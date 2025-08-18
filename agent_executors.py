@@ -1,5 +1,7 @@
 # Custom inputs
-from logging_utils import log_assistant
+from logging_utils import log_assistant, write_agent_summary, read_agent_summary
+from prompts import PREPARATION_AGENT_SYSTEM_PROMPT, ANALYSIS_AGENT_SYSTEM_PROMPT, VISUALIZATION_AGENT_PROMPT
+from genai_setup import create_client, create_config, create_contents, create_response
 
 # Other imports
 from google import genai
@@ -10,13 +12,6 @@ from tempfile import NamedTemporaryFile
 import os
 import subprocess
 import sys
-from dotenv import load_dotenv
-load_dotenv()
-
-# Get API key from environment variable
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is not set. Please set it in your .env file.")
 
 def execute_python_file(file_path):
     try:
@@ -29,8 +24,7 @@ def execute_python_file(file_path):
         # Execute the Python file using the same Python interpreter
         result = subprocess.run([sys.executable, file_path], 
                               capture_output=True,
-                              text=True,
-                              check=True)
+                              text=True)
         
         if result.returncode == 0:
             return f"Successfully executed {file_path}\nOutput:\n{result.stdout}"
@@ -42,36 +36,53 @@ def execute_python_file(file_path):
     except Exception as e:
         return f"Unexpected error executing {file_path}\nError: {str(e)}"
 
-def execute_preparation_agent(preparation_plan):    
-    PREPARATION_AGENT_SYSTEM_PROMPT = """
-You are a data preparation agent.
-Clean, validate, and standardize the input data for analysis, as you are instructed.
-Do not perform any analysis or interpretation.
-Input dataset in the project directory: /Users/mbidnyj/Dev/multi-agent-system/preparation_agent/input_dataset.csv
-Data dictionary: /Users/mbidnyj/Dev/multi-agent-system/preparation_agent/data_dictionary.csv
-Output dataset in the root directory: /Users/mbidnyj/Dev/multi-agent-system/preparation_agent/output_dataset.csv
-You have pandas and numpy libraries at your disposal.
-Output nothing but only python script.
-Start from:
-import...
-"""
-    
-    client = genai.Client(
-        api_key=GEMINI_API_KEY
-    )
-    config = types.GenerateContentConfig(
-        system_instruction=PREPARATION_AGENT_SYSTEM_PROMPT
-    )
-    contents = [
-        types.Content(
-            role="user", parts=[types.Part(text=preparation_plan)]
+def summarize_steps(script_path, execution_output, agent_type):
+    """Simple function to summarize what steps were actually performed and save to XML"""
+    try:
+        # Read the executed script
+        with open(script_path, 'r') as f:
+            script_content = f.read()
+        
+        prompt = f"""Based on this executed Python script and its output, summarize the actual steps that were performed.
+
+Script:
+{script_content}
+
+Execution Output:
+{execution_output}
+
+IMPORTANT: Format your response as a simple numbered list without any markdown, bold text, or special formatting. Use this exact format:
+1. First step description with details
+2. Second step description with details 
+3. Third step description with details
+...
+
+Do not use **bold**, *italics*, or any markdown formatting. Just provide a clean numbered list of what was actually accomplished."""
+        
+        client = create_client()
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
         )
-    ]
-    response = client.models.generate_content(
-        model="gemini-2.5-pro",
-        contents=contents,
-        config=config
-    )
+        response = create_response(client, "gemini-2.5-flash", contents, config)
+        summary = response.candidates[-1].content.parts[-1].text
+        log_assistant(f"Steps summary: {summary}")
+        
+        # Save summary to XML file
+        write_agent_summary(agent_type, summary)
+        return summary
+        
+    except Exception as e:
+        log_assistant(f"Could not generate summary: {str(e)}")
+        return None
+
+def execute_preparation_agent(preparation_plan):    
+    client = create_client()
+    config = create_config([], PREPARATION_AGENT_SYSTEM_PROMPT)
+    # Create history
+    # Pass in correct format
+    contents = create_contents(history)
+    response = create_response(client, "gemini-2.5-flash", contents, config)
     python_code = response.candidates[-1].content.parts[-1].text
     
     # Clean up code block markers if they exist
@@ -93,37 +104,21 @@ import...
     # Execute the generated script
     execution_result = execute_python_file(script_path)
     log_assistant(f"Script execution result: {execution_result}")
-
-    return execution_result
+    
+    # If successful, return summary; otherwise return error
+    if execution_result.startswith("Successfully executed"):
+        summary = summarize_steps(script_path, execution_result, "preparation_agent")
+        return summary if summary else execution_result
+    else:
+        return execution_result
 
 def execute_analysis_agent(analysis_plan):
-    ANALYSIS_AGENT_SYSTEM_PROMPT = """
-You are an analysis agent.
-Execute the provided analysis plan on the prepared data, as you are instructed.
-Do not modify the plan or add extra insights.
-Output nothing but the python script.
-You have scikit-learn library at your disposal for the model training and joblib to store the model.
-Store the model at /Users/mbidnyj/Dev/multi-agent-system/analysis_agent/model.joblib file.
-Output nothing but only python script.
-Start from:
-import...
-"""
-    client = genai.Client(
-        api_key=GEMINI_API_KEY
-    )
-    config = types.GenerateContentConfig(
-        system_instruction=ANALYSIS_AGENT_SYSTEM_PROMPT
-    )
-    contents = [
-        types.Content(
-            role="user", parts=[types.Part(text=analysis_plan)]
-        )
-    ]
-    response = client.models.generate_content(
-        model="gemini-2.5-pro",
-        contents=contents,
-        config=config
-    )
+    client = create_client()
+    config = create_config([], ANALYSIS_AGENT_SYSTEM_PROMPT)
+    # Define history
+    # Pass in the correct format
+    contents = create_contents(history)
+    response = create_response(client, "gemini-2.5-flash", contents, config)
     python_code = response.candidates[-1].content.parts[-1].text
     
     # Clean up code block markers if they exist
@@ -145,35 +140,21 @@ import...
     # Execute the generated script
     execution_result = execute_python_file(script_path)
     log_assistant(f"Script execution result: {execution_result}")
-
-    return execution_result
+    
+    # If successful, return summary; otherwise return error
+    if execution_result.startswith("Successfully executed"):
+        summary = summarize_steps(script_path, execution_result, "analysis_agent")
+        return summary if summary else execution_result
+    else:
+        return execution_result
 
 def execute_visualization_agent(visualization_plan):    
-    VISUALIZATION_AGENT_PROMPT = """
-You are a visualization agent.
-Having results of the model execution, get the most useful data insight and write python script to visualize it.
-You have mathplotlib and seabord libraries at your disposal.
-Store the image at /Users/mbidnyj/Dev/multi-agent-system/visualization_agent/insight.png file.
-Output nothing but only python script.
-Start from:
-import...
-"""
-    client = genai.Client(
-        api_key=GEMINI_API_KEY
-    )
-    config = types.GenerateContentConfig(
-        system_instruction=VISUALIZATION_AGENT_PROMPT
-    )
-    contents = [
-        types.Content(
-            role="user", parts=[types.Part(text=visualization_plan)]
-        )
-    ]
-    response = client.models.generate_content(
-        model="gemini-2.5-pro",
-        contents=contents,
-        config=config
-    )
+    client = create_client()
+    config = create_config([], VISUALIZATION_AGENT_PROMPT)
+    # Define history
+    # Pass in the correct format
+    contents = create_contents(history)
+    response = create_response(client, "gemini-2.5-flash", contents, config)
     python_code = response.candidates[-1].content.parts[-1].text
     
     # Clean up code block markers if they exist
@@ -195,5 +176,10 @@ import...
     # Execute the generated script
     execution_result = execute_python_file(script_path)
     log_assistant(f"Script execution result: {execution_result}")
-
-    return execution_result 
+    
+    # If successful, return summary; otherwise return error
+    if execution_result.startswith("Successfully executed"):
+        summary = summarize_steps(script_path, execution_result, "visualization_agent")
+        return summary if summary else execution_result
+    else:
+        return execution_result 

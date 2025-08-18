@@ -9,34 +9,16 @@ from agent_executors import (
     execute_analysis_agent,
     execute_visualization_agent
 )
-
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
-# Get API key from environment variable
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is not set. Please set it in your .env file.")
-
-from google import genai
-from google.genai import types
+from genai_setup import create_client, create_config, create_contents
 
 # ---------------------
 
-client = genai.Client(
-    api_key=GEMINI_API_KEY
-)
-config = types.GenerateContentConfig(
-    tools=[tools],
-    system_instruction=SYSTEM_INSTRUCTION
-)
-
-contents = [
-    types.Content(
-        role="user", parts=[types.Part(text=INITIAL_QUERY)]
-    )
-]
+client = create_client()
+# Pass tools as a list
+config = create_config(tools, SYSTEM_INSTRUCTION)
+# Define history
+# Pass in correct format
+contents = create_contents(history)
 log_user(INITIAL_QUERY)
 
 response = client.models.generate_content(
@@ -89,7 +71,6 @@ while tool_call and tool_call.name:
     )
     contents.append(types.Content(role="user", parts=[function_response_part]))
 
-    # call LLM once again
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=contents,

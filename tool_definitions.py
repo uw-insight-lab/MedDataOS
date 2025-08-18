@@ -8,7 +8,7 @@ prepare_data_for_analysis = {
         "properties": {
             "preparation_plan": {
                 "type": "string",
-                "description": "Provide comprehensive preparation plan for the given dataset to make it ready for the futher data analysis"
+                "description": "Provide comprehensive preparation plan for the given dataset to make it ready for the futher data analysis. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
             }
         },
         "required": ["preparation_plan"]
@@ -23,7 +23,7 @@ prepare_analysis = {
         "properties": {
             "analysis_plan": {
                 "type": "string",
-                "description": "Write python script to execute analysis plan with all given input data"
+                "description": "Write python script to execute analysis plan with all given input data. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
             }
         },
         "required": ["analysis_plan"]
@@ -38,7 +38,7 @@ visualize_analysis_results = {
         "properties": {
             "visualization_plan": {
                 "type": "string",
-                "description": "Write python script to build visualization using mathplotlib or seaborn libraries"
+                "description": "Write python script to build visualization using mathplotlib or seaborn libraries. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
             }
         },
         "required": ["visualization_plan"]

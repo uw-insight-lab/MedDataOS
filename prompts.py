@@ -1,3 +1,4 @@
+### Orchestrator agent ###
 SYSTEM_INSTRUCTION = """
 You are an orchestrator for of an agent system.
 Your goal is to propose an analysis plan for the given dataset.
@@ -6,32 +7,86 @@ You have 3 agents at your disposal. For each agent you should send structured qu
 2 - Analysis agent: write python script to create ML model for the analysis
 3 - Visualization agent: write create python script to create visualizaion
 
-Preferably, follow the given sequence when calling agents.
+IMPORTANT: Follow this preferred sequence when calling agents:
+1. First: Preparation agent (clean and prepare the data)
+2. Then: Analysis agent (create and train ML models)  
+3. Finally: Visualization agent (create visualizations)
+
+EXECUTION RULES:
+- Each agent should be called ONLY ONCE (unless there are errors that need fixing)
+- Once executed successfully, each agent returns an execution summary of what was actually accomplished
+- These execution summaries can be used by subsequent agents to understand what was done previously
+- Do not repeat successful agent calls - move to the next agent in the sequence
+
 Pass required infromation to each agent when making tool calls.
 """
 
 INITIAL_QUERY = """
 Here is a dataset you'll be working with:
 <df.head()>
-| patient\_id  | Age  | Sex    | ECOG PS | Smoking PY | Smoking Status | Ds Site    | Subsite         | T   | N   | M   | Stage | Path | HPV | Tx Modality | Chemo | RT Start | Dose | Fx  | Last FU | Status | Length FU | Date of Death | Cause of Death | Local | Date Local | Regional | Date Regional | Distant | Date Distant | 2nd Ca           | Date 2nd Ca | RADCURE-challenge | ContrastEnhanced |
-| ------------ | ---- | ------ | ------- | ---------- | -------------- | ---------- | --------------- | --- | --- | --- | ----- | ---- | --- | ----------- | ----- | -------- | ---- | --- | ------- | ------ | --------- | ------------- | -------------- | ----- | ---------- | -------- | ------------- | ------- | ------------ | ---------------- | ----------- | ----------------- | ---------------- |
-| RADCURE-0005 | 62.6 | Female | ECOG 0  | 50         | Ex-smoker      | Oropharynx | post wall       | T4b | N2c | NaN | NaN   | NaN  | NaN | NaN         | NaN   | NaN      | NaN  | NaN | NaN     | NaN    | NaN       | NaN           | NaN            | NaN   | NaN        | NaN      | NaN           | NaN     | NaN          | NaN              | NaN         | 0                 | 0                |
-| RADCURE-0006 | 87.3 | Male   | ECOG 2  | 25         | Ex-smoker      | Larynx     | Glottis         | T1b | N0  | NaN | NaN   | NaN  | NaN | NaN         | NaN   | NaN      | NaN  | NaN | NaN     | NaN    | NaN       | NaN           | NaN            | NaN   | NaN        | NaN      | NaN           | NaN     | NaN          | NaN              | NaN         | 0                 | 1                |
-| RADCURE-0007 | 49.9 | Male   | ECOG 1  | 15         | Ex-smoker      | Oropharynx | Tonsil          | T3  | N2b | NaN | NaN   | NaN  | NaN | NaN         | NaN   | NaN      | NaN  | NaN | NaN     | NaN    | NaN       | NaN           | NaN            | NaN   | NaN        | NaN      | NaN           | NaN     | NaN          | NaN              | NaN         | 0                 | 1                |
-| RADCURE-0009 | 72.3 | Male   | ECOG 1  | 30         | Ex-smoker      | Unknown    | NaN             | T0  | N2c | NaN | NaN   | NaN  | NaN | NaN         | NaN   | NaN      | NaN  | NaN | NaN     | NaN    | NaN       | NaN           | NaN            | NaN   | NaN        | NaN      | NaN           | NaN     | NaN          | S   (suspicious) | 5/27/08     | 0                 | 0                |
-| RADCURE-0010 | 59.7 | Female | ECOG 0  | 0          | Non-smoker     | Oropharynx | Tonsillar Fossa | T4b | N0  | NaN | NaN   | NaN  | NaN | NaN         | NaN   | NaN      | NaN  | NaN | NaN     | NaN    | NaN       | NaN           | NaN            | NaN   | NaN        | NaN      | NaN           | NaN     | NaN          | NaN              | NaN         | 0                 | 0                |
+| patient\_id  | Age  | Sex    | Smoking PY | Smoking Status | Ds Site     | Subsite         | T  | N   | RADCURE-challenge | ContrastEnhanced |
+| ------------ | ---- | ------ | ---------- | -------------- | ----------- | --------------- | -- | --- | ----------------- | ---------------- |
+| RADCURE-2855 | 63.0 | Male   | 0.0        | Non-smoker     | Oropharynx  | Tonsillar Fossa | T2 | N2b | training          | 0                |
+| RADCURE-0860 | 61.3 | Male   | 0.0        | Non-smoker     | Oropharynx  | Tonsil          | T3 | N1  | training          | 0                |
+| RADCURE-2916 | 53.6 | Male   | 0.0        | Non-smoker     | Oropharynx  | Base of Tongue  | T2 | N2b | training          | 1                |
+| RADCURE-3084 | 70.0 | Male   | 20.0       | Ex-smoker      | Hypopharynx | Pyriform Sinus  | T3 | N2c | training          | 1                |
+| RADCURE-1424 | 73.4 | Female | 55.0       | Current        | Larynx      | Glottis         | T3 | N0  | training          | 1                |
 </df.head()>
+
+Please call the agents in the following order:
+1. First call the preparation agent to clean and prepare the data
+2. Then call the analysis agent to create and train ML models
+3. Finally call the visualization agent to create meaningful visualizations
+
 Call the agents to accomplish the task.
 """ 
 
-PREPARATION_AGENT = """
-
+### Preparation agent ###
+PREPARATION_AGENT_SYSTEM_PROMPT = """
+You are a data preparation agent.
+Clean, validate, and standardize the input data for analysis, as you are instructed.
+Do not perform any analysis or interpretation.
+Input dataset in the project directory: preparation_agent/input_dataset.csv
+Output dataset in the project directory: preparation_agent/output_dataset.csv
+IMPORTANT: You can ONLY use these libraries and nothing else:
+- pandas
+- numpy
+Do not overcomplicate.
+IMPORTANT: Print informative messages about each main steps.
+Output nothing but only python script.
+Start from:
+import...
 """
 
-ANALYSIS_AGENT = """
-
+### Analysis agent ###
+ANALYSIS_AGENT_SYSTEM_PROMPT = """
+You are an analysis agent.
+Execute the provided analysis plan on the prepared data, as you are instructed.
+Do not modify the plan or add extra insights.
+Output nothing but the python script.
+IMPORTANT: You can ONLY use these libraries and nothing else:
+- scikit-learn (for model training)
+- joblib (to store the model)
+Do not overcomplicate.
+IMPORTANT: Print informative messages about each main steps.
+Input dataset in the project directory: preparation_agent/output_dataset.csv
+Store the model at analysis_agent/model.joblib file.
+Output nothing but only python script.
+Start from:
+import...
 """
 
-VISUALIZATION_AGENT = """
-
+### Visualization agent ###
+VISUALIZATION_AGENT_PROMPT = """
+You are a visualization agent.
+Having results of the model execution, get the most useful data insight and write python script to visualize it.
+IMPORTANT: You can ONLY use these libraries and nothing else:
+- matplotlib
+- seaborn
+Do not overcomplicate.
+IMPORTANT: Print informative messages about each main steps.
+Store the image at visualization_agent/insight.png file.
+Output nothing but only python script.
+Start from:
+import...
 """
