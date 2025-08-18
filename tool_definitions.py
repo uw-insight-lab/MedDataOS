@@ -45,5 +45,20 @@ generate_analysis_report = {
     }
 }
 
+classify_chest_xray = {
+    "name": "classify_chest_xray",
+    "description": "Analyzes chest X-ray images from URL to detect and classify 18 different pathological conditions using a pre-trained deep learning model. Returns probability scores for each pathology, high-confidence findings, summary statistics, and clinical interpretation-ready results.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "image_url": {
+                "type": "string",
+                "description": "URL to the chest X-ray image (JPEG format) to be analyzed."
+            }
+        },
+        "required": ["image_url"]
+    }
+}
+
 # Create a tools configuration for Gemini
-tools = types.Tool(function_declarations=[prepare_data_for_analysis, prepare_analysis, generate_analysis_report]) 
+tools = types.Tool(function_declarations=[prepare_data_for_analysis, prepare_analysis, generate_analysis_report, classify_chest_xray]) 

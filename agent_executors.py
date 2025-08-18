@@ -12,6 +12,8 @@ from tempfile import NamedTemporaryFile
 import os
 import subprocess
 import sys
+import requests
+import json
 
 def execute_python_file(file_path):
     try:
@@ -135,4 +137,52 @@ def execute_report_agent(report_plan):
     return execute_agent(report_plan, {
         'system_prompt': REPORT_AGENT_PROMPT,
         'agent_name': 'report_agent'
-    }) 
+    })
+
+def execute_chest_xray_agent(image_url):
+    """
+    Special function for chest X-ray classification using external API.
+    
+    Args:
+        image_url (str): URL of the chest X-ray image to classify
+        
+    Returns:
+        str: JSON response with probability scores for each pathology
+    """
+    try:
+        # Prepare the payload
+        payload = {
+            "image_url": image_url
+        }
+        
+        # Send POST request to localhost:8000/classify/url
+        response = requests.post(
+            "http://localhost:8000/classify/url",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=30
+        )
+        
+        # Check if request was successful
+        if response.status_code == 200:
+            # Return the JSON response as is
+            result_json = response.json()
+            log_assistant(f"Chest X-ray classification completed for {image_url}")
+            return json.dumps(result_json, indent=2)
+        else:
+            error_msg = f"API request failed with status {response.status_code}: {response.text}"
+            log_assistant(error_msg)
+            return error_msg
+            
+    except requests.exceptions.Timeout:
+        error_msg = "Request timed out - chest X-ray classification service may be slow"
+        log_assistant(error_msg)
+        return error_msg
+    except requests.exceptions.ConnectionError:
+        error_msg = "Could not connect to chest X-ray classification service at localhost:8000"
+        log_assistant(error_msg)
+        return error_msg
+    except Exception as e:
+        error_msg = f"Unexpected error during chest X-ray classification: {str(e)}"
+        log_assistant(error_msg)
+        return error_msg 

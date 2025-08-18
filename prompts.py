@@ -1,45 +1,44 @@
 ### Orchestrator agent ###
 SYSTEM_INSTRUCTION = """
-You are an orchestrator for of an agent system.
-Your goal is to propose an analysis plan for the given dataset.
-You have 3 agents at your disposal. For each agent you should send structured query in a human readable format. Here's what agents do:
-1 - Preparation agent: write python script for dataset cleaning
-2 - Analysis agent: write python script to create ML model for the analysis
-3 - Visualization agent: write create python script to create visualizaion
-
-IMPORTANT: Follow this preferred sequence when calling agents:
-1. First: Preparation agent (clean and prepare the data)
-2. Then: Analysis agent (create and train ML models)  
-3. Finally: Visualization agent (create visualizations)
+You are an orchestrator for a multi-agent analysis system.
+Your role is to analyze the given task and call the appropriate tools to accomplish it.
 
 EXECUTION RULES:
-- Each agent should be called ONLY ONCE (unless there are errors that need fixing)
-- Once executed successfully, each agent returns an execution summary of what was actually accomplished
-- These execution summaries can be used by subsequent agents to understand what was done previously
-- Do not repeat successful agent calls - move to the next agent in the sequence
+- Analyze the user's request and determine which tools are needed
+- Call tools with clear, specific instructions
+- Each tool should typically be called only once (unless errors need fixing)
+- Use execution summaries from completed tools to inform subsequent tool calls
+- For multi-step workflows, maintain logical sequence and dependencies
 
-Pass required infromation to each agent when making tool calls.
+When calling tools, provide detailed, human-readable instructions that clearly specify what needs to be accomplished.
 """
 
+# For tabular data
+# INITIAL_QUERY = """
+# Here is a dataset you'll be working with:
+# <df.head()>
+# | patient\_id  | Age  | Sex    | Smoking PY | Smoking Status | Ds Site     | Subsite         | T  | N   | RADCURE-challenge | ContrastEnhanced |
+# | ------------ | ---- | ------ | ---------- | -------------- | ----------- | --------------- | -- | --- | ----------------- | ---------------- |
+# | RADCURE-2855 | 63.0 | Male   | 0.0        | Non-smoker     | Oropharynx  | Tonsillar Fossa | T2 | N2b | training          | 0                |
+# | RADCURE-0860 | 61.3 | Male   | 0.0        | Non-smoker     | Oropharynx  | Tonsil          | T3 | N1  | training          | 0                |
+# | RADCURE-2916 | 53.6 | Male   | 0.0        | Non-smoker     | Oropharynx  | Base of Tongue  | T2 | N2b | training          | 1                |
+# | RADCURE-3084 | 70.0 | Male   | 20.0       | Ex-smoker      | Hypopharynx | Pyriform Sinus  | T3 | N2c | training          | 1                |
+# | RADCURE-1424 | 73.4 | Female | 55.0       | Current        | Larynx      | Glottis         | T3 | N0  | training          | 1                |
+# </df.head()>
+
+# Analyze this healthcare dataset by completing the following steps:
+# 1. First, prepare and clean the data (data preparation)
+# 2. Then, create and train machine learning models (analysis)
+# 3. Finally, generate a comprehensive analysis report with insights and recommendations
+
+# IMPORTANT: Call each tool only once. Do not repeat tool calls unless there are errors that need fixing. Each tool will provide a summary of what was accomplished for the next step.
+# """ 
+
+# For chest x-rays
 INITIAL_QUERY = """
-Here is a dataset you'll be working with:
-<df.head()>
-| patient\_id  | Age  | Sex    | Smoking PY | Smoking Status | Ds Site     | Subsite         | T  | N   | RADCURE-challenge | ContrastEnhanced |
-| ------------ | ---- | ------ | ---------- | -------------- | ----------- | --------------- | -- | --- | ----------------- | ---------------- |
-| RADCURE-2855 | 63.0 | Male   | 0.0        | Non-smoker     | Oropharynx  | Tonsillar Fossa | T2 | N2b | training          | 0                |
-| RADCURE-0860 | 61.3 | Male   | 0.0        | Non-smoker     | Oropharynx  | Tonsil          | T3 | N1  | training          | 0                |
-| RADCURE-2916 | 53.6 | Male   | 0.0        | Non-smoker     | Oropharynx  | Base of Tongue  | T2 | N2b | training          | 1                |
-| RADCURE-3084 | 70.0 | Male   | 20.0       | Ex-smoker      | Hypopharynx | Pyriform Sinus  | T3 | N2c | training          | 1                |
-| RADCURE-1424 | 73.4 | Female | 55.0       | Current        | Larynx      | Glottis         | T3 | N0  | training          | 1                |
-</df.head()>
-
-Please call the agents in the following order:
-1. First call the preparation agent to clean and prepare the data
-2. Then call the analysis agent to create and train ML models
-3. Finally call the visualization agent to create meaningful visualizations
-
-Call the agents to accomplish the task.
-""" 
+Here is a URL for a chest X-ray image that you need to classify into one of the 18 possible diagnoses:
+URL: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg/1920px-Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg
+"""
 
 ### Preparation agent ###
 PREPARATION_AGENT_SYSTEM_PROMPT = """
