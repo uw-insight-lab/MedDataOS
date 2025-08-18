@@ -30,20 +30,20 @@ prepare_analysis = {
     }
 }
 
-visualize_analysis_results = {
-    "name": "visualize_analysis_results",
-    "description": "Provide visualizations of the analysis main features to present data conveniently",
+generate_analysis_report = {
+    "name": "generate_analysis_report",
+    "description": "Generate a comprehensive text report analyzing the model results and providing insights",
     "parameters": {
         "type": "object",
         "properties": {
-            "visualization_plan": {
+            "report_plan": {
                 "type": "string",
-                "description": "Write python script to build visualization using mathplotlib or seaborn libraries. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
+                "description": "Write python script to generate a comprehensive analysis report including model performance, feature insights, and recommendations. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
             }
         },
-        "required": ["visualization_plan"]
+        "required": ["report_plan"]
     }
 }
 
 # Create a tools configuration for Gemini
-tools = types.Tool(function_declarations=[prepare_data_for_analysis, prepare_analysis, visualize_analysis_results]) 
+tools = types.Tool(function_declarations=[prepare_data_for_analysis, prepare_analysis, generate_analysis_report]) 

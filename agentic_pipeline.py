@@ -4,11 +4,8 @@
 from tool_definitions import tools
 from logging_utils import log_user, log_assistant, log_tool_call, log_tool_result
 from prompts import SYSTEM_INSTRUCTION, INITIAL_QUERY
-from agent_executors import (
-    execute_preparation_agent,
-    execute_analysis_agent,
-    execute_visualization_agent
-)
+from agent_executors import execute_agent
+from prompts import PREPARATION_AGENT_SYSTEM_PROMPT, ANALYSIS_AGENT_SYSTEM_PROMPT, REPORT_AGENT_PROMPT
 from genai_setup import create_client, create_config, create_contents
 
 # ---------------------
@@ -32,29 +29,34 @@ tool_call = response.candidates[-1].content.parts[-1].function_call
 
 # Tool calling in the loop
 while tool_call and tool_call.name:
-    # Tool-function mapping 
-    tool_functions = {
-        "prepare_data_for_analysis": execute_preparation_agent,
-        "prepare_analysis": execute_analysis_agent,
-        "visualize_analysis_results": execute_visualization_agent
+    # Agent configuration mapping
+    agent_configs = {
+        "prepare_data_for_analysis": {
+            'system_prompt': PREPARATION_AGENT_SYSTEM_PROMPT,
+            'agent_name': 'preparation_agent',
+            'plan_key': 'preparation_plan'
+        },
+        "prepare_analysis": {
+            'system_prompt': ANALYSIS_AGENT_SYSTEM_PROMPT,
+            'agent_name': 'analysis_agent',
+            'plan_key': 'analysis_plan'
+        },
+        "generate_analysis_report": {
+            'system_prompt': REPORT_AGENT_PROMPT,
+            'agent_name': 'report_agent',
+            'plan_key': 'report_plan'
+        }
     }
     # Detect if it was a tool call
     if tool_call:
-        # Lookup and call corresponding tool function
-        tool_func = tool_functions.get(tool_call.name)
-        if tool_func:
-            # Extract the relevant plan based on tool name
-            plan_types = {
-                "prepare_data_for_analysis": "preparation_plan",
-                "prepare_analysis": "analysis_plan",
-                "visualize_analysis_results": "visualization_plan"
-            }
-            plan_key = plan_types.get(tool_call.name)
-            if plan_key:
-                plan = tool_call.args.get(plan_key)
-                log_tool_call(tool_call.name, plan)
+        # Lookup agent configuration
+        agent_config = agent_configs.get(tool_call.name)
+        if agent_config:
+            # Extract the plan using config
+            plan = tool_call.args.get(agent_config['plan_key'])
+            log_tool_call(tool_call.name, plan)
             
-            result = tool_func(plan)
+            result = execute_agent(plan, agent_config)
             log_tool_result(result)
         else:
             raise ValueError(f"Unknown tool: {tool_call.name}")

@@ -1,6 +1,6 @@
 # Custom inputs
 from logging_utils import log_assistant, write_agent_summary, read_agent_summary
-from prompts import PREPARATION_AGENT_SYSTEM_PROMPT, ANALYSIS_AGENT_SYSTEM_PROMPT, VISUALIZATION_AGENT_PROMPT
+from prompts import PREPARATION_AGENT_SYSTEM_PROMPT, ANALYSIS_AGENT_SYSTEM_PROMPT, REPORT_AGENT_PROMPT, SUMMARIZER_PROMPT
 from genai_setup import create_client, create_config, create_contents, create_response
 
 # Other imports
@@ -43,21 +43,10 @@ def summarize_steps(script_path, execution_output, agent_type):
         with open(script_path, 'r') as f:
             script_content = f.read()
         
-        prompt = f"""Based on this executed Python script and its output, summarize the actual steps that were performed.
-
-Script:
-{script_content}
-
-Execution Output:
-{execution_output}
-
-IMPORTANT: Format your response as a simple numbered list without any markdown, bold text, or special formatting. Use this exact format:
-1. First step description with details
-2. Second step description with details 
-3. Third step description with details
-...
-
-Do not use **bold**, *italics*, or any markdown formatting. Just provide a clean numbered list of what was actually accomplished."""
+        prompt = SUMMARIZER_PROMPT.format(
+            script_content=script_content,
+            execution_output=execution_output
+        )
         
         client = create_client()
         response = client.models.generate_content(
@@ -76,9 +65,21 @@ Do not use **bold**, *italics*, or any markdown formatting. Just provide a clean
         log_assistant(f"Could not generate summary: {str(e)}")
         return None
 
-def execute_preparation_agent(preparation_plan):    
+def execute_agent(plan, agent_config):
+    """
+    Unified agent executor function.
+    
+    Args:
+        plan (str): The plan/instructions for the agent
+        agent_config (dict): Configuration containing:
+            - 'system_prompt': The system prompt for the agent
+            - 'agent_name': Name of the agent (for folder/file paths)
+            
+    Returns:
+        str: Execution summary or error message
+    """
     client = create_client()
-    config = create_config([], PREPARATION_AGENT_SYSTEM_PROMPT)
+    config = create_config([], agent_config['system_prompt'])
     # Create history
     # Pass in correct format
     contents = create_contents(history)
@@ -95,7 +96,7 @@ def execute_preparation_agent(preparation_plan):
         python_code = python_code[:-len("```")].strip()
 
     # Store python code into script.py file
-    script_path = os.path.join('preparation_agent', 'script.py')
+    script_path = os.path.join(agent_config['agent_name'], 'script.py')
     os.makedirs(os.path.dirname(script_path), exist_ok=True)
     
     with open(script_path, 'w') as f:
@@ -107,79 +108,26 @@ def execute_preparation_agent(preparation_plan):
     
     # If successful, return summary; otherwise return error
     if execution_result.startswith("Successfully executed"):
-        summary = summarize_steps(script_path, execution_result, "preparation_agent")
+        summary = summarize_steps(script_path, execution_result, agent_config['agent_name'])
         return summary if summary else execution_result
     else:
         return execution_result
+
+# Wrapper functions for backwards compatibility
+def execute_preparation_agent(preparation_plan):
+    return execute_agent(preparation_plan, {
+        'system_prompt': PREPARATION_AGENT_SYSTEM_PROMPT,
+        'agent_name': 'preparation_agent'
+    })
 
 def execute_analysis_agent(analysis_plan):
-    client = create_client()
-    config = create_config([], ANALYSIS_AGENT_SYSTEM_PROMPT)
-    # Define history
-    # Pass in the correct format
-    contents = create_contents(history)
-    response = create_response(client, "gemini-2.5-flash", contents, config)
-    python_code = response.candidates[-1].content.parts[-1].text
-    
-    # Clean up code block markers if they exist
-    python_code = python_code.strip()
-    if python_code.startswith("```python"):
-        python_code = python_code[len("```python"):].strip()
-    elif python_code.startswith("```"):
-        python_code = python_code[len("```"):].strip()
-    if python_code.endswith("```"):
-        python_code = python_code[:-len("```")].strip()
+    return execute_agent(analysis_plan, {
+        'system_prompt': ANALYSIS_AGENT_SYSTEM_PROMPT,
+        'agent_name': 'analysis_agent'
+    })
 
-    # Store python code into script.py file
-    script_path = os.path.join('analysis_agent', 'script.py')
-    os.makedirs(os.path.dirname(script_path), exist_ok=True)
-    
-    with open(script_path, 'w') as f:
-        f.write(python_code)
-    
-    # Execute the generated script
-    execution_result = execute_python_file(script_path)
-    log_assistant(f"Script execution result: {execution_result}")
-    
-    # If successful, return summary; otherwise return error
-    if execution_result.startswith("Successfully executed"):
-        summary = summarize_steps(script_path, execution_result, "analysis_agent")
-        return summary if summary else execution_result
-    else:
-        return execution_result
-
-def execute_visualization_agent(visualization_plan):    
-    client = create_client()
-    config = create_config([], VISUALIZATION_AGENT_PROMPT)
-    # Define history
-    # Pass in the correct format
-    contents = create_contents(history)
-    response = create_response(client, "gemini-2.5-flash", contents, config)
-    python_code = response.candidates[-1].content.parts[-1].text
-    
-    # Clean up code block markers if they exist
-    python_code = python_code.strip()
-    if python_code.startswith("```python"):
-        python_code = python_code[len("```python"):].strip()
-    elif python_code.startswith("```"):
-        python_code = python_code[len("```"):].strip()
-    if python_code.endswith("```"):
-        python_code = python_code[:-len("```")].strip()
-
-    # Store python code into script.py file
-    script_path = os.path.join('visualization_agent', 'script.py')
-    os.makedirs(os.path.dirname(script_path), exist_ok=True)
-    
-    with open(script_path, 'w') as f:
-        f.write(python_code)
-    
-    # Execute the generated script
-    execution_result = execute_python_file(script_path)
-    log_assistant(f"Script execution result: {execution_result}")
-    
-    # If successful, return summary; otherwise return error
-    if execution_result.startswith("Successfully executed"):
-        summary = summarize_steps(script_path, execution_result, "visualization_agent")
-        return summary if summary else execution_result
-    else:
-        return execution_result 
+def execute_report_agent(report_plan):
+    return execute_agent(report_plan, {
+        'system_prompt': REPORT_AGENT_PROMPT,
+        'agent_name': 'report_agent'
+    }) 

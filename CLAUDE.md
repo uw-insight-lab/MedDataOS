@@ -19,7 +19,7 @@ The system follows a tool-calling orchestration pattern with these key component
 
 1. **Preparation Agent**: Cleans and preprocesses raw CSV data using pandas/numpy
 2. **Analysis Agent**: Creates ML models using scikit-learn and saves them with joblib
-3. **Visualization Agent**: Generates insights visualizations using matplotlib/seaborn
+3. **Report Agent**: Generates comprehensive text reports with model insights and recommendations
 
 Each agent:
 - Receives a structured plan as input
@@ -53,14 +53,14 @@ python agentic_pipeline.py
 Input: `preparation_agent/input_dataset.csv` (raw healthcare data)
 → Preparation: `preparation_agent/output_dataset.csv` (cleaned data)
 → Analysis: `analysis_agent/model.joblib` (trained ML model)
-→ Visualization: `visualization_agent/insight.png` (feature importance chart)
+→ Report: `report_agent/analysis_report.txt` (comprehensive analysis report)
 
 ## Agent Directories
 
 Each agent operates in its own directory with specific input/output files:
 - `preparation_agent/`: Input CSV → output CSV + generated script
 - `analysis_agent/`: Cleaned data → trained model + metrics + generated script  
-- `visualization_agent/`: Model results → PNG visualization + generated script
+- `report_agent/`: Model results → text analysis report + generated script
 
 ## Shared Knowledge System
 

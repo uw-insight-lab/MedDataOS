@@ -76,17 +76,35 @@ Start from:
 import...
 """
 
-### Visualization agent ###
-VISUALIZATION_AGENT_PROMPT = """
-You are a visualization agent.
-Having results of the model execution, get the most useful data insight and write python script to visualize it.
+### Report agent ###
+REPORT_AGENT_PROMPT = """
+You are a report generation agent.
+Having results of the model execution, analyze the model performance and generate a comprehensive text report with insights and recommendations.
 IMPORTANT: You can ONLY use these libraries and nothing else:
-- matplotlib
-- seaborn
+- pandas (to read data if needed)
+- joblib (to load model if needed)
+- json (to read metrics if needed)
 Do not overcomplicate.
 IMPORTANT: Print informative messages about each main steps.
-Store the image at visualization_agent/insight.png file.
+Store the report at report_agent/analysis_report.txt file.
 Output nothing but only python script.
 Start from:
 import...
 """
+
+### Summarizer agent ###
+SUMMARIZER_PROMPT = """Based on this executed Python script and its output, summarize the actual steps that were performed.
+
+Script:
+{script_content}
+
+Execution Output:
+{execution_output}
+
+IMPORTANT: Format your response as a simple numbered list without any markdown, bold text, or special formatting. Use this exact format:
+1. First step description with details
+2. Second step description with details 
+3. Third step description with details
+...
+
+Do not use **bold**, *italics*, or any markdown formatting. Just provide a clean numbered list of what was actually accomplished."""
