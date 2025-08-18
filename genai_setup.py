@@ -13,19 +13,14 @@ def create_client():
 
 def create_config(tools, system_instruction):
     return types.GenerateContentConfig(
-        tools=tools,
+        tools=[tools],
         system_instruction=system_instruction
     )
 
 def create_contents(history):
     # Expected format
-    # array
-    # element: {role: Part}
-    return [
-        types.Content(
-            role="user", parts=[types.Part(text=INITIAL_QUERY)]
-        )
-    ]
+    # array of Content objects with role and parts
+    return list(history) if history else []
 
 def create_response(client, model, contents, config=None):
     return client.models.generate_content(

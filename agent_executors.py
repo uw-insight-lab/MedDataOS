@@ -49,11 +49,13 @@ def summarize_steps(script_path, execution_output, agent_type):
         )
         
         client = create_client()
+        contents = [types.Content(
+            role="user", parts=[types.Part(text=prompt)]
+        )]
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=prompt
+            contents=contents
         )
-        response = create_response(client, "gemini-2.5-flash", contents, config)
         summary = response.candidates[-1].content.parts[-1].text
         log_assistant(f"Steps summary: {summary}")
         
@@ -79,10 +81,13 @@ def execute_agent(plan, agent_config):
         str: Execution summary or error message
     """
     client = create_client()
-    config = create_config([], agent_config['system_prompt'])
-    # Create history
-    # Pass in correct format
-    contents = create_contents(history)
+    config = types.GenerateContentConfig(
+        system_instruction=agent_config['system_prompt']
+    )
+    # Create contents with the plan
+    contents = [types.Content(
+        role="user", parts=[types.Part(text=plan)]
+    )]
     response = create_response(client, "gemini-2.5-flash", contents, config)
     python_code = response.candidates[-1].content.parts[-1].text
     

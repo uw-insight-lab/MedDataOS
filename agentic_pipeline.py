@@ -7,15 +7,20 @@ from prompts import SYSTEM_INSTRUCTION, INITIAL_QUERY
 from agent_executors import execute_agent
 from prompts import PREPARATION_AGENT_SYSTEM_PROMPT, ANALYSIS_AGENT_SYSTEM_PROMPT, REPORT_AGENT_PROMPT
 from genai_setup import create_client, create_config, create_contents
+from google.genai import types
 
 # ---------------------
 
 client = create_client()
 # Pass tools as a list
 config = create_config(tools, SYSTEM_INSTRUCTION)
-# Define history
-# Pass in correct format
+# Initialize conversation history
+history = []
 contents = create_contents(history)
+# Add initial query to contents
+contents.append(types.Content(
+    role="user", parts=[types.Part(text=INITIAL_QUERY)]
+))
 log_user(INITIAL_QUERY)
 
 response = client.models.generate_content(
