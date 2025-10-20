@@ -1,7 +1,15 @@
-/archive
-/preparation_agent
-/analysis_agent
-/visualization_agent
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+
 # Environment files
 .env
 .env.local
@@ -9,19 +17,20 @@
 .env.test.local
 .env.production.local
 
-# Node.js dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Workspace - agent working directories
+workspace/
 
-# Generated files
-preparation_agent/script.js
-preparation_agent/output_dataset.csv
-analysis_agent/script.js
-analysis_agent/model.json
-visualization_agent/script.js
-visualization_agent/insight.png
+# Outputs - final artifacts
+outputs/
+
+# Shared knowledge
+shared_knowledge.xml
+
+# Old agent directories (legacy)
+/preparation_agent
+/analysis_agent
+/visualization_agent
+/report_agent
 
 # Logs
 logs

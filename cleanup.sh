@@ -1,32 +1,40 @@
 #!/bin/bash
-echo "🧹 Starting cleanup process..."
 
-# Clean analysis_agent folder completely
-echo "  → Cleaning analysis_agent folder..."
-rm -rf analysis_agent/*
+# Cleanup script for multi-agent-system project
+# Removes Python cache, temporary files, and build artifacts
 
-# Clean report_agent folder completely  
-echo "  → Cleaning report_agent folder..."
-rm -rf report_agent/*
+echo "🧹 Cleaning up project..."
 
-# Clean preparation_agent folder but keep input_dataset.csv
-echo "  → Cleaning preparation_agent folder (keeping input_dataset.csv)..."
-find preparation_agent -type f ! -name "input_dataset.csv" -delete
-find preparation_agent -type d -mindepth 1 -delete
+# Remove Python cache directories
+echo "  → Removing __pycache__ directories..."
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
 
-# Remove __pycache__ folders
-echo "  → Removing __pycache__ folders..."
-find . -type d -name "__pycache__" -exec rm -rf {} +
+# Remove Python bytecode files
+echo "  → Removing .pyc, .pyo, .pyd files..."
+find . -type f -name "*.pyc" -delete 2>/dev/null
+find . -type f -name "*.pyo" -delete 2>/dev/null
+find . -type f -name "*.pyd" -delete 2>/dev/null
 
-# Empty shared_knowledge.xml file
-echo "  → Emptying shared_knowledge.xml..."
-> shared_knowledge.xml
+# Remove Python egg info
+echo "  → Removing .egg-info directories..."
+find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null
 
-echo "✅ Cleanup completed successfully!"
-echo ""
-echo "Summary:"
-echo "  - analysis_agent/: All files removed"
-echo "  - report_agent/: All files removed" 
-echo "  - preparation_agent/: All files removed except input_dataset.csv"
-echo "  - __pycache__/: All cache folders removed"
-echo "  - shared_knowledge.xml: Emptied"
+# Remove pytest cache
+echo "  → Removing pytest cache..."
+find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null
+
+# Remove mypy cache
+echo "  → Removing mypy cache..."
+find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null
+
+# Remove build directories
+echo "  → Removing build directories..."
+rm -rf build/ dist/ 2>/dev/null
+
+# Remove .DS_Store files (macOS)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "  → Removing .DS_Store files..."
+    find . -name ".DS_Store" -delete 2>/dev/null
+fi
+
+echo "✓ Cleanup complete!"

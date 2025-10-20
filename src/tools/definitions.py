@@ -1,14 +1,18 @@
+"""
+Tool definitions for Gemini function calling.
+Defines the interface for all specialized agents in the system.
+"""
 from google.genai import types
 
 prepare_data_for_analysis = {
     "name": "prepare_data_for_analysis",
-    "description": "Write python scipt to execute preparation plan of what should be done with dataset",
+    "description": "Write python script to execute preparation plan of what should be done with dataset",
     "parameters": {
         "type": "object",
         "properties": {
             "preparation_plan": {
                 "type": "string",
-                "description": "Provide comprehensive preparation plan for the given dataset to make it ready for the futher data analysis. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
+                "description": "Provide comprehensive preparation plan for the given dataset to make it ready for the further data analysis. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
             }
         },
         "required": ["preparation_plan"]
@@ -61,4 +65,9 @@ classify_chest_xray = {
 }
 
 # Create a tools configuration for Gemini
-tools = types.Tool(function_declarations=[prepare_data_for_analysis, prepare_analysis, generate_analysis_report, classify_chest_xray]) 
+tools = types.Tool(function_declarations=[
+    prepare_data_for_analysis,
+    prepare_analysis,
+    generate_analysis_report,
+    classify_chest_xray
+])

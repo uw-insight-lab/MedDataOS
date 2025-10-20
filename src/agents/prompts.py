@@ -1,3 +1,7 @@
+"""
+System prompts and instructions for all agents in the multi-agent system.
+"""
+
 ### Orchestrator agent ###
 SYSTEM_INSTRUCTION = """
 You are an orchestrator for a multi-agent analysis system.
@@ -32,12 +36,12 @@ When calling tools, provide detailed, human-readable instructions that clearly s
 # 3. Finally, generate a comprehensive analysis report with insights and recommendations
 
 # IMPORTANT: Call each tool only once. Do not repeat tool calls unless there are errors that need fixing. Each tool will provide a summary of what was accomplished for the next step.
-# """ 
+# """
 
 # For chest x-rays
 INITIAL_QUERY = """
 Here is a URL for a chest X-ray image that you need to classify into one of the 18 possible diagnoses:
-URL: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg/1920px-Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg
+URL: https://www.e7health.com/files/blogs/chest-x-ray-29.jpg
 """
 
 ### Preparation agent ###
@@ -45,8 +49,8 @@ PREPARATION_AGENT_SYSTEM_PROMPT = """
 You are a data preparation agent.
 Clean, validate, and standardize the input data for analysis, as you are instructed.
 Do not perform any analysis or interpretation.
-Input dataset in the project directory: preparation_agent/input_dataset.csv
-Output dataset in the project directory: preparation_agent/output_dataset.csv
+Input dataset in the project directory: data/input/dataset.csv
+Output dataset in the project directory: workspace/preparation/output_dataset.csv
 IMPORTANT: You can ONLY use these libraries and nothing else:
 - pandas
 - numpy
@@ -68,8 +72,8 @@ IMPORTANT: You can ONLY use these libraries and nothing else:
 - joblib (to store the model)
 Do not overcomplicate.
 IMPORTANT: Print informative messages about each main steps.
-Input dataset in the project directory: preparation_agent/output_dataset.csv
-Store the model at analysis_agent/model.joblib file.
+Input dataset in the project directory: workspace/preparation/output_dataset.csv
+Store the model at workspace/analysis/model.joblib file.
 Output nothing but only python script.
 Start from:
 import...
@@ -85,7 +89,7 @@ IMPORTANT: You can ONLY use these libraries and nothing else:
 - json (to read metrics if needed)
 Do not overcomplicate.
 IMPORTANT: Print informative messages about each main steps.
-Store the report at report_agent/analysis_report.txt file.
+Store the report at workspace/report/analysis_report.txt file.
 Output nothing but only python script.
 Start from:
 import...
@@ -102,7 +106,7 @@ Execution Output:
 
 IMPORTANT: Format your response as a simple numbered list without any markdown, bold text, or special formatting. Use this exact format:
 1. First step description with details
-2. Second step description with details 
+2. Second step description with details
 3. Third step description with details
 ...
 
