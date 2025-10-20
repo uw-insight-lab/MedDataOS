@@ -16,13 +16,16 @@ from src.agents.prompts import (
 from src.core.gemini_client import create_client, create_config, create_contents
 
 
-def run_pipeline():
+def run_pipeline(user_query: str = None):
     """
     Execute the main orchestration pipeline.
 
+    Args:
+        user_query (str): User's query/task to execute. If None, uses INITIAL_QUERY from prompts.
+
     This function:
     1. Initializes the Gemini client and configuration
-    2. Processes the initial query
+    2. Processes the user query
     3. Loops through tool calls, executing specialized agents
     4. Logs all interactions
     """
@@ -33,11 +36,14 @@ def run_pipeline():
     history = []
     contents = create_contents(history)
 
-    # Add initial query to contents
+    # Use provided query or default to INITIAL_QUERY
+    query = user_query if user_query else INITIAL_QUERY
+
+    # Add query to contents
     contents.append(types.Content(
-        role="user", parts=[types.Part(text=INITIAL_QUERY)]
+        role="user", parts=[types.Part(text=query)]
     ))
-    log_user(INITIAL_QUERY)
+    log_user(query)
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
