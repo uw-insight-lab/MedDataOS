@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
     <div class="container">
@@ -25,34 +25,30 @@
         </header>
 
         <main>
-            <div class="query-panel">
+            <div class="chat-panel">
                 <div class="panel-header">
-                    <h2>Task Input</h2>
-                </div>
-                <div class="query-input-container">
-                    <textarea
-                        id="query-input"
-                        placeholder="Enter your medical data analysis task (e.g., 'Analyze chest X-ray from URL: https://example.com/xray.jpg' or 'Prepare and analyze patient dataset for survival prediction')"
-                        rows="3"
-                    ></textarea>
-                    <button id="execute-btn" class="btn-execute">
-                        <span class="btn-text">Execute Analysis</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="execution-panel">
-                <div class="panel-header">
-                    <h2>Execution Log</h2>
+                    <h2>Chat</h2>
                     <button id="clear-btn" class="btn-clear">Clear</button>
                 </div>
-                <div class="logs-container" id="logs-container">
-                    <!-- Logs will be added here dynamically -->
+
+                <div class="chat-container" id="chat-container">
+                    <!-- Chat messages will be added here dynamically -->
+                </div>
+
+                <div class="chat-input-container">
+                    <textarea
+                        id="message-input"
+                        placeholder="Ask me to analyze medical data, prepare datasets, or generate reports..."
+                        rows="2"
+                    ></textarea>
+                    <button id="send-btn" class="btn-send" disabled>
+                        <span class="btn-text">Send</span>
+                    </button>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=2"></script>
 </body>
 </html>

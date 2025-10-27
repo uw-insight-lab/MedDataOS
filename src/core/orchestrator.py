@@ -16,30 +16,38 @@ from src.agents.prompts import (
 from src.core.gemini_client import create_client, create_config, create_contents
 
 
-def run_pipeline(user_query: str = None):
+def run_pipeline(user_query: str = None, conversation_history: list = None):
     """
     Execute the main orchestration pipeline.
 
     Args:
         user_query (str): User's query/task to execute. If None, uses INITIAL_QUERY from prompts.
+        conversation_history (list): Optional conversation history in format:
+            [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
 
     This function:
     1. Initializes the Gemini client and configuration
-    2. Processes the user query
+    2. Processes the user query with conversation context
     3. Loops through tool calls, executing specialized agents
     4. Logs all interactions
     """
     client = create_client()
     config = create_config(tools, SYSTEM_INSTRUCTION)
 
-    # Initialize conversation history
-    history = []
-    contents = create_contents(history)
+    # Convert conversation history to Gemini format
+    contents = []
+    if conversation_history:
+        for msg in conversation_history[:-1]:  # All except last (current) message
+            role = "user" if msg["role"] == "user" else "model"
+            contents.append(types.Content(
+                role=role,
+                parts=[types.Part(text=msg["content"])]
+            ))
 
     # Use provided query or default to INITIAL_QUERY
     query = user_query if user_query else INITIAL_QUERY
 
-    # Add query to contents
+    # Add current query to contents
     contents.append(types.Content(
         role="user", parts=[types.Part(text=query)]
     ))
@@ -130,4 +138,8 @@ def run_pipeline(user_query: str = None):
         else:
             tool_call = None
 
-    log_assistant(response.candidates[-1].content.parts[-1].text)
+    # Get final assistant response
+    final_response = response.candidates[-1].content.parts[-1].text
+    log_assistant(final_response)
+
+    return final_response

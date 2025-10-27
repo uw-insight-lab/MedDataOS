@@ -1,13 +1,17 @@
 // WebSocket connection
 let ws = null;
 
+// Session management
+let sessionId = localStorage.getItem('meddata_session_id') || null;
+let isProcessing = false;
+
 // DOM elements
-const logsContainer = document.getElementById('logs-container');
+const chatContainer = document.getElementById('chat-container');
 const connectionStatus = document.getElementById('connection-status');
 const connectionText = document.getElementById('connection-text');
-const executeBtn = document.getElementById('execute-btn');
+const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
-const queryInput = document.getElementById('query-input');
+const messageInput = document.getElementById('message-input');
 
 // Connect to WebSocket
 function connectWebSocket() {
@@ -19,19 +23,18 @@ function connectWebSocket() {
     ws.onopen = () => {
         console.log('WebSocket connected');
         updateConnectionStatus(true);
+        updateSendButton();
     };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        // Only add actual log entries, skip system connection messages
-        if (data.type !== 'system' || data.message.includes('Query') || data.message.includes('Response')) {
-            addLogEntry(data);
-        }
+        handleWebSocketMessage(data);
     };
 
     ws.onclose = () => {
         console.log('WebSocket disconnected');
         updateConnectionStatus(false);
+        updateSendButton();
         // Attempt to reconnect after 3 seconds
         setTimeout(connectWebSocket, 3000);
     };
@@ -39,6 +42,26 @@ function connectWebSocket() {
     ws.onerror = (error) => {
         console.error('WebSocket error:', error);
     };
+}
+
+// Handle WebSocket messages
+function handleWebSocketMessage(data) {
+    // Skip initial connection messages
+    if (data.type === 'system' && data.message === 'Connected to MedDataOS Monitor') {
+        return;
+    }
+
+    // Add detailed log entries below the current chat messages
+    addLogEntry(data);
+
+    // If this is an assistant message, check if processing is complete
+    if (data.type === 'assistant') {
+        isProcessing = false;
+        updateSendButton();
+
+        // Add assistant response to chat
+        addChatMessage('assistant', data.message);
+    }
 }
 
 // Update connection status UI
@@ -52,7 +75,32 @@ function updateConnectionStatus(connected) {
     }
 }
 
-// Add log entry to the UI
+// Update send button state
+function updateSendButton() {
+    const isConnected = ws && ws.readyState === WebSocket.OPEN;
+    const hasMessage = messageInput.value.trim().length > 0;
+    sendBtn.disabled = !isConnected || isProcessing || !hasMessage;
+}
+
+// Add chat message to UI
+function addChatMessage(role, content) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role}`;
+
+    const label = role === 'user' ? 'You' : 'MedDataOS';
+
+    messageDiv.innerHTML = `
+        <div class="message-header">${escapeHtml(label)}</div>
+        <div class="message-bubble">
+            <div class="message-content">${escapeHtml(content)}</div>
+        </div>
+    `;
+
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+// Add detailed log entry (for WebSocket streaming logs)
 function addLogEntry(data) {
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry ${data.type}`;
@@ -68,10 +116,13 @@ function addLogEntry(data) {
         <div class="log-message">${escapeHtml(data.message)}</div>
     `;
 
-    logsContainer.appendChild(logEntry);
+    chatContainer.appendChild(logEntry);
+    scrollToBottom();
+}
 
-    // Auto-scroll to bottom
-    logsContainer.scrollTop = logsContainer.scrollHeight;
+// Scroll to bottom of chat
+function scrollToBottom() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 // Format timestamp
@@ -88,61 +139,84 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Clear logs
-function clearLogs() {
-    logsContainer.innerHTML = '';
+// Clear chat
+function clearChat() {
+    chatContainer.innerHTML = '';
+    // Clear session and start fresh
+    sessionId = null;
+    localStorage.removeItem('meddata_session_id');
 }
 
-// Execute analysis
-async function executeAnalysis() {
-    const query = queryInput.value.trim();
+// Send message
+async function sendMessage() {
+    const message = messageInput.value.trim();
 
-    if (!query) {
-        alert('Please enter a task description');
+    if (!message) {
         return;
     }
 
-    executeBtn.disabled = true;
-    const originalText = executeBtn.querySelector('.btn-text').textContent;
-    executeBtn.querySelector('.btn-text').textContent = 'Executing...';
+    // Disable input while processing
+    isProcessing = true;
+    updateSendButton();
+    messageInput.disabled = true;
+
+    // Add user message to chat immediately
+    addChatMessage('user', message);
+
+    // Clear input
+    messageInput.value = '';
 
     try {
-        const response = await fetch('/api/start', {
+        const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ query })
+            body: JSON.stringify({
+                session_id: sessionId,
+                message: message
+            })
         });
 
         const result = await response.json();
 
-        if (result.status === 'started') {
-            // Query will be logged via WebSocket
-            queryInput.value = '';
+        if (result.status === 'processing') {
+            // Store session ID
+            if (result.session_id) {
+                sessionId = result.session_id;
+                localStorage.setItem('meddata_session_id', sessionId);
+            }
+            // Response will come via WebSocket
         } else if (result.status === 'error') {
-            alert(result.message || 'Failed to start analysis');
+            alert(result.message || 'Failed to send message');
+            isProcessing = false;
+            updateSendButton();
         }
     } catch (error) {
-        console.error('Error starting analysis:', error);
+        console.error('Error sending message:', error);
         alert('Failed to communicate with server');
+        isProcessing = false;
+        updateSendButton();
     } finally {
-        setTimeout(() => {
-            executeBtn.disabled = false;
-            executeBtn.querySelector('.btn-text').textContent = originalText;
-        }, 2000);
+        messageInput.disabled = false;
+        messageInput.focus();
     }
 }
 
 // Event listeners
-executeBtn.addEventListener('click', executeAnalysis);
-clearBtn.addEventListener('click', clearLogs);
+sendBtn.addEventListener('click', sendMessage);
+clearBtn.addEventListener('click', clearChat);
 
-// Allow Enter key to submit (with Shift+Enter for new line)
-queryInput.addEventListener('keydown', (e) => {
+// Update send button when typing
+messageInput.addEventListener('input', updateSendButton);
+
+// Allow Enter key to send (with Shift+Enter for new line)
+messageInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        executeAnalysis();
+        if (!sendBtn.disabled) {
+            sendMessage();
+        }
     }
 });
 

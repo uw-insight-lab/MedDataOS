@@ -18,6 +18,8 @@ from fastapi.responses import FileResponse
 import uvicorn
 import asyncio
 import threading
+from uuid import uuid4
+from typing import Optional
 
 from src.utils.logging import WebSocketManager, set_websocket_manager
 from src.core.orchestrator import run_pipeline
@@ -30,6 +32,9 @@ _server = None
 # Initialize WebSocket manager
 ws_manager = WebSocketManager()
 set_websocket_manager(ws_manager)
+
+# Session storage (in-memory, persists until server restart)
+sessions = {}  # session_id -> {"history": [...], "processing": bool}
 
 # Serve static files (frontend)
 frontend_path = Path(__file__).parent.parent / "frontend"
@@ -89,12 +94,96 @@ async def start_pipeline(request: dict):
     return {"status": "started", "query": user_query}
 
 
+@app.post("/api/chat")
+async def chat(request: dict):
+    """
+    Chat endpoint with session management.
+
+    Request:
+        {
+            "session_id": "optional-uuid",
+            "message": "user message"
+        }
+
+    Response:
+        {
+            "session_id": "uuid",
+            "status": "processing" | "error"
+        }
+    """
+    message = request.get("message", "").strip()
+    session_id = request.get("session_id")
+
+    if not message:
+        return {"status": "error", "message": "Message is required"}
+
+    # Create new session if not provided or doesn't exist
+    if not session_id or session_id not in sessions:
+        session_id = str(uuid4())
+        sessions[session_id] = {
+            "history": [],
+            "processing": False
+        }
+
+    session = sessions[session_id]
+
+    # Reject concurrent requests for the same session
+    if session["processing"]:
+        return {
+            "status": "error",
+            "message": "Session is currently processing a request. Please wait.",
+            "session_id": session_id
+        }
+
+    # Mark session as processing
+    session["processing"] = True
+
+    # Add user message to history
+    session["history"].append({"role": "user", "content": message})
+
+    # Run pipeline in background with conversation history
+    def run_in_thread():
+        try:
+            assistant_response = run_pipeline(message, conversation_history=session["history"])
+            # Add assistant response to history
+            if assistant_response:
+                session["history"].append({"role": "assistant", "content": assistant_response})
+        finally:
+            # Mark session as no longer processing
+            session["processing"] = False
+
+    thread = threading.Thread(target=run_in_thread, daemon=True)
+    thread.start()
+
+    return {
+        "status": "processing",
+        "session_id": session_id
+    }
+
+
+@app.get("/api/session/{session_id}")
+async def get_session(session_id: str):
+    """Get session information for debugging."""
+    if session_id not in sessions:
+        return {"status": "error", "message": "Session not found"}
+
+    session = sessions[session_id]
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "message_count": len(session["history"]),
+        "processing": session["processing"],
+        "history": session["history"]
+    }
+
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "active_connections": len(ws_manager.active_connections)
+        "active_connections": len(ws_manager.active_connections),
+        "active_sessions": len(sessions)
     }
 
 
