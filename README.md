@@ -5,7 +5,7 @@ A multi-agent AI system for automated medical data analysis using Google's Gemin
 ## Features
 
 - **Interactive Chat Interface** - Web-based UI with real-time execution streaming
-- **File Upload Support** - Upload .xlsx files for automated analysis
+- **File Upload Support** - Upload CSV or Excel files for automated analysis
 - **Multi-Agent Pipeline** - Specialized agents for preparation, analysis, and reporting
 - **Session Management** - Persistent conversation history across page refreshes
 - **Real-time Logs** - WebSocket streaming of agent execution details
@@ -138,7 +138,7 @@ Type a message and press Send or Enter:
 ### 2. File Upload + Analysis
 
 1. Click the **📎 attach button**
-2. Select an `.xlsx` file (Excel format only)
+2. Select a CSV or Excel file (`.csv` or `.xlsx` format)
 3. Type your request:
    ```
    "Analyze this patient data and predict survival outcomes"
@@ -236,7 +236,7 @@ Main chat endpoint with file upload support
 **Request** (multipart/form-data):
 - `message` (required) - User message
 - `session_id` (optional) - Session UUID
-- `file` (optional) - .xlsx file upload
+- `file` (optional) - CSV or Excel file upload (.csv or .xlsx)
 
 **Response**:
 ```json
@@ -316,9 +316,9 @@ lsof -ti :8080 | xargs kill -9
 - Try incognito/private window
 
 ### File upload fails
-- Ensure file is `.xlsx` format (not `.xls` or `.csv`)
+- Ensure file is CSV (`.csv`) or Excel (`.xlsx`) format
 - Check file size (FastAPI default limit: 16MB)
-- Verify `python-multipart` is installed
+- Verify `python-multipart` and `openpyxl` are installed
 
 ### Agent execution fails
 - Check `workspace/{agent}/generated_script.py` for errors

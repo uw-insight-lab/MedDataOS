@@ -102,8 +102,9 @@ function handleFileSelect(event) {
     if (!file) return;
 
     // Validate file type
-    if (!file.name.toLowerCase().endsWith('.xlsx')) {
-        alert('Only .xlsx files are allowed');
+    const fileNameLower = file.name.toLowerCase();
+    if (!fileNameLower.endsWith('.csv') && !fileNameLower.endsWith('.xlsx')) {
+        alert('Only CSV and Excel (.csv, .xlsx) files are allowed');
         fileInput.value = '';
         return;
     }

@@ -143,10 +143,10 @@ async def chat(
     file_path = None
     if file:
         # Validate file extension
-        if not file.filename.lower().endswith('.xlsx'):
+        if not file.filename.lower().endswith(('.csv', '.xlsx')):
             return {
                 "status": "error",
-                "message": "Only .xlsx files are allowed",
+                "message": "Only CSV and Excel (.csv, .xlsx) files are allowed",
                 "session_id": session_id
             }
 
