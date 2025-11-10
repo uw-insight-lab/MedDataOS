@@ -17,4 +17,15 @@
 8. The constructed report content was saved to the file "workspace/report/analysis_report.txt".
 9. A confirmation message was printed indicating that the report was successfully generated and saved.
 </report>
+  <preparation>
+1. The dataset was loaded from the specified Excel file, '/Users/maksymbidnyi/Downloads/MedDataOS/data/input/87fa413c-b8b8-4060-a96a-ad317aaeb298_input_dataset.xlsx'.
+2. The dataset's structure was inspected, displaying the first 5 rows, column names, data types (1 float64, 11 object), and overall shape (101 rows, 12 columns).
+3. Missing values were handled: 1 missing value in the numerical column 'input_dataset' was imputed with its mean (1559.01), and 6 missing values in the categorical column 'Unnamed: 7' were imputed with its mode ('Base of Tongue'). All missing values were successfully addressed.
+4. No duplicate rows were found in the dataset.
+5. One-Hot Encoding was applied to 11 identified categorical columns ('Unnamed: 1' through 'Unnamed: 11'), increasing the total number of columns from 12 to 271.
+6. The numerical column 'input_dataset' was standardized using Z-score normalization.
+7. No string columns remained after encoding for whitespace stripping; general consistency checks were noted but no specific string cleaning was performed.
+8. Potential outliers in the numerical column 'input_dataset' were checked using the IQR method, and no significant outliers were detected. No outlier removal was performed.
+9. The prepared dataset was saved to 'workspace/preparation/output_dataset.csv'. The final dataset has a shape of 101 rows and 271 columns.
+</preparation>
 </shared_knowledge>

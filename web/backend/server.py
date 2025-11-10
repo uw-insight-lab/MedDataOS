@@ -12,7 +12,7 @@ import socket
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
@@ -20,6 +20,7 @@ import asyncio
 import threading
 from uuid import uuid4
 from typing import Optional
+import shutil
 
 from src.utils.logging import WebSocketManager, set_websocket_manager
 from src.core.orchestrator import run_pipeline
@@ -95,15 +96,18 @@ async def start_pipeline(request: dict):
 
 
 @app.post("/api/chat")
-async def chat(request: dict):
+async def chat(
+    message: str = Form(...),
+    session_id: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None)
+):
     """
-    Chat endpoint with session management.
+    Chat endpoint with session management and file upload support.
 
-    Request:
-        {
-            "session_id": "optional-uuid",
-            "message": "user message"
-        }
+    Form Data:
+        message: str - User message
+        session_id: str (optional) - Session UUID
+        file: UploadFile (optional) - .xlsx file upload
 
     Response:
         {
@@ -111,8 +115,7 @@ async def chat(request: dict):
             "status": "processing" | "error"
         }
     """
-    message = request.get("message", "").strip()
-    session_id = request.get("session_id")
+    message = message.strip()
 
     if not message:
         return {"status": "error", "message": "Message is required"}
@@ -122,7 +125,8 @@ async def chat(request: dict):
         session_id = str(uuid4())
         sessions[session_id] = {
             "history": [],
-            "processing": False
+            "processing": False,
+            "uploaded_file": None
         }
 
     session = sessions[session_id]
@@ -135,16 +139,55 @@ async def chat(request: dict):
             "session_id": session_id
         }
 
+    # Handle file upload
+    file_path = None
+    if file:
+        # Validate file extension
+        if not file.filename.lower().endswith('.xlsx'):
+            return {
+                "status": "error",
+                "message": "Only .xlsx files are allowed",
+                "session_id": session_id
+            }
+
+        # Create upload directory if it doesn't exist
+        upload_dir = project_root / "data" / "input"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save file with session-specific name
+        file_path = upload_dir / f"{session_id}_{file.filename}"
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            # Store file path in session
+            session["uploaded_file"] = str(file_path)
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Failed to save file: {str(e)}",
+                "session_id": session_id
+            }
+        finally:
+            file.file.close()
+
     # Mark session as processing
     session["processing"] = True
 
     # Add user message to history
-    session["history"].append({"role": "user", "content": message})
+    user_message = message
+    if file:
+        user_message += f"\n[Uploaded file: {file.filename}]"
+    session["history"].append({"role": "user", "content": user_message})
 
-    # Run pipeline in background with conversation history
+    # Run pipeline in background with conversation history and file
     def run_in_thread():
         try:
-            assistant_response = run_pipeline(message, conversation_history=session["history"])
+            assistant_response = run_pipeline(
+                message,
+                conversation_history=session["history"],
+                uploaded_file=session.get("uploaded_file")
+            )
             # Add assistant response to history
             if assistant_response:
                 session["history"].append({"role": "assistant", "content": assistant_response})

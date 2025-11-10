@@ -4,6 +4,7 @@ let ws = null;
 // Session management
 let sessionId = localStorage.getItem('meddata_session_id') || null;
 let isProcessing = false;
+let attachedFile = null;
 
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
@@ -12,6 +13,11 @@ const connectionText = document.getElementById('connection-text');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
 const messageInput = document.getElementById('message-input');
+const attachBtn = document.getElementById('attach-btn');
+const fileInput = document.getElementById('file-input');
+const fileAttachment = document.getElementById('file-attachment');
+const fileName = document.getElementById('file-name');
+const fileRemove = document.getElementById('file-remove');
 
 // Connect to WebSocket
 function connectWebSocket() {
@@ -80,6 +86,32 @@ function updateSendButton() {
     const isConnected = ws && ws.readyState === WebSocket.OPEN;
     const hasMessage = messageInput.value.trim().length > 0;
     sendBtn.disabled = !isConnected || isProcessing || !hasMessage;
+    attachBtn.disabled = !isConnected || isProcessing;
+}
+
+// Handle file selection
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+        alert('Only .xlsx files are allowed');
+        fileInput.value = '';
+        return;
+    }
+
+    attachedFile = file;
+    fileName.textContent = file.name;
+    fileAttachment.style.display = 'flex';
+}
+
+// Remove attached file
+function removeFile() {
+    attachedFile = null;
+    fileInput.value = '';
+    fileAttachment.style.display = 'none';
+    fileName.textContent = '';
 }
 
 // Add chat message to UI
@@ -145,6 +177,8 @@ function clearChat() {
     // Clear session and start fresh
     sessionId = null;
     localStorage.removeItem('meddata_session_id');
+    // Clear attached file
+    removeFile();
 }
 
 // Send message
@@ -159,23 +193,34 @@ async function sendMessage() {
     isProcessing = true;
     updateSendButton();
     messageInput.disabled = true;
+    attachBtn.disabled = true;
+
+    // Build display message
+    let displayMessage = message;
+    if (attachedFile) {
+        displayMessage += `\n\n📎 Attached: ${attachedFile.name}`;
+    }
 
     // Add user message to chat immediately
-    addChatMessage('user', message);
+    addChatMessage('user', displayMessage);
 
     // Clear input
     messageInput.value = '';
 
     try {
+        // Prepare request body
+        const formData = new FormData();
+        formData.append('message', message);
+        if (sessionId) {
+            formData.append('session_id', sessionId);
+        }
+        if (attachedFile) {
+            formData.append('file', attachedFile);
+        }
+
         const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                session_id: sessionId,
-                message: message
-            })
+            body: formData
         });
 
         const result = await response.json();
@@ -186,6 +231,8 @@ async function sendMessage() {
                 sessionId = result.session_id;
                 localStorage.setItem('meddata_session_id', sessionId);
             }
+            // Clear attached file after successful send
+            removeFile();
             // Response will come via WebSocket
         } else if (result.status === 'error') {
             alert(result.message || 'Failed to send message');
@@ -206,6 +253,9 @@ async function sendMessage() {
 // Event listeners
 sendBtn.addEventListener('click', sendMessage);
 clearBtn.addEventListener('click', clearChat);
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', handleFileSelect);
+fileRemove.addEventListener('click', removeFile);
 
 // Update send button when typing
 messageInput.addEventListener('input', updateSendButton);

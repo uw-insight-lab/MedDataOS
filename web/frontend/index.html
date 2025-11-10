@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
     <div class="container">
@@ -36,19 +36,31 @@
                 </div>
 
                 <div class="chat-input-container">
-                    <textarea
-                        id="message-input"
-                        placeholder="Ask me to analyze medical data, prepare datasets, or generate reports..."
-                        rows="2"
-                    ></textarea>
-                    <button id="send-btn" class="btn-send" disabled>
-                        <span class="btn-text">Send</span>
-                    </button>
+                    <div class="input-wrapper">
+                        <div class="file-attachment" id="file-attachment" style="display: none;">
+                            <span class="file-name" id="file-name"></span>
+                            <button class="file-remove" id="file-remove" title="Remove file">×</button>
+                        </div>
+                        <div class="input-row">
+                            <input type="file" id="file-input" accept=".xlsx" style="display: none;">
+                            <button id="attach-btn" class="btn-attach" title="Attach .xlsx file">
+                                <span class="btn-icon">📎</span>
+                            </button>
+                            <textarea
+                                id="message-input"
+                                placeholder="Ask me to analyze medical data, prepare datasets, or generate reports..."
+                                rows="2"
+                            ></textarea>
+                            <button id="send-btn" class="btn-send" disabled>
+                                <span class="btn-text">Send</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="/static/app.js?v=2"></script>
+    <script src="/static/app.js?v=3"></script>
 </body>
 </html>

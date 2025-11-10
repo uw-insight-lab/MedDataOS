@@ -16,7 +16,7 @@ from src.agents.prompts import (
 from src.core.gemini_client import create_client, create_config, create_contents
 
 
-def run_pipeline(user_query: str = None, conversation_history: list = None):
+def run_pipeline(user_query: str = None, conversation_history: list = None, uploaded_file: str = None):
     """
     Execute the main orchestration pipeline.
 
@@ -24,6 +24,7 @@ def run_pipeline(user_query: str = None, conversation_history: list = None):
         user_query (str): User's query/task to execute. If None, uses INITIAL_QUERY from prompts.
         conversation_history (list): Optional conversation history in format:
             [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+        uploaded_file (str): Optional path to uploaded .xlsx file for analysis
 
     This function:
     1. Initializes the Gemini client and configuration
@@ -32,7 +33,19 @@ def run_pipeline(user_query: str = None, conversation_history: list = None):
     4. Logs all interactions
     """
     client = create_client()
-    config = create_config(tools, SYSTEM_INSTRUCTION)
+
+    # Modify system instruction if file is uploaded
+    system_instruction = SYSTEM_INSTRUCTION
+    if uploaded_file:
+        system_instruction = f"""{SYSTEM_INSTRUCTION}
+
+IMPORTANT: The user has uploaded a file at: {uploaded_file}
+This file should be used as input for the data preparation agent.
+You MUST call the prepare_data_for_analysis tool first to process this uploaded file.
+After preparation, proceed with prepare_analysis and generate_analysis_report tools.
+"""
+
+    config = create_config(tools, system_instruction)
 
     # Convert conversation history to Gemini format
     contents = []
@@ -46,6 +59,17 @@ def run_pipeline(user_query: str = None, conversation_history: list = None):
 
     # Use provided query or default to INITIAL_QUERY
     query = user_query if user_query else INITIAL_QUERY
+
+    # Enhance query with file information if provided
+    if uploaded_file:
+        query = f"""{query}
+
+UPLOADED FILE: {uploaded_file}
+Please analyze this uploaded dataset by:
+1. Preparing and cleaning the data
+2. Performing analysis
+3. Generating a comprehensive report
+"""
 
     # Add current query to contents
     contents.append(types.Content(
