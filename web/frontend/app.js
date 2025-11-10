@@ -129,10 +129,21 @@ function addChatMessage(role, content) {
 
     const label = role === 'user' ? 'You' : 'MedDataOS';
 
+    // Render markdown for assistant messages, plain text for user messages
+    let messageContent;
+    if (role === 'assistant') {
+        // Parse markdown and sanitize for security
+        const rawHtml = marked.parse(content);
+        messageContent = DOMPurify.sanitize(rawHtml);
+    } else {
+        // User messages stay as plain text
+        messageContent = escapeHtml(content);
+    }
+
     messageDiv.innerHTML = `
         <div class="message-header">${escapeHtml(label)}</div>
         <div class="message-bubble">
-            <div class="message-content">${escapeHtml(content)}</div>
+            <div class="message-content">${messageContent}</div>
         </div>
     `;
 
@@ -140,17 +151,44 @@ function addChatMessage(role, content) {
     scrollToBottom();
 }
 
+// Map tool names to friendly agent names
+const agentNameMap = {
+    'prepare_data_for_analysis': 'Preparation Agent',
+    'prepare_analysis': 'Analysis Agent',
+    'generate_analysis_report': 'Report Agent',
+    'classify_chest_xray': 'Chest X-Ray Agent'
+};
+
+// Track the last agent that was called
+let lastAgentName = '';
+
 // Add detailed log entry (for WebSocket streaming logs)
 function addLogEntry(data) {
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry ${data.type}`;
 
     const timestamp = formatTimestamp(data.timestamp);
-    const header = data.header || data.type.replace('_', ' ').toUpperCase();
+
+    // Determine title based on type
+    let title = '';
+    let icon = '';
+
+    if (data.type === 'tool_call') {
+        // Extract tool name from header or message
+        const toolName = data.header || data.message.split(':')[0] || '';
+        const agentName = agentNameMap[toolName.trim()] || toolName;
+        lastAgentName = agentName; // Track for matching with result
+        icon = '🤖';
+        title = `${icon} ${agentName}: Executing`;
+    } else if (data.type === 'tool_result') {
+        // Use the last agent name that was called
+        icon = '✅';
+        title = `${icon} ${lastAgentName}: Completed`;
+    }
 
     logEntry.innerHTML = `
         <div class="log-header">
-            <span class="log-title">${escapeHtml(header)}</span>
+            <span class="log-title">${escapeHtml(title)}</span>
             <span class="log-timestamp">${timestamp}</span>
         </div>
         <div class="log-message">${escapeHtml(data.message)}</div>
