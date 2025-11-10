@@ -57,16 +57,23 @@ function handleWebSocketMessage(data) {
         return;
     }
 
-    // Add detailed log entries below the current chat messages
-    addLogEntry(data);
-
-    // If this is an assistant message, check if processing is complete
+    // Handle assistant messages - show as chat bubble only
     if (data.type === 'assistant') {
         isProcessing = false;
         updateSendButton();
-
-        // Add assistant response to chat
         addChatMessage('assistant', data.message);
+        return;
+    }
+
+    // Skip user messages - already shown as chat bubble when sent
+    if (data.type === 'user') {
+        return;
+    }
+
+    // Show only tool execution logs (tool_call, tool_result)
+    // This shows the pipeline execution details without duplicating chat messages
+    if (data.type === 'tool_call' || data.type === 'tool_result') {
+        addLogEntry(data);
     }
 }
 
