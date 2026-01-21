@@ -108,7 +108,6 @@ def log_tool_call(name, input_data):
     header_map = {
         "prepare_data_for_analysis": "Data Preparation",
         "prepare_analysis": "Analysis Execution",
-        "generate_analysis_report": "Report Generation",
         "classify_chest_xray": "Chest X-Ray Classification"
     }
     header = header_map.get(name, name.replace("_", " ").title())
@@ -128,7 +127,7 @@ def write_agent_summary(agent_name, summary):
     Write execution summary for a specific agent to shared_knowledge.xml
 
     Args:
-        agent_name (str): Name of the agent (preparation, analysis, report)
+        agent_name (str): Name of the agent (preparation, analysis)
         summary (str): Summary text of what the agent accomplished
     """
     xml_file = "shared_knowledge.xml"

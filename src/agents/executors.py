@@ -9,12 +9,10 @@ import json
 
 from google.genai import types
 
-from src.utils.logging import log_assistant, write_agent_summary, read_agent_summary
+from src.utils.logging import log_assistant
 from src.agents.prompts import (
     PREPARATION_AGENT_SYSTEM_PROMPT,
-    ANALYSIS_AGENT_SYSTEM_PROMPT,
-    REPORT_AGENT_PROMPT,
-    SUMMARIZER_PROMPT
+    ANALYSIS_AGENT_SYSTEM_PROMPT
 )
 from src.core.gemini_client import create_client, create_response
 
@@ -52,48 +50,6 @@ def execute_python_file(file_path):
         return f"Unexpected error executing {file_path}\nError: {str(e)}"
 
 
-def summarize_steps(script_path, execution_output, agent_type):
-    """
-    Generate a summary of executed steps and save to XML.
-
-    Args:
-        script_path (str): Path to the executed script
-        execution_output (str): Output from script execution
-        agent_type (str): Type of agent (preparation, analysis, report)
-
-    Returns:
-        str: Generated summary or None if error
-    """
-    try:
-        # Read the executed script
-        with open(script_path, 'r') as f:
-            script_content = f.read()
-
-        prompt = SUMMARIZER_PROMPT.format(
-            script_content=script_content,
-            execution_output=execution_output
-        )
-
-        client = create_client()
-        contents = [types.Content(
-            role="user", parts=[types.Part(text=prompt)]
-        )]
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=contents
-        )
-        summary = response.candidates[-1].content.parts[-1].text
-        log_assistant(f"Steps summary: {summary}")
-
-        # Save summary to XML file
-        write_agent_summary(agent_type, summary)
-        return summary
-
-    except Exception as e:
-        log_assistant(f"Could not generate summary: {str(e)}")
-        return None
-
-
 def execute_agent(plan, agent_config):
     """
     Unified agent executor function.
@@ -115,7 +71,7 @@ def execute_agent(plan, agent_config):
     contents = [types.Content(
         role="user", parts=[types.Part(text=plan)]
     )]
-    response = create_response(client, "gemini-2.5-flash", contents, config)
+    response = create_response(client, "gemini-2.5-pro", contents, config)
     python_code = response.candidates[-1].content.parts[-1].text
 
     # Clean up code block markers if they exist
@@ -138,10 +94,9 @@ def execute_agent(plan, agent_config):
     execution_result = execute_python_file(script_path)
     log_assistant(f"Script execution result: {execution_result}")
 
-    # If successful, return summary; otherwise return error
+    # Return execution result directly (summarization removed for clarity)
     if execution_result.startswith("Successfully executed"):
-        summary = summarize_steps(script_path, execution_result, agent_config['agent_name'])
-        return summary if summary else execution_result
+        return f"{agent_config['agent_name'].title()} agent completed successfully"
     else:
         return execution_result
 
@@ -160,14 +115,6 @@ def execute_analysis_agent(analysis_plan):
     return execute_agent(analysis_plan, {
         'system_prompt': ANALYSIS_AGENT_SYSTEM_PROMPT,
         'agent_name': 'analysis'
-    })
-
-
-def execute_report_agent(report_plan):
-    """Execute the report generation agent."""
-    return execute_agent(report_plan, {
-        'system_prompt': REPORT_AGENT_PROMPT,
-        'agent_name': 'report'
     })
 
 

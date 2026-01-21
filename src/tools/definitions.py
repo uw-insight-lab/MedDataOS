@@ -34,21 +34,6 @@ prepare_analysis = {
     }
 }
 
-generate_analysis_report = {
-    "name": "generate_analysis_report",
-    "description": "Generate a comprehensive text report analyzing the model results and providing insights",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "report_plan": {
-                "type": "string",
-                "description": "Write python script to generate a comprehensive analysis report including model performance, feature insights, and recommendations. Format the plan as a simple numbered list without any markdown formatting, like: 1. First step description 2. Second step description 3. Third step description 4..."
-            }
-        },
-        "required": ["report_plan"]
-    }
-}
-
 classify_chest_xray = {
     "name": "classify_chest_xray",
     "description": "Analyzes chest X-ray images from URL to detect and classify 18 different pathological conditions using a pre-trained deep learning model. Returns probability scores for each pathology, high-confidence findings, summary statistics, and clinical interpretation-ready results.",
@@ -68,6 +53,5 @@ classify_chest_xray = {
 tools = types.Tool(function_declarations=[
     prepare_data_for_analysis,
     prepare_analysis,
-    generate_analysis_report,
     classify_chest_xray
 ])

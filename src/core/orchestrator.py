@@ -10,8 +10,7 @@ from src.agents.prompts import SYSTEM_INSTRUCTION, INITIAL_QUERY
 from src.agents.executors import execute_agent, execute_chest_xray_agent
 from src.agents.prompts import (
     PREPARATION_AGENT_SYSTEM_PROMPT,
-    ANALYSIS_AGENT_SYSTEM_PROMPT,
-    REPORT_AGENT_PROMPT
+    ANALYSIS_AGENT_SYSTEM_PROMPT
 )
 from src.core.gemini_client import create_client, create_config, create_contents
 
@@ -42,7 +41,7 @@ def run_pipeline(user_query: str = None, conversation_history: list = None, uplo
 IMPORTANT: The user has uploaded a file at: {uploaded_file}
 This file should be used as input for the data preparation agent.
 You MUST call the prepare_data_for_analysis tool first to process this uploaded file.
-After preparation, proceed with prepare_analysis and generate_analysis_report tools.
+After preparation, proceed with prepare_analysis tool if ML training is requested.
 """
 
     config = create_config(tools, system_instruction)
@@ -67,8 +66,7 @@ After preparation, proceed with prepare_analysis and generate_analysis_report to
 UPLOADED FILE: {uploaded_file}
 Please analyze this uploaded dataset by:
 1. Preparing and cleaning the data
-2. Performing analysis
-3. Generating a comprehensive report
+2. Performing analysis as requested
 """
 
     # Add current query to contents
@@ -78,7 +76,7 @@ Please analyze this uploaded dataset by:
     log_user(query)
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-pro",
         contents=contents,
         config=config
     )
@@ -99,11 +97,6 @@ Please analyze this uploaded dataset by:
                 'system_prompt': ANALYSIS_AGENT_SYSTEM_PROMPT,
                 'agent_name': 'analysis',
                 'plan_key': 'analysis_plan'
-            },
-            "generate_analysis_report": {
-                'system_prompt': REPORT_AGENT_PROMPT,
-                'agent_name': 'report',
-                'plan_key': 'report_plan'
             },
             "classify_chest_xray": {
                 'function': execute_chest_xray_agent,
@@ -147,7 +140,7 @@ Please analyze this uploaded dataset by:
         contents.append(types.Content(role="user", parts=[function_response_part]))
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-pro",
             contents=contents,
             config=config
         )

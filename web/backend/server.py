@@ -154,8 +154,9 @@ async def chat(
         upload_dir = project_root / "data" / "input"
         upload_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save file with session-specific name
-        file_path = upload_dir / f"{session_id}_{file.filename}"
+        # Save to standard location (overwrite if exists)
+        extension = '.csv' if file.filename.lower().endswith('.csv') else '.xlsx'
+        file_path = upload_dir / f"dataset{extension}"
         try:
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
