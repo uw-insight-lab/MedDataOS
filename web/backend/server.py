@@ -263,9 +263,13 @@ def kill_process_on_port(port: int):
         print(f"Could not kill process on port {port}: {e}")
 
 
-def start_server(host: str = "127.0.0.1", port: int = 8080):
+def start_server(host: str = None, port: int = None):
     """Start the FastAPI server with proper cleanup."""
     global _server
+
+    # Use environment variables with sensible defaults
+    host = host or os.getenv("HOST", "0.0.0.0")
+    port = port or int(os.getenv("PORT", "8080"))
 
     print(f"\n🌐 Starting MedDataOS Web Monitor...")
 

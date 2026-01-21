@@ -75,7 +75,7 @@ pip install -r requirements.txt
 
 This installs:
 - Core: `pandas`, `numpy`, `scikit-learn`, `joblib`
-- AI: `google-generativeai`, `langgraph`, `langchain`
+- AI: `google-genai`, `langgraph`, `langchain`
 - Web: `fastapi`, `uvicorn`, `websockets`, `python-multipart`
 - Utils: `python-dotenv`, `matplotlib`, `seaborn`, `openpyxl`
 

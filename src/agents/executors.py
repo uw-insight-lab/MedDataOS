@@ -16,6 +16,9 @@ from src.agents.prompts import (
 )
 from src.core.gemini_client import create_client, create_response
 
+# External service URLs (configurable via environment)
+CHEST_XRAY_SERVICE_URL = os.getenv("CHEST_XRAY_SERVICE_URL", "http://localhost:8000/classify/url")
+
 
 def execute_python_file(file_path):
     """
@@ -134,9 +137,9 @@ def execute_chest_xray_agent(image_url):
             "image_url": image_url
         }
 
-        # Send POST request to localhost:8000/classify/url
+        # Send POST request to chest X-ray classification service
         response = requests.post(
-            "http://localhost:8000/classify/url",
+            CHEST_XRAY_SERVICE_URL,
             headers={"Content-Type": "application/json"},
             json=payload,
             timeout=30
@@ -158,7 +161,7 @@ def execute_chest_xray_agent(image_url):
         log_assistant(error_msg)
         return error_msg
     except requests.exceptions.ConnectionError:
-        error_msg = "Could not connect to chest X-ray classification service at localhost:8000"
+        error_msg = f"Could not connect to chest X-ray classification service at {CHEST_XRAY_SERVICE_URL}"
         log_assistant(error_msg)
         return error_msg
     except Exception as e:
