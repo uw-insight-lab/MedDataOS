@@ -537,6 +537,214 @@ main {
     word-wrap: break-word;
 }
 
+/* Citation superscript badge */
+.citation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    vertical-align: super;
+    line-height: 1;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.citation:hover {
+    background: var(--secondary-color);
+}
+
+/* Citation card popup */
+#citation-popup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    width: 340px;
+    background: var(--bg-panel);
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    pointer-events: auto;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(37, 99, 235, 0.12);
+    border-bottom: 1px solid var(--border-color);
+    gap: 8px;
+}
+
+.card-agent {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--primary-color);
+    white-space: nowrap;
+}
+
+.card-file {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-content {
+    height: 210px;
+    overflow: hidden;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #080d18;
+    display: block;
+}
+
+.card-image-svg {
+    background: #ffffff;
+}
+
+.card-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #000;
+}
+
+.card-audio-wrap {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 28px;
+    gap: 20px;
+    background: var(--bg-dark);
+    box-sizing: border-box;
+}
+
+.card-audio-wrap::before {
+    content: "♫";
+    font-size: 56px;
+    color: var(--primary-color);
+    opacity: 0.2;
+    line-height: 1;
+}
+
+.card-audio {
+    width: 85%;
+    display: block;
+}
+
+.card-text {
+    height: 100%;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    overflow-y: auto;
+    white-space: pre-wrap;
+    box-sizing: border-box;
+}
+
+.card-loading {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.card-error {
+    color: var(--error-color);
+}
+
+.card-summary {
+    padding: 8px 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border-color);
+    font-style: italic;
+}
+
+/* Table inside card */
+.card-table-wrap {
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.card-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.card-table th {
+    background: rgba(255, 255, 255, 0.06);
+    padding: 5px 8px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+.card-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.card-table .dim {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Panel header actions */
+.panel-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-demo {
+    background: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-demo:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
 /* Empty state */
 .empty-state {
     text-align: center;

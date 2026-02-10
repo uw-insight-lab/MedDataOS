@@ -41,6 +41,10 @@ sessions = {}  # session_id -> {"history": [...], "processing": bool}
 frontend_path = Path(__file__).parent.parent / "frontend"
 app.mount("/static", StaticFiles(directory=str(frontend_path)), name="static")
 
+# Serve multimodal data files
+multimodal_path = project_root / "multimodal-data"
+app.mount("/multimodal-data", StaticFiles(directory=str(multimodal_path)), name="multimodal-data")
+
 
 @app.get("/")
 async def read_root():

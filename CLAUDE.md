@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MedDataOS is a multi-agent AI system for automated medical data analysis using Google's Gemini API. It orchestrates specialized agents through a tool-calling pattern where Gemini coordinates data preparation, analysis, and reporting agents.
+MedDataOS is a multi-agent AI system for automated medical data analysis using Google's Gemini API. It orchestrates specialized agents through a tool-calling pattern where Gemini coordinates data preparation, analysis, and reporting agents. The system supports multimodal citations — orchestrator responses can reference outputs from specialized agents, rendered in the chat as hoverable cards showing the actual data (images, audio, video, tables, text).
 
 ## Running the Application
 
@@ -114,13 +114,67 @@ The system uses Gemini's function calling to coordinate specialized agents. **Cr
 - `src/agents/prompts.py` - System prompts for each agent (defines library constraints)
 
 ### Web Interface
-- `web/backend/server.py` - FastAPI server, session management, file uploads, WebSocket broadcasting
-- `web/frontend/app.js` - WebSocket client, message filtering, markdown rendering
+- `web/backend/server.py` - FastAPI server, session management, file uploads, WebSocket broadcasting. Serves multimodal data at `/multimodal-data/*`
+- `web/frontend/app.js` - WebSocket client, message filtering, markdown rendering, citation parsing and card rendering
 - `web/frontend/index.html` - UI structure
-- `web/frontend/style.css` - Styling including markdown element styles
+- `web/frontend/style.css` - Styling including markdown element styles and citation cards
+
+### Multimodal Data
+- `multimodal-data/` - Static patient data files served at `/multimodal-data/*`
 
 ### Utilities
 - `src/utils/logging.py` - WebSocket manager, XML persistence, log broadcasting functions
+
+## Citation System
+
+### Overview
+The orchestrator can cite specific agent outputs inline in its response. Citations are rendered in the chat as hoverable cards showing the actual multimodal data.
+
+### Model Output Format
+The orchestrator returns JSON (not plain text) when citations are present:
+```json
+{
+  "response": "Patient has chest pain [cite:1]. X-ray is normal [cite:2].",
+  "citations": [
+    { "id": "1", "agent": "clinical_notes", "file": "clinical-notes.txt", "web_path": "/multimodal-data/clinical-notes.txt", "summary": "..." },
+    { "id": "2", "agent": "chest_xray",     "file": "chest-x-ray.png",    "web_path": "/multimodal-data/chest-x-ray.png",    "summary": "..." }
+  ]
+}
+```
+
+### Reference Format
+- Inline token: `[cite:N]` where N is the citation ID
+- Frontend regex: `/\[cite:(\w+)\]/g`
+- Rendered as: `<sup class="citation" data-citation="...">N</sup>`
+
+### Multimodal Agent Names
+| Agent ID | Data Type | File Format |
+|----------|-----------|-------------|
+| `clinical_notes` | Clinical text notes | `.txt` |
+| `chest_xray` | Chest X-ray image | `.png` |
+| `ecg` | Electrocardiogram | `.svg` (HL7 source) |
+| `heart_sounds` | Heart auscultation | `.wav` |
+| `echo` | Echocardiogram | `.mp4` |
+| `lab_results` | Lab results chart | `.png` (HL7v2 source) |
+| `medication` | Medication history | `.csv` |
+
+### Citation Card Rendering (Frontend)
+Cards are fixed size (340px wide, 210px content area). Content adapts by file type:
+- `.png` / `.jpg` → `<img>` with dark letterbox (`object-fit: contain`)
+- `.svg` → `<img>` with **white** background (ECG waveform is dark on white)
+- `.mp4` → `<video>` with controls
+- `.wav` → `<audio>` with controls, centered in card with ♫ icon
+- `.csv` → scrollable HTML table (all rows, first 5 columns)
+- `.txt` → scrollable text excerpt
+
+### Hover Interaction
+- Hover citation badge → card appears below (flips above if near screen bottom)
+- Mouse moves to card → card stays open (150ms delay prevents flicker)
+- Mouse leaves card → card hides
+- Audio/video are fully playable within the card (`pointer-events: auto`)
+
+### Demo
+A hardcoded demo dialog is available via the **Load Demo** button in the chat header. It simulates a full cardiac assessment for patient P0001 using all 7 data modalities.
 
 ## Non-Obvious Implementation Details
 
