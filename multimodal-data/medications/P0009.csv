@@ -1,0 +1,7 @@
+patient_id,medication_name,dose_mg,frequency,route,start_date,end_date,status,indication,prn
+P0009,Amlodipine,5,once daily,oral,2017-02-01,,active,Hypertension,no
+P0009,Hydrochlorothiazide,12.5,once daily,oral,2019-08-01,,active,Hypertension,no
+P0009,Alendronate,70,once weekly,oral,2020-11-15,,active,Osteoporosis,no
+P0009,Calcium with Vitamin D,600/400,twice daily,oral,2020-11-15,,active,Osteoporosis supplementation,no
+P0009,Acetaminophen,500,every 6h as needed,oral,2021-01-01,,active,Musculoskeletal pain,yes
+P0009,Omeprazole,20,once daily,oral,2022-05-01,,active,GERD,no

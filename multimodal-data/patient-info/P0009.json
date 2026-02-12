@@ -1,0 +1,8 @@
+{
+  "name": "Harold Jensen",
+  "age": 79,
+  "sex": "M",
+  "blood_type": "A+",
+  "allergies": ["Codeine"],
+  "conditions": ["Aortic stenosis", "Hypertension", "Osteoporosis"]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "James Carter",
+  "age": 58,
+  "sex": "M",
+  "blood_type": "A+",
+  "allergies": ["Penicillin"],
+  "conditions": ["Hypertension", "Type 2 Diabetes", "Hyperlipidemia", "Asthma"]
+}

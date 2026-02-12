@@ -1,0 +1,8 @@
+{
+  "name": "Susan Nakamura",
+  "age": 63,
+  "sex": "F",
+  "blood_type": "B-",
+  "allergies": ["Iodine contrast"],
+  "conditions": ["Hypertension", "Hypothyroidism"]
+}

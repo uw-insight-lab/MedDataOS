@@ -4,17 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css?v=12">
+    <link rel="stylesheet" href="/static/style.css?v=13">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <div class="logo">
-                    <span class="logo-icon">⚕</span>
-                    <div class="logo-text">
-                        <h1>MedDataOS</h1>
-                        <p class="subtitle">Medical Data Operating System</p>
+                <div class="header-left">
+                    <button id="sidebar-toggle" class="btn-sidebar-toggle" title="Toggle sidebar">
+                        <span class="toggle-icon">☰</span>
+                    </button>
+                    <div class="logo">
+                        <span class="logo-icon">⚕</span>
+                        <div class="logo-text">
+                            <h1>MedDataOS</h1>
+                            <p class="subtitle">Medical Data Operating System</p>
+                        </div>
                     </div>
                 </div>
                 <div class="connection-indicator">
@@ -24,44 +29,54 @@
             </div>
         </header>
 
-        <main>
-            <div class="chat-panel">
-                <div class="panel-header">
-                    <h2>Chat</h2>
-                    <div class="panel-header-actions">
-                        <button id="demo-btn" class="btn-demo">Load Demo</button>
-                        <button id="clear-btn" class="btn-clear">Clear</button>
-                    </div>
+        <div class="app-body">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <span class="sidebar-title">Patients</span>
                 </div>
-
-                <div class="chat-container" id="chat-container">
-                    <!-- Chat messages will be added here dynamically -->
+                <div class="sidebar-content" id="sidebar-content">
+                    <!-- Patient list rendered by JS -->
                 </div>
+            </aside>
 
-                <div class="chat-input-container">
-                    <div class="input-wrapper">
-                        <div class="file-attachment" id="file-attachment" style="display: none;">
-                            <span class="file-name" id="file-name"></span>
-                            <button class="file-remove" id="file-remove" title="Remove file">×</button>
-                        </div>
-                        <div class="input-row">
-                            <input type="file" id="file-input" accept=".csv,.xlsx" style="display: none;">
-                            <button id="attach-btn" class="btn-attach" title="Attach CSV or Excel file">
-                                <span class="btn-icon">📎</span>
-                            </button>
-                            <textarea
-                                id="message-input"
-                                placeholder="Ask me to analyze medical data, prepare datasets, or generate reports..."
-                                rows="2"
-                            ></textarea>
-                            <button id="send-btn" class="btn-send" disabled>
-                                <span class="btn-text">Send</span>
-                            </button>
+            <main>
+                <div class="chat-panel">
+                    <div class="panel-header">
+                        <h2>Chat <span id="active-patient-label" class="active-patient-label"></span></h2>
+                        <div class="panel-header-actions">
+                            <button id="clear-btn" class="btn-clear">Clear</button>
                         </div>
                     </div>
+
+                    <div class="chat-container" id="chat-container">
+                        <!-- Chat messages will be added here dynamically -->
+                    </div>
+
+                    <div class="chat-input-container">
+                        <div class="input-wrapper">
+                            <div class="file-attachment" id="file-attachment" style="display: none;">
+                                <span class="file-name" id="file-name"></span>
+                                <button class="file-remove" id="file-remove" title="Remove file">×</button>
+                            </div>
+                            <div class="input-row">
+                                <input type="file" id="file-input" accept=".csv,.xlsx" style="display: none;">
+                                <button id="attach-btn" class="btn-attach" title="Attach CSV or Excel file">
+                                    <span class="btn-icon">📎</span>
+                                </button>
+                                <textarea
+                                    id="message-input"
+                                    placeholder="Ask me to analyze medical data, prepare datasets, or generate reports..."
+                                    rows="2"
+                                ></textarea>
+                                <button id="send-btn" class="btn-send" disabled>
+                                    <span class="btn-text">Send</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
     <!-- Citation card (content built dynamically) -->
@@ -71,6 +86,6 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 
-    <script src="/static/app.js?v=12"></script>
+    <script src="/static/app.js?v=13"></script>
 </body>
 </html>

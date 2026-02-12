@@ -1,0 +1,8 @@
+{
+  "name": "Lisa Fernandez",
+  "age": 41,
+  "sex": "F",
+  "blood_type": "AB-",
+  "allergies": ["Lisinopril"],
+  "conditions": ["Coronary artery disease", "Depression", "Hyperlipidemia"]
+}

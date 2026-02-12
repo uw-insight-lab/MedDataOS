@@ -4,10 +4,12 @@ Real-time web interface to monitor MedDataOS (Medical Data Operating System) exe
 
 ## Features
 
+- **Patient Sidebar**: Browse 10 patients (P0001–P0010), expand to see conversations, create new ones, switch between them
+- **Patient Context**: Active patient demographics (age, sex, blood type, allergies, conditions) injected into AI system prompt
 - **Real-time Log Streaming**: See all system logs in real-time via WebSockets
 - **Color-coded Log Types**: Different colors for user messages, assistant responses, tool calls, and results
 - **Auto-scroll**: Automatically scroll to latest logs
-- **Clean UI**: Simple, modern interface with dark theme for logs
+- **Clean UI**: Simple, modern interface with warm/brown design system
 - **Non-blocking**: The system runs normally - web UI just observes
 
 ## Architecture
@@ -68,7 +70,12 @@ The UI displays different log types with distinct colors:
 
 - `GET /` - Serve the web UI
 - `WebSocket /ws` - WebSocket endpoint for log streaming
-- `POST /api/start` - Start the agent pipeline
+- `POST /api/chat` - Chat with file upload and patient context
+- `GET /api/patients` - List all patients
+- `GET /api/patients/{id}/conversations` - List conversations for a patient
+- `POST /api/patients/{id}/conversations` - Create a new conversation for a patient
+- `GET /api/session/{id}` - Get session history
+- `POST /api/start` - Start the agent pipeline (legacy)
 - `GET /api/health` - Health check endpoint
 
 ## Customization

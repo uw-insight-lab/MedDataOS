@@ -1,0 +1,8 @@
+{
+  "name": "Dorothy Williams",
+  "age": 72,
+  "sex": "F",
+  "blood_type": "AB+",
+  "allergies": ["ACE inhibitors"],
+  "conditions": ["Heart failure (HFrEF)", "Atrial fibrillation", "CKD stage 3", "Hypertension"]
+}

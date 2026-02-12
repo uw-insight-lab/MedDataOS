@@ -4,7 +4,9 @@ A multi-agent AI system for automated medical data analysis using Google's Gemin
 
 ## Features
 
+- **Patient Sidebar** - Browse 10 patients (P0001–P0010) with age/sex labels, create per-patient conversations, and switch between them
 - **Interactive Chat Interface** - Web-based UI with real-time execution streaming
+- **Patient-Aware Context** - Active patient demographics automatically injected into the AI system prompt
 - **File Upload Support** - Upload CSV or Excel files for automated analysis
 - **Multi-Agent Pipeline** - Specialized agents for preparation, analysis, and reporting
 - **Session Management** - Persistent conversation history across page refreshes
@@ -128,14 +130,21 @@ http://127.0.0.1:8080
 
 ## Usage
 
-### 1. Simple Chat Query
+### 1. Select a Patient
+
+1. Use the **sidebar** on the left to browse patients (P0001–P0010)
+2. Click a patient to expand their conversation list
+3. Click **+ New** to start a new conversation for that patient
+4. The patient's demographics are automatically included as context for the AI
+
+### 2. Simple Chat Query
 
 Type a message and press Send or Enter:
 ```
 "Explain what kind of analysis can be performed on medical datasets"
 ```
 
-### 2. File Upload + Analysis
+### 3. File Upload + Analysis
 
 1. Click the **📎 attach button**
 2. Select a CSV or Excel file (`.csv` or `.xlsx` format)
@@ -153,7 +162,7 @@ The system will automatically:
 - Stream real-time logs showing each step
 - Return a final comprehensive report
 
-### 3. View Execution Details
+### 4. View Execution Details
 
 The chat interface shows:
 - **Chat bubbles** - Clean conversation with the system
@@ -161,7 +170,7 @@ The chat interface shows:
   - 🛠️ **Tool Call** - Agent invocation
   - 📦 **Tool Result** - Agent output summary
 
-### 4. Clear Chat
+### 5. Clear Chat
 
 Click the **Clear** button to:
 - Reset conversation history
@@ -203,13 +212,15 @@ MedDataOS/
 │   │   └── definitions.py      # Gemini function calling schemas
 │   └── utils/                  # Utilities
 │       └── logging.py          # WebSocket manager & XML logging
+├── multimodal-data/
+│   └── patient-info/           # Patient JSON files (P0001–P0010)
 ├── web/                        # Web interface
 │   ├── backend/
-│   │   └── server.py           # FastAPI server
+│   │   └── server.py           # FastAPI server + patient APIs
 │   └── frontend/
-│       ├── index.html          # Main UI
-│       ├── app.js              # Chat & WebSocket logic
-│       └── style.css           # Styling
+│       ├── index.html          # Main UI (sidebar + chat layout)
+│       ├── app.js              # Chat, WebSocket & sidebar logic
+│       └── style.css           # Styling (sidebar, chat, citations)
 ├── data/
 │   └── input/                  # Uploaded datasets (gitignored)
 ├── workspace/                  # Agent working directories (gitignored)
@@ -230,12 +241,22 @@ The backend exposes these REST endpoints:
 ### `GET /`
 Serves the web UI (HTML interface)
 
+### `GET /api/patients`
+Returns list of patients with id, age, sex, and conditions (read from `multimodal-data/patient-info/P*.json`)
+
+### `GET /api/patients/{patient_id}/conversations`
+Returns conversations (sessions) linked to a patient, each with `session_id` and `preview` (first user message, truncated to 60 chars)
+
+### `POST /api/patients/{patient_id}/conversations`
+Creates a new empty session linked to a patient. Returns `session_id` and `patient_id`.
+
 ### `POST /api/chat`
 Main chat endpoint with file upload support
 
 **Request** (multipart/form-data):
 - `message` (required) - User message
 - `session_id` (optional) - Session UUID
+- `patient_id` (optional) - Patient identifier (e.g. "P0001")
 - `file` (optional) - CSV or Excel file upload (.csv or .xlsx)
 
 **Response**:
@@ -260,7 +281,7 @@ Real-time log streaming endpoint
 ```
 
 ### `GET /api/session/{session_id}`
-Get session details (debugging)
+Get session details and conversation history
 
 ### `GET /api/health`
 Health check with connection stats

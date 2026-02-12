@@ -1,0 +1,8 @@
+{
+  "name": "Frank Morrison",
+  "age": 67,
+  "sex": "M",
+  "blood_type": "A-",
+  "allergies": ["Aspirin"],
+  "conditions": ["COPD (GOLD stage 3)", "Former smoker (40 pack-years)", "Osteoarthritis"]
+}

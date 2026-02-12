@@ -6,13 +6,18 @@ let sessionId = localStorage.getItem('meddata_session_id') || null;
 let isProcessing = false;
 let attachedFile = null;
 
+// Sidebar state
+let activePatientId = null;
+let activeConversationId = null;
+let patients = [];
+let sidebarOpen = true;
+
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
 const connectionStatus = document.getElementById('connection-status');
 const connectionText = document.getElementById('connection-text');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
-const demoBtn = document.getElementById('demo-btn');
 const messageInput = document.getElementById('message-input');
 const attachBtn = document.getElementById('attach-btn');
 const fileInput = document.getElementById('file-input');
@@ -20,23 +25,184 @@ const fileAttachment = document.getElementById('file-attachment');
 const fileName = document.getElementById('file-name');
 const fileRemove = document.getElementById('file-remove');
 const citationPopup = document.getElementById('citation-popup');
+const sidebarEl = document.getElementById('sidebar');
+const sidebarContent = document.getElementById('sidebar-content');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const activePatientLabel = document.getElementById('active-patient-label');
 
-// Demo dialog data
-const DEMO_DIALOG = {
-    user: "Patient P0001 is a 58-year-old male presenting to the clinic today. He has been complaining of chest discomfort. I have uploaded all available patient data. Can you give me a full clinical summary and flag any concerns?",
-    assistant: {
-        response: "**Clinical Summary — Patient P0001**\n\nThe patient presents with a 2–3 week history of exertional, pressure-like chest discomfort (4/10), resolving within 5 minutes of rest, accompanied by mild dyspnea on exertion and increased fatigue [cite:1]. There is no rest pain, palpitations, or syncope reported [cite:1].\n\nThe chest radiograph is clear with no acute cardiopulmonary findings and a normal cardiac silhouette [cite:2]. However, the ECG shows a sinus rhythm with subtle ST changes in the lateral leads [cite:3], and auscultation reveals an S4 gallop with a soft systolic murmur [cite:4], raising concern for impaired ventricular compliance. Echocardiogram confirms mildly reduced left ventricular function with regional wall motion abnormalities in the lateral wall [cite:5].\n\n⚠️ **Critical flag — Electrolytes:** Potassium has exceeded 5.5 mmol/L on three separate occasions over the past 4 months, with a peak of 6.2 mmol/L in late December [cite:6]. This is a significant safety concern given the patient is currently on Lisinopril 20mg — an ACE inhibitor known to elevate potassium [cite:7]. Immediate review of ACE inhibitor dosing is recommended.\n\n**Current medications** include Lisinopril 20mg and Amlodipine 5mg for hypertension, Atorvastatin 20mg, Aspirin 81mg for ASCVD prevention, Metformin and Semaglutide for Type 2 Diabetes, and Albuterol inhaler PRN for asthma [cite:7].\n\n**Assessment:** The clinical picture is consistent with stable exertional angina in the context of known cardiovascular risk factors (hypertension, hyperlipidemia, Type 2 diabetes). The lateral wall motion abnormality on echo may indicate underlying coronary artery disease. The recurrent hyperkalemia on ACE inhibitor therapy requires urgent attention.",
-        citations: [
-            { id: "1", agent: "clinical_notes",  file: "clinical-notes.txt",     web_path: "/multimodal-data/clinical-notes.txt",     summary: "58-year-old male with 2–3 week history of exertional chest pressure and dyspnea" },
-            { id: "2", agent: "chest_xray",       file: "chest-x-ray.png",        web_path: "/multimodal-data/chest-x-ray.png",        summary: "No acute cardiopulmonary abnormality, normal cardiac silhouette" },
-            { id: "3", agent: "ecg",              file: "ecg.svg",                web_path: "/multimodal-data/ecg.svg",                summary: "Sinus rhythm, ST changes in lateral leads V4–V6" },
-            { id: "4", agent: "heart_sounds",     file: "heart-sounds.wav",       web_path: "/multimodal-data/heart-sounds.wav",       summary: "S4 gallop present, grade 2/6 systolic murmur" },
-            { id: "5", agent: "echo",             file: "echocardiogram.mp4",     web_path: "/multimodal-data/echocardiogram.mp4",     summary: "Mildly reduced LV ejection fraction, lateral wall motion abnormality" },
-            { id: "6", agent: "lab_results",      file: "hl7-v2.png",             web_path: "/multimodal-data/hl7-v2.png",             summary: "Recurrent hyperkalemia: peaks at 5.9, 6.2, 5.8 mmol/L over Oct 2025–Jan 2026" },
-            { id: "7", agent: "medication",       file: "medication-history.csv", web_path: "/multimodal-data/medication-history.csv", summary: "Active medications include Lisinopril 20mg — ACE inhibitor contributing to elevated potassium" }
-        ]
+// ─── Sidebar: Load Patients ─────────────────────────────────
+async function loadPatients() {
+    try {
+        const res = await fetch('/api/patients');
+        patients = await res.json();
+        renderPatientList();
+
+        // Auto-expand P0001 and load first conversation
+        const firstPatient = document.querySelector('.sidebar-patient[data-patient-id="P0001"]');
+        if (firstPatient) {
+            await togglePatient(firstPatient);
+            // Select the first conversation if one exists
+            const firstConvo = firstPatient.querySelector('.conversation-item');
+            if (firstConvo) {
+                await switchConversation(firstConvo.dataset.patientId, firstConvo.dataset.sessionId);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load patients:', e);
     }
-};
+}
+
+function renderPatientList() {
+    sidebarContent.innerHTML = '';
+    patients.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'sidebar-patient';
+        div.dataset.patientId = p.id;
+        div.dataset.patientName = p.name;
+
+        div.innerHTML = `
+            <div class="sidebar-patient-header">
+                <span class="sidebar-patient-arrow">▶</span>
+                <span class="sidebar-patient-name">${escapeHtml(p.name)}</span>
+                <span class="sidebar-patient-meta">${p.age}, ${p.sex}</span>
+            </div>
+            <div class="sidebar-patient-body">
+                <div class="conversation-list"></div>
+                <button class="btn-new-conversation" data-patient-id="${p.id}">+ New</button>
+            </div>
+        `;
+        sidebarContent.appendChild(div);
+    });
+}
+
+// ─── Sidebar: Toggle ────────────────────────────────────────
+function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    sidebarEl.classList.toggle('collapsed', !sidebarOpen);
+}
+
+// ─── Sidebar: Expand / Collapse Patient ─────────────────────
+async function togglePatient(patientEl) {
+    const wasExpanded = patientEl.classList.contains('expanded');
+
+    // Collapse all
+    document.querySelectorAll('.sidebar-patient.expanded').forEach(el => {
+        el.classList.remove('expanded');
+    });
+
+    if (!wasExpanded) {
+        patientEl.classList.add('expanded');
+        // Load conversations for this patient
+        const pid = patientEl.dataset.patientId;
+        await loadConversations(pid, patientEl);
+    }
+}
+
+async function loadConversations(patientId, patientEl) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/conversations`);
+        const convos = await res.json();
+        const listEl = patientEl.querySelector('.conversation-list');
+        listEl.innerHTML = '';
+        convos.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            if (c.session_id === activeConversationId) {
+                item.classList.add('active');
+            }
+            item.dataset.sessionId = c.session_id;
+            item.dataset.patientId = patientId;
+            item.textContent = c.preview || 'New conversation';
+            listEl.appendChild(item);
+        });
+    } catch (e) {
+        console.error('Failed to load conversations:', e);
+    }
+}
+
+// ─── Sidebar: Switch Conversation ───────────────────────────
+async function switchConversation(patientId, sid) {
+    activePatientId = patientId;
+    activeConversationId = sid;
+    sessionId = sid;
+    localStorage.setItem('meddata_session_id', sid);
+
+    // Update active patient label with name
+    const patientEl = document.querySelector(`.sidebar-patient[data-patient-id="${patientId}"]`);
+    const patientName = patientEl ? patientEl.dataset.patientName : patientId;
+    activePatientLabel.textContent = `— ${patientName}`;
+
+    // Highlight active conversation in sidebar
+    document.querySelectorAll('.conversation-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.sessionId === sid);
+    });
+
+    // Clear chat and load history
+    chatContainer.innerHTML = '';
+    try {
+        const res = await fetch(`/api/session/${sid}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.history) {
+            data.history.forEach(msg => {
+                addChatMessage(msg.role, msg.content);
+            });
+        }
+    } catch (e) {
+        console.error('Failed to load session:', e);
+    }
+}
+
+// ─── Sidebar: Create New Conversation ───────────────────────
+async function createNewConversation(patientId) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/conversations`, { method: 'POST' });
+        const data = await res.json();
+        // Refresh conversation list
+        const patientEl = document.querySelector(`.sidebar-patient[data-patient-id="${patientId}"]`);
+        if (patientEl) {
+            await loadConversations(patientId, patientEl);
+        }
+        // Switch to new conversation
+        await switchConversation(patientId, data.session_id);
+    } catch (e) {
+        console.error('Failed to create conversation:', e);
+    }
+}
+
+// ─── Sidebar: Refresh active patient's conversation list ────
+async function refreshSidebarConversations() {
+    if (!activePatientId) return;
+    const patientEl = document.querySelector(`.sidebar-patient[data-patient-id="${activePatientId}"]`);
+    if (patientEl) {
+        await loadConversations(activePatientId, patientEl);
+    }
+}
+
+// ─── Sidebar: Event Delegation ──────────────────────────────
+sidebarContent.addEventListener('click', async (e) => {
+    // New conversation button
+    const newBtn = e.target.closest('.btn-new-conversation');
+    if (newBtn) {
+        await createNewConversation(newBtn.dataset.patientId);
+        return;
+    }
+
+    // Conversation item click
+    const convoItem = e.target.closest('.conversation-item');
+    if (convoItem) {
+        await switchConversation(convoItem.dataset.patientId, convoItem.dataset.sessionId);
+        return;
+    }
+
+    // Patient header click (expand/collapse)
+    const header = e.target.closest('.sidebar-patient-header');
+    if (header) {
+        const patientEl = header.closest('.sidebar-patient');
+        await togglePatient(patientEl);
+    }
+});
+
+sidebarToggle.addEventListener('click', toggleSidebar);
 
 // Connect to WebSocket
 function connectWebSocket() {
@@ -81,6 +247,8 @@ function handleWebSocketMessage(data) {
         isProcessing = false;
         updateSendButton();
         addChatMessage('assistant', data.message);
+        // Refresh sidebar to update conversation preview
+        refreshSidebarConversations();
         return;
     }
 
@@ -141,6 +309,28 @@ function removeFile() {
     fileName.textContent = '';
 }
 
+// Agent ID → short display label for citation badges
+const agentBadgeLabels = {
+    'clinical_notes': 'Notes',
+    'chest_xray':     'X-Ray',
+    'ecg':            'ECG',
+    'heart_sounds':   'Heart Sounds',
+    'echo':           'Echo',
+    'lab_results':    'Labs',
+    'medication':     'Meds',
+};
+
+// Agent ID → full display name for citation card header
+const agentCardLabels = {
+    'clinical_notes': 'Clinical Notes Agent',
+    'chest_xray':     'Chest X-Ray Agent',
+    'ecg':            'ECG Agent',
+    'heart_sounds':   'Heart Sounds Agent',
+    'echo':           'Echocardiogram Agent',
+    'lab_results':    'Lab Results Agent',
+    'medication':     'Medications Agent',
+};
+
 // Replace [cite:X] tokens with hoverable <sup> badges
 function renderWithCitations(html, citations) {
     const citationMap = {};
@@ -150,7 +340,8 @@ function renderWithCitations(html, citations) {
         const citation = citationMap[id];
         if (!citation) return match;
         const data = encodeURIComponent(JSON.stringify(citation));
-        return `<sup class="citation" data-citation="${data}">${id}</sup>`;
+        const label = agentBadgeLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
+        return `<sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>`;
     });
 }
 
@@ -201,14 +392,13 @@ async function showCitationPopup(anchor, citation) {
     clearTimeout(hideTimeout);
 
     const type = getCitationType(citation.file);
-    const agentLabel = escapeHtml(citation.agent.replace(/_/g, ' '));
-    const fileLabel = escapeHtml(citation.file);
+    const agentLabel = agentCardLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
 
     // Build initial content (immediate for media, loading state for text/csv)
     let contentHTML = '';
     if (type === 'image') {
         const isSvg = citation.file.endsWith('.svg');
-        contentHTML = `<img class="card-image${isSvg ? ' card-image-svg' : ''}" src="${citation.web_path}" alt="${fileLabel}">`;
+        contentHTML = `<img class="card-image${isSvg ? ' card-image-svg' : ''}" src="${citation.web_path}" alt="${escapeHtml(agentLabel)}">`;
     } else if (type === 'video') {
         contentHTML = `<video class="card-video" src="${citation.web_path}" controls></video>`;
     } else if (type === 'audio') {
@@ -219,8 +409,7 @@ async function showCitationPopup(anchor, citation) {
 
     citationPopup.innerHTML = `
         <div class="card-header">
-            <span class="card-agent">${agentLabel}</span>
-            <span class="card-file">${fileLabel}</span>
+            <span class="card-agent">${escapeHtml(agentLabel)}</span>
         </div>
         <div class="card-content" id="card-content-inner">${contentHTML}</div>
         <div class="card-summary">${escapeHtml(citation.summary)}</div>
@@ -358,9 +547,16 @@ function clearChat() {
     chatContainer.innerHTML = '';
     // Clear session and start fresh
     sessionId = null;
+    activeConversationId = null;
+    activePatientId = null;
+    activePatientLabel.textContent = '';
     localStorage.removeItem('meddata_session_id');
     // Clear attached file
     removeFile();
+    // Remove active highlight from sidebar
+    document.querySelectorAll('.conversation-item.active').forEach(el => {
+        el.classList.remove('active');
+    });
 }
 
 // Send message
@@ -396,6 +592,9 @@ async function sendMessage() {
         if (sessionId) {
             formData.append('session_id', sessionId);
         }
+        if (activePatientId) {
+            formData.append('patient_id', activePatientId);
+        }
         if (attachedFile) {
             formData.append('file', attachedFile);
         }
@@ -411,10 +610,13 @@ async function sendMessage() {
             // Store session ID
             if (result.session_id) {
                 sessionId = result.session_id;
+                activeConversationId = result.session_id;
                 localStorage.setItem('meddata_session_id', sessionId);
             }
             // Clear attached file after successful send
             removeFile();
+            // Refresh sidebar to show conversation preview
+            refreshSidebarConversations();
             // Response will come via WebSocket
         } else if (result.status === 'error') {
             alert(result.message || 'Failed to send message');
@@ -430,12 +632,6 @@ async function sendMessage() {
         messageInput.disabled = false;
         messageInput.focus();
     }
-}
-
-// Load hardcoded demo dialog
-function loadDemo() {
-    addChatMessage('user', DEMO_DIALOG.user);
-    addChatMessage('assistant', JSON.stringify(DEMO_DIALOG.assistant));
 }
 
 // Citation hover — event delegation on chat container
@@ -458,7 +654,6 @@ citationPopup.addEventListener('mouseleave', () => { citationPopup.style.display
 // Event listeners
 sendBtn.addEventListener('click', sendMessage);
 clearBtn.addEventListener('click', clearChat);
-demoBtn.addEventListener('click', loadDemo);
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', handleFileSelect);
 fileRemove.addEventListener('click', removeFile);
@@ -476,5 +671,6 @@ messageInput.addEventListener('keydown', (e) => {
     }
 });
 
-// Initialize WebSocket connection
+// Initialize
 connectWebSocket();
+loadPatients();

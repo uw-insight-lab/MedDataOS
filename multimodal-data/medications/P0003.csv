@@ -1,0 +1,5 @@
+patient_id,medication_name,dose_mg,frequency,route,start_date,end_date,status,indication,prn
+P0003,Sertraline,25,once daily,oral,2021-06-01,2021-07-01,discontinued,Generalized anxiety disorder,no
+P0003,Sertraline,50,once daily,oral,2021-07-01,,active,Generalized anxiety disorder,no
+P0003,Ibuprofen,200,every 6h as needed,oral,2023-01-01,,active,Occasional headache,yes
+P0003,Melatonin,3,once at bedtime as needed,oral,2024-03-15,,active,Insomnia,yes

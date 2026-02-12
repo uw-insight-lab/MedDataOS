@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MedDataOS is a multi-agent AI system for automated medical data analysis using Google's Gemini API. It orchestrates specialized agents through a tool-calling pattern where Gemini coordinates data preparation, analysis, and reporting agents. The system supports multimodal citations — orchestrator responses can reference outputs from specialized agents, rendered in the chat as hoverable cards showing the actual data (images, audio, video, tables, text).
+MedDataOS is a multi-agent AI system for automated medical data analysis using Google's Gemini API. It orchestrates specialized agents through a tool-calling pattern where Gemini coordinates data preparation, analysis, and reporting agents. The system supports multimodal citations — orchestrator responses can reference outputs from specialized agents, rendered in the chat as hoverable cards showing the actual data (images, audio, video, tables, text). A left sidebar enables multi-patient, multi-conversation workflows — users select from 10 patients (P0001–P0010), create per-patient conversations, and switch between them.
 
 ## Running the Application
 
@@ -34,7 +34,8 @@ GEMINI_API_KEY=your_api_key_here
 The system uses Gemini's function calling to coordinate specialized agents. **Critical flow:**
 
 1. **User Query → Orchestrator** (`src/core/orchestrator.py`)
-   - Receives query + optional file upload
+   - Receives query + optional file upload + optional patient context
+   - When a patient is active, prepends patient demographics (age, sex, blood type, allergies, conditions) to the system instruction
    - Creates `GenerateContentConfig` with tool definitions
    - Sends to Gemini 2.5 Flash with conversation history
 
@@ -82,13 +83,29 @@ The system uses Gemini's function calling to coordinate specialized agents. **Cr
 
 **Critical Detail:** Logs broadcast from background thread require `asyncio.run_coroutine_threadsafe()` to schedule in event loop safely.
 
+### Patient Sidebar & Multi-Conversation
+
+The UI has a collapsible left sidebar listing 10 patients (P0001–P0010) loaded from `multimodal-data/patient-info/P*.json`. Each patient expands to show its conversations and a "+ New" button.
+
+**Frontend state:** `activePatientId`, `activeConversationId`, `patients[]`, `sidebarOpen`
+
+**Flow:**
+1. On load, `loadPatients()` fetches `GET /api/patients` and renders the list
+2. Clicking a patient header expands it and fetches `GET /api/patients/{id}/conversations`
+3. "+ New" calls `POST /api/patients/{id}/conversations` to create a session, then switches to it
+4. Clicking a conversation calls `GET /api/session/{id}` to load history and replays messages in the chat
+5. `sendMessage()` includes `patient_id` in the FormData; sidebar refreshes after send and after assistant response
+
+**Sidebar toggle:** Hamburger button in the header toggles `.collapsed` class on the sidebar (CSS transition on `width`).
+
 ### Session Management
 
 **In-memory storage:** `sessions = {}`
-- Structure: `{"history": [...], "processing": bool, "uploaded_file": str}`
+- Structure: `{"history": [...], "processing": bool, "uploaded_file": str, "patient_id": str}`
 - Session ID stored in frontend localStorage
 - Survives page refresh but NOT server restart
 - `processing` flag prevents concurrent requests per session
+- `patient_id` links session to a patient (set on creation or first message)
 
 ### File Upload Pipeline
 
@@ -114,10 +131,10 @@ The system uses Gemini's function calling to coordinate specialized agents. **Cr
 - `src/agents/prompts.py` - System prompts for each agent (defines library constraints)
 
 ### Web Interface
-- `web/backend/server.py` - FastAPI server, session management, file uploads, WebSocket broadcasting. Serves multimodal data at `/multimodal-data/*`
-- `web/frontend/app.js` - WebSocket client, message filtering, markdown rendering, citation parsing and card rendering
-- `web/frontend/index.html` - UI structure
-- `web/frontend/style.css` - Styling including markdown element styles and citation cards
+- `web/backend/server.py` - FastAPI server, session management, file uploads, patient/conversation APIs, WebSocket broadcasting. Serves multimodal data at `/multimodal-data/*`
+- `web/frontend/app.js` - WebSocket client, message filtering, markdown rendering, citation parsing and card rendering, patient sidebar logic (load, expand, switch, create conversations)
+- `web/frontend/index.html` - UI structure (header with sidebar toggle, sidebar + main flex layout)
+- `web/frontend/style.css` - Styling including sidebar, markdown element styles, and citation cards
 
 ### Multimodal Data
 - `multimodal-data/` - Static patient data files served at `/multimodal-data/*`
@@ -174,7 +191,7 @@ Cards are fixed size (340px wide, 210px content area). Content adapts by file ty
 - Audio/video are fully playable within the card (`pointer-events: auto`)
 
 ### Demo
-A hardcoded demo dialog is available via the **Load Demo** button in the chat header. It simulates a full cardiac assessment for patient P0001 using all 7 data modalities.
+A hardcoded demo dialog is available via the **Load Demo** button in the chat header. It simulates a full cardiac assessment for patient P0001 using all 7 data modalities. Load Demo also sets P0001 as the active patient and expands it in the sidebar.
 
 ## Non-Obvious Implementation Details
 

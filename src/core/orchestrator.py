@@ -15,7 +15,8 @@ from src.agents.prompts import (
 from src.core.gemini_client import create_client, create_config, create_contents
 
 
-def run_pipeline(user_query: str = None, conversation_history: list = None, uploaded_file: str = None):
+def run_pipeline(user_query: str = None, conversation_history: list = None, uploaded_file: str = None,
+                  patient_id: str = None, patient_info: dict = None):
     """
     Execute the main orchestration pipeline.
 
@@ -24,6 +25,8 @@ def run_pipeline(user_query: str = None, conversation_history: list = None, uplo
         conversation_history (list): Optional conversation history in format:
             [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
         uploaded_file (str): Optional path to uploaded .xlsx file for analysis
+        patient_id (str): Optional patient identifier (e.g. "P0001")
+        patient_info (dict): Optional patient info dict with age, sex, blood_type, allergies, conditions
 
     This function:
     1. Initializes the Gemini client and configuration
@@ -35,6 +38,19 @@ def run_pipeline(user_query: str = None, conversation_history: list = None, uplo
 
     # Modify system instruction if file is uploaded
     system_instruction = SYSTEM_INSTRUCTION
+
+    # Prepend patient context when available
+    if patient_id and patient_info:
+        patient_name = patient_info.get('name', patient_id)
+        patient_block = (
+            f"\n\nACTIVE PATIENT: {patient_name} ({patient_id})\n"
+            f"Age: {patient_info.get('age')}  Sex: {patient_info.get('sex')}  "
+            f"Blood Type: {patient_info.get('blood_type', 'N/A')}\n"
+            f"Allergies: {', '.join(patient_info.get('allergies', [])) or 'None'}\n"
+            f"Conditions: {', '.join(patient_info.get('conditions', [])) or 'None'}\n"
+            f"All queries in this conversation relate to this patient.\n"
+        )
+        system_instruction = patient_block + system_instruction
     if uploaded_file:
         system_instruction = f"""{SYSTEM_INSTRUCTION}
 

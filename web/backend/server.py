@@ -4,6 +4,7 @@ Serves the web UI and handles WebSocket connections.
 """
 import sys
 import os
+import json
 from pathlib import Path
 import signal
 import socket
@@ -36,6 +37,342 @@ set_websocket_manager(ws_manager)
 
 # Session storage (in-memory, persists until server restart)
 sessions = {}  # session_id -> {"history": [...], "processing": bool}
+
+
+def _cite(cid, agent, file, web_path, summary):
+    """Helper to build a citation dict."""
+    return {"id": str(cid), "agent": agent, "file": file, "web_path": web_path, "summary": summary}
+
+
+# Reusable P0001 citation builders (call with sequential id)
+def _c_notes(cid):
+    return _cite(cid, "clinical_notes", "P0001.txt", "/multimodal-data/clinical-notes/P0001.txt",
+                 "58-year-old male with 2\u20133 week history of exertional chest pressure and dyspnea")
+
+def _c_xray(cid):
+    return _cite(cid, "chest_xray", "P0001.png", "/multimodal-data/chest-xray/P0001.png",
+                 "No acute cardiopulmonary abnormality, normal cardiac silhouette")
+
+def _c_ecg(cid):
+    return _cite(cid, "ecg", "P0001.svg", "/multimodal-data/ecg/P0001.svg",
+                 "Sinus rhythm, ST changes in lateral leads V4\u2013V6")
+
+def _c_heart(cid):
+    return _cite(cid, "heart_sounds", "P0001.wav", "/multimodal-data/heart-sounds/P0001.wav",
+                 "S4 gallop present, grade 2/6 systolic murmur")
+
+def _c_echo(cid):
+    return _cite(cid, "echo", "P0001.mp4", "/multimodal-data/echo/P0001.mp4",
+                 "Mildly reduced LV ejection fraction, lateral wall motion abnormality")
+
+def _c_labs(cid):
+    return _cite(cid, "lab_results", "P0001.png", "/multimodal-data/lab-results/P0001.png",
+                 "Recurrent hyperkalemia: peaks at 5.9, 6.2, 5.8 mmol/L over Oct 2025\u2013Jan 2026")
+
+def _c_meds(cid):
+    return _cite(cid, "medication", "P0001.csv", "/multimodal-data/medications/P0001.csv",
+                 "Active medications include Lisinopril 20mg \u2014 ACE inhibitor contributing to elevated potassium")
+
+
+# Reusable P0002 citation builders
+def _c2_notes(cid):
+    return _cite(cid, "clinical_notes", "P0002.txt", "/multimodal-data/clinical-notes/P0002.txt",
+                 "34-year-old female with 5-day fever, productive cough, right-sided pleuritic chest pain, SpO2 94%")
+
+def _c2_xray(cid):
+    return _cite(cid, "chest_xray", "P0002.png", "/multimodal-data/chest-xray/P0002.png",
+                 "Right lower lobe consolidation consistent with community-acquired pneumonia")
+
+def _c2_ecg(cid):
+    return _cite(cid, "ecg", "P0002.svg", "/multimodal-data/ecg/P0002.svg",
+                 "Sinus tachycardia at 112 bpm, no ST changes, no right heart strain pattern")
+
+def _c2_heart(cid):
+    return _cite(cid, "heart_sounds", "P0002.wav", "/multimodal-data/heart-sounds/P0002.wav",
+                 "Normal heart sounds, no murmurs, gallops, or rubs")
+
+def _c2_echo(cid):
+    return _cite(cid, "echo", "P0002.mp4", "/multimodal-data/echo/P0002.mp4",
+                 "Normal LV function, no valvular abnormality, no pericardial effusion")
+
+def _c2_labs(cid):
+    return _cite(cid, "lab_results", "P0002.png", "/multimodal-data/lab-results/P0002.png",
+                 "Elevated WBC and CRP consistent with acute bacterial infection, normal renal and hepatic panels")
+
+def _c2_meds(cid):
+    return _cite(cid, "medication", "P0002.csv", "/multimodal-data/medications/P0002.csv",
+                 "Albuterol PRN, Amoxicillin 875mg + Azithromycin 500mg for pneumonia, Acetaminophen PRN")
+
+
+def _msg(role, content, citations=None):
+    """Build a history message. For assistant with citations, encodes as JSON."""
+    if role == "assistant" and citations:
+        return {"role": "assistant", "content": json.dumps({"response": content, "citations": citations})}
+    return {"role": role, "content": content}
+
+
+def _seed_demo_sessions():
+    """Pre-populate three demo conversations for patient P0001 (James Carter)."""
+
+    # ── Conversation 1: Initial Clinical Assessment (3:3) ──────────
+    sessions["demo-1"] = {
+        "history": [
+            _msg("user",
+                 "James Carter is presenting today with chest discomfort. "
+                 "Can you pull up his clinical notes and give me a summary of his presentation?"),
+            _msg("assistant",
+                 "Based on the clinical notes [cite:1], James Carter presents with a 2\u20133 week history "
+                 "of exertional, pressure-like chest discomfort rated 4/10, accompanied by mild dyspnea on "
+                 "exertion and increased fatigue. The discomfort resolves within 5 minutes of rest, and he "
+                 "denies rest pain, palpitations, or syncope.\n\n"
+                 "He is currently on a multi-drug regimen [cite:2] including Lisinopril 20mg and Amlodipine 5mg "
+                 "for hypertension, Metformin and Semaglutide for Type 2 Diabetes, Atorvastatin 20mg and "
+                 "Aspirin 81mg for cardiovascular prevention, and Albuterol PRN for asthma. Note the documented "
+                 "Penicillin allergy.\n\n"
+                 "Would you like me to review his imaging and cardiac workup?",
+                 [_c_notes(1), _c_meds(2)]),
+
+            _msg("user",
+                 "Yes, let\u2019s review his imaging. What does the chest X-ray show? "
+                 "And pull up the ECG and echocardiogram."),
+            _msg("assistant",
+                 "The chest radiograph [cite:1] is clear \u2014 no acute cardiopulmonary abnormality and "
+                 "normal cardiac silhouette, which rules out overt cardiomegaly or pulmonary congestion.\n\n"
+                 "However, the ECG [cite:2] shows sinus rhythm with subtle but notable ST changes in the "
+                 "lateral leads (V4\u2013V6). This is a concerning pattern in the context of his symptoms.\n\n"
+                 "The echocardiogram [cite:3] corroborates the ECG findings: it reveals a mildly reduced left "
+                 "ventricular ejection fraction with a regional wall motion abnormality specifically in the "
+                 "lateral wall. The concordance between the ECG lateral ST changes and the echo lateral wall "
+                 "abnormality raises suspicion for underlying coronary artery disease in that vascular territory.",
+                 [_c_xray(1), _c_ecg(2), _c_echo(3)]),
+
+            _msg("user",
+                 "What about the heart sounds and lab work? Anything critical I should flag?"),
+            _msg("assistant",
+                 "Auscultation [cite:1] reveals an S4 gallop and a grade 2/6 systolic murmur. The S4 is "
+                 "consistent with impaired ventricular compliance, which aligns with the echocardiographic "
+                 "findings of reduced ejection fraction and wall motion abnormality.\n\n"
+                 "\u26a0\ufe0f **Critical flag \u2014 Electrolytes:** The lab results [cite:2] show potassium has "
+                 "exceeded 5.5 mmol/L on three separate occasions over the past 4 months, with a peak of "
+                 "6.2 mmol/L in late December. This is a significant safety concern.\n\n"
+                 "Cross-referencing with his medications [cite:3], the likely driver is Lisinopril 20mg \u2014 "
+                 "an ACE inhibitor known to elevate potassium. Immediate review of ACE inhibitor dosing or "
+                 "switching to an alternative is strongly recommended.\n\n"
+                 "Additionally, the clinical notes [cite:4] document a Penicillin allergy, which is important "
+                 "to flag for any future antibiotic prescriptions or procedural prophylaxis.",
+                 [_c_heart(1), _c_labs(2), _c_meds(3), _c_notes(4)]),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0001",
+    }
+
+    # ── Conversation 2: Medication Safety Review (2:2) ─────────────
+    sessions["demo-2"] = {
+        "history": [
+            _msg("user",
+                 "I need to review James Carter\u2019s medications against his recent lab work. "
+                 "His potassium has been running high \u2014 can you cross-reference and flag any concerns?"),
+            _msg("assistant",
+                 "**Current medication list** [cite:1]:\n"
+                 "- Lisinopril 20mg daily (ACE inhibitor)\n"
+                 "- Amlodipine 5mg daily\n"
+                 "- Atorvastatin 20mg daily\n"
+                 "- Aspirin 81mg daily\n"
+                 "- Metformin 1000mg twice daily\n"
+                 "- Semaglutide 0.5mg weekly\n"
+                 "- Albuterol inhaler PRN\n\n"
+                 "**Lab correlation** [cite:2]: Potassium levels have been persistently elevated \u2014 "
+                 "5.9, 6.2, and 5.8 mmol/L across October to January. This is a clear pattern of ACE "
+                 "inhibitor\u2013induced hyperkalemia, with Lisinopril as the primary suspect.\n\n"
+                 "The clinical notes [cite:3] confirm a documented Penicillin allergy \u2014 important "
+                 "context for any medication changes.\n\n"
+                 "Auscultation [cite:4] shows an S4 gallop suggesting diastolic dysfunction, so whatever "
+                 "replacement we select must maintain adequate cardioprotection.",
+                 [_c_meds(1), _c_labs(2), _c_notes(3), _c_heart(4)]),
+
+            _msg("user",
+                 "If we switch from Lisinopril to an ARB, what\u2019s the cardiac picture we\u2019re "
+                 "working with? I want to make sure we\u2019re not compromising anything."),
+            _msg("assistant",
+                 "The ECG [cite:1] shows lateral ST changes in V4\u2013V6, indicating ischemia in that "
+                 "territory. The echocardiogram [cite:2] confirms a lateral wall motion abnormality with "
+                 "mildly reduced ejection fraction \u2014 these two findings are concordant and suggest "
+                 "underlying coronary artery disease.\n\n"
+                 "The chest X-ray [cite:3] is reassuringly normal \u2014 no cardiomegaly or pulmonary "
+                 "congestion \u2014 so there\u2019s no evidence of overt heart failure at this stage.\n\n"
+                 "**Recommendation:** Switching from Lisinopril to an ARB such as losartan would maintain "
+                 "RAAS blockade, which is critical for:\n"
+                 "- Blood pressure control (hypertension)\n"
+                 "- Cardiac remodeling protection (given the wall motion abnormality)\n"
+                 "- Renal protection (important with his Type 2 Diabetes)\n\n"
+                 "This switch should reduce the hyperkalemia risk. Labs [cite:4] should be rechecked "
+                 "1\u20132 weeks after the transition. His diabetes medications [cite:5] (Metformin + "
+                 "Semaglutide) do not contribute to hyperkalemia and can continue unchanged.",
+                 [_c_ecg(1), _c_echo(2), _c_xray(3), _c_labs(4), _c_meds(5)]),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0001",
+    }
+
+    # ── Conversation 3: Pre-Procedure Cardiac Risk (2:2) ───────────
+    sessions["demo-3"] = {
+        "history": [
+            _msg("user",
+                 "James Carter is being considered for an elective surgical procedure. "
+                 "I need a cardiac risk assessment \u2014 walk me through his cardiac studies."),
+            _msg("assistant",
+                 "**Cardiac risk assessment for surgical clearance:**\n\n"
+                 "The echocardiogram [cite:1] is the most significant finding \u2014 mildly reduced LVEF "
+                 "with a regional wall motion abnormality in the lateral wall. This indicates structural "
+                 "cardiac compromise.\n\n"
+                 "The ECG [cite:2] corroborates with ST changes in V4\u2013V6 (lateral territory), "
+                 "suggesting ischemia in the same distribution as the echo abnormality.\n\n"
+                 "Auscultation [cite:3] reveals an S4 gallop and grade 2/6 systolic murmur, consistent "
+                 "with impaired ventricular compliance.\n\n"
+                 "The chest X-ray [cite:4] is clear with a normal cardiac silhouette \u2014 no pulmonary "
+                 "congestion, which is reassuring.\n\n"
+                 "Clinical notes [cite:5] describe exertional symptoms that resolve at rest within "
+                 "5 minutes, with no rest pain or syncope. This pattern is consistent with stable demand "
+                 "ischemia rather than acute coronary syndrome.\n\n"
+                 "**Overall risk classification:** Intermediate cardiac risk. The lateral wall abnormality "
+                 "and functional limitation warrant cardiology clearance before proceeding with the procedure.",
+                 [_c_echo(1), _c_ecg(2), _c_heart(3), _c_xray(4), _c_notes(5)]),
+
+            _msg("user",
+                 "What about his labs and medications \u2014 anything to adjust before surgery?"),
+            _msg("assistant",
+                 "**Pre-operative medication and lab review:**\n\n"
+                 "\u26a0\ufe0f **Potassium** [cite:1]: Recurrent hyperkalemia with a peak of 6.2 mmol/L. "
+                 "This must be normalized before surgery \u2014 hyperkalemia significantly increases the "
+                 "risk of intraoperative arrhythmias, especially under general anesthesia.\n\n"
+                 "**Medication adjustments** [cite:2]:\n"
+                 "- **Lisinopril 20mg** \u2014 Hold the morning of surgery. This also helps address the "
+                 "potassium elevation.\n"
+                 "- **Aspirin 81mg** \u2014 Discuss hold timing with the surgical team (typically 7 days "
+                 "prior for major procedures).\n"
+                 "- **Metformin 1000mg** \u2014 Hold the day of and day after surgery to avoid lactic "
+                 "acidosis risk with contrast or reduced renal perfusion.\n"
+                 "- **Semaglutide 0.5mg** \u2014 Consider holding the week of surgery due to gastroparesis "
+                 "risk affecting anesthesia.\n"
+                 "- **Amlodipine, Atorvastatin** \u2014 May continue as usual.\n"
+                 "- **Albuterol PRN** \u2014 Must be available peri-operatively for asthma management.\n\n"
+                 "\u26a0\ufe0f **Allergy alert** [cite:3]: Penicillin allergy is documented. This directly "
+                 "impacts surgical antibiotic prophylaxis \u2014 standard cefazolin may pose cross-reactivity "
+                 "risk. Use clindamycin or vancomycin as alternatives.",
+                 [_c_labs(1), _c_meds(2), _c_notes(3)]),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0001",
+    }
+
+    # ── Conversation 4: Acute Pneumonia Workup — P0002 (3:3) ──────
+    sessions["demo-4"] = {
+        "history": [
+            _msg("user",
+                 "Maria Lopez came in with fever and a productive cough. "
+                 "Can you review her clinical notes and tell me what we\u2019re dealing with?"),
+            _msg("assistant",
+                 "Based on the clinical notes [cite:1], Maria Lopez is a 34-year-old female presenting "
+                 "with a 5-day history of fever (peak 39.2\u00b0C), productive cough with yellowish-green "
+                 "sputum, and right-sided pleuritic chest pain that worsens on deep inspiration. She reports "
+                 "progressive dyspnea over the past 3 days, now occurring with minimal exertion.\n\n"
+                 "Vitals on presentation: tachycardic at 112 bpm, tachypneic at 22/min, SpO2 94% on room "
+                 "air. Lung exam reveals crackles and bronchial breath sounds over the right lower lobe with "
+                 "dullness to percussion. She has a known history of mild intermittent asthma, well-controlled.\n\n"
+                 "She has been started on dual antibiotic therapy [cite:2]: Amoxicillin 875mg twice daily and "
+                 "Azithromycin 500mg, along with Acetaminophen PRN for fever. Her baseline medication is "
+                 "Albuterol inhaler PRN for asthma. No known drug allergies.",
+                 [_c2_notes(1), _c2_meds(2)]),
+
+            _msg("user",
+                 "What does her chest X-ray show? And let\u2019s check the ECG \u2014 "
+                 "she\u2019s tachycardic at 112."),
+            _msg("assistant",
+                 "The chest X-ray [cite:1] shows right lower lobe consolidation, which is consistent "
+                 "with the clinical exam findings of crackles, bronchial breath sounds, and dullness to "
+                 "percussion in that region. This confirms community-acquired pneumonia.\n\n"
+                 "The ECG [cite:2] shows sinus tachycardia at 112 bpm, which is expected given the fever "
+                 "and active infection. Importantly, there are no ST changes, no arrhythmia, and no right "
+                 "heart strain pattern \u2014 the tachycardia is likely infectious/febrile in origin rather "
+                 "than cardiac.\n\n"
+                 "The echocardiogram [cite:3] confirms normal left ventricular function with no valvular "
+                 "abnormality and no pericardial effusion \u2014 the heart is structurally normal. This "
+                 "effectively rules out any cardiac complication from the infection.",
+                 [_c2_xray(1), _c2_ecg(2), _c2_echo(3)]),
+
+            _msg("user",
+                 "How about her labs and heart sounds? Anything unexpected, "
+                 "or is this straightforward pneumonia?"),
+            _msg("assistant",
+                 "Heart sounds [cite:1] are normal \u2014 no murmurs, no gallops, no rubs. This is "
+                 "reassuring and consistent with a non-cardiac cause for her symptoms.\n\n"
+                 "Lab results [cite:2] show elevated WBC and inflammatory markers consistent with acute "
+                 "bacterial infection. CRP is elevated. Renal and hepatic panels are within normal limits, "
+                 "which is important for antibiotic dosing.\n\n"
+                 "The clinical notes [cite:3] document no drug allergies, so her current antibiotic regimen "
+                 "(amoxicillin + azithromycin) [cite:4] is appropriate for community-acquired pneumonia.\n\n"
+                 "**Assessment:** This is a straightforward community-acquired pneumonia in an otherwise "
+                 "healthy 34-year-old. Key monitoring points: repeat SpO2 trending, fever curve, and ensure "
+                 "adequate hydration given her reduced oral intake over the past 2 days.",
+                 [_c2_heart(1), _c2_labs(2), _c2_notes(3), _c2_meds(4)]),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0002",
+    }
+
+    # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
+    sessions["demo-5"] = {
+        "history": [
+            _msg("user",
+                 "I\u2019m concerned about Maria Lopez\u2019s asthma complicating her pneumonia. "
+                 "Can you cross-reference her respiratory data and medications?"),
+            _msg("assistant",
+                 "Clinical notes [cite:1] confirm mild intermittent asthma, well-controlled with PRN "
+                 "albuterol, and no recent exacerbations. However, the pneumonia introduces significant "
+                 "risk \u2014 the infection and inflammation can trigger bronchospasm. Her SpO2 is already "
+                 "at 94% on room air, leaving limited respiratory reserve.\n\n"
+                 "The chest X-ray [cite:2] shows right lower lobe consolidation, which is reducing her "
+                 "functional lung capacity on top of any potential asthma-related airway narrowing.\n\n"
+                 "Current medications [cite:3]: Albuterol inhaler PRN (should be used more aggressively "
+                 "during the acute illness), Amoxicillin + Azithromycin for the pneumonia, Acetaminophen "
+                 "for fever. Notably, she was previously on Montelukast 10mg daily for asthma but it was "
+                 "discontinued in January 2023.\n\n"
+                 "Heart sounds [cite:4] are clear \u2014 no wheezing transmitted to the cardiac exam, "
+                 "which is a good sign for current asthma control.",
+                 [_c2_notes(1), _c2_xray(2), _c2_meds(3), _c2_heart(4)]),
+
+            _msg("user",
+                 "Should we restart the Montelukast? And give me the full cardiac picture "
+                 "to rule out any complications."),
+            _msg("assistant",
+                 "Restarting Montelukast 10mg daily is reasonable as a temporary measure during the acute "
+                 "illness to provide additional bronchodilation and anti-inflammatory coverage alongside "
+                 "the Albuterol [cite:1].\n\n"
+                 "The ECG [cite:2] shows sinus tachycardia but no right heart strain pattern \u2014 no "
+                 "S1Q3T3, no right axis deviation. This effectively rules out a PE mimic, which is worth "
+                 "checking given her pleuritic pain and tachycardia.\n\n"
+                 "The echocardiogram [cite:3] shows normal biventricular function and no pericardial "
+                 "effusion \u2014 no cardiac complications from the infection.\n\n"
+                 "Labs [cite:4] support a purely infectious process with no end-organ involvement.\n\n"
+                 "**Recommended plan:**\n"
+                 "- Continue Amoxicillin + Azithromycin as prescribed\n"
+                 "- Increase Albuterol to scheduled q4\u20136h (not just PRN)\n"
+                 "- Restart Montelukast 10mg daily\n"
+                 "- Monitor SpO2 closely \u2014 supplement O2 if she drops below 92%\n"
+                 "- Reassess in 48\u201372 hours for clinical improvement",
+                 [_c2_meds(1), _c2_ecg(2), _c2_echo(3), _c2_labs(4)]),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0002",
+    }
+
+
+_seed_demo_sessions()
 
 # Serve static files (frontend)
 frontend_path = Path(__file__).parent.parent / "frontend"
@@ -103,6 +440,7 @@ async def start_pipeline(request: dict):
 async def chat(
     message: str = Form(...),
     session_id: Optional[str] = Form(None),
+    patient_id: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None)
 ):
     """
@@ -130,8 +468,13 @@ async def chat(
         sessions[session_id] = {
             "history": [],
             "processing": False,
-            "uploaded_file": None
+            "uploaded_file": None,
+            "patient_id": patient_id,
         }
+
+    # Update patient_id if provided on existing session
+    if patient_id:
+        sessions[session_id]["patient_id"] = patient_id
 
     session = sessions[session_id]
 
@@ -185,13 +528,26 @@ async def chat(
         user_message += f"\n[Uploaded file: {file.filename}]"
     session["history"].append({"role": "user", "content": user_message})
 
+    # Load patient info if patient_id is set
+    p_id = session.get("patient_id")
+    patient_info = None
+    if p_id:
+        patient_file = project_root / "multimodal-data" / "patient-info" / f"{p_id}.json"
+        if patient_file.exists():
+            try:
+                patient_info = json.loads(patient_file.read_text())
+            except Exception:
+                pass
+
     # Run pipeline in background with conversation history and file
     def run_in_thread():
         try:
             assistant_response = run_pipeline(
                 message,
                 conversation_history=session["history"],
-                uploaded_file=session.get("uploaded_file")
+                uploaded_file=session.get("uploaded_file"),
+                patient_id=p_id,
+                patient_info=patient_info,
             )
             # Add assistant response to history
             if assistant_response:
@@ -223,6 +579,59 @@ async def get_session(session_id: str):
         "processing": session["processing"],
         "history": session["history"]
     }
+
+
+@app.get("/api/patients")
+async def get_patients():
+    """Return list of patients from multimodal-data/patient-info/*.json."""
+    patient_dir = project_root / "multimodal-data" / "patient-info"
+    patients = []
+    for f in sorted(patient_dir.glob("P*.json")):
+        try:
+            data = json.loads(f.read_text())
+            patients.append({
+                "id": f.stem,
+                "name": data.get("name", f.stem),
+                "age": data.get("age"),
+                "sex": data.get("sex"),
+                "conditions": data.get("conditions", []),
+            })
+        except Exception:
+            continue
+    return patients
+
+
+@app.get("/api/patients/{patient_id}/conversations")
+async def get_patient_conversations(patient_id: str):
+    """Return conversations (sessions) linked to a patient."""
+    convos = []
+    for sid, session in sessions.items():
+        if session.get("patient_id") != patient_id:
+            continue
+        # Build a preview from the first user message
+        preview = ""
+        for msg in session["history"]:
+            if msg["role"] == "user":
+                preview = msg["content"][:60]
+                break
+        convos.append({
+            "session_id": sid,
+            "preview": preview or "New conversation",
+        })
+    return convos
+
+
+@app.post("/api/patients/{patient_id}/conversations")
+async def create_patient_conversation(patient_id: str):
+    """Create a new empty session linked to a patient."""
+    sid = str(uuid4())
+    sessions[sid] = {
+        "history": [],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": patient_id,
+    }
+    return {"session_id": sid, "patient_id": patient_id}
 
 
 @app.get("/api/health")

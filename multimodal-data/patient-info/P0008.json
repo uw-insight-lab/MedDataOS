@@ -1,0 +1,8 @@
+{
+  "name": "David Okafor",
+  "age": 52,
+  "sex": "M",
+  "blood_type": "O+",
+  "allergies": [],
+  "conditions": ["Type 2 Diabetes", "Hypertension", "Obesity", "Peripheral neuropathy"]
+}
