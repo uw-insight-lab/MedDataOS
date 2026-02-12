@@ -8,27 +8,27 @@
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
 :root {
-    --bg-deep:     #0c0b0a;
-    --bg-panel:    #111009;
-    --bg-surface:  #181614;
-    --bg-input:    #1d1c19;
-    --bg-hover:    #222019;
+    --bg-deep:     #ede8dc;
+    --bg-panel:    #f4f0e6;
+    --bg-surface:  #faf7f0;
+    --bg-input:    #e8e2d6;
+    --bg-hover:    #e2dcd0;
 
-    --text-primary:   #ede8df;
-    --text-secondary: #7a7060;
-    --text-dim:       #38332e;
+    --text-primary:   #1a1612;
+    --text-secondary: #6b5f50;
+    --text-dim:       #bdb3a3;
 
-    --accent:      #c9913d;
-    --accent-soft: rgba(201, 145, 61, 0.10);
-    --accent-mid:  rgba(201, 145, 61, 0.28);
-    --accent-glow: rgba(201, 145, 61, 0.06);
+    --accent:      #a67830;
+    --accent-soft: rgba(166, 120, 48, 0.08);
+    --accent-mid:  rgba(166, 120, 48, 0.28);
+    --accent-glow: rgba(166, 120, 48, 0.07);
 
-    --data-blue:   #6fa8c0;
-    --data-blue-soft: rgba(111, 168, 192, 0.12);
-    --critical:    #c05040;
+    --data-blue:   #2a6e8c;
+    --data-blue-soft: rgba(42, 110, 140, 0.08);
+    --critical:    #b03a2a;
 
-    --border:      rgba(237, 232, 223, 0.07);
-    --border-warm: rgba(237, 232, 223, 0.13);
+    --border:      rgba(26, 22, 18, 0.10);
+    --border-warm: rgba(26, 22, 18, 0.16);
 
     --mono: 'DM Mono', 'Courier New', monospace;
     --serif: 'Lora', Georgia, serif;
@@ -46,12 +46,12 @@ body {
     overflow: hidden;
 }
 
-/* Grain overlay */
+/* Grain overlay — more visible on light, reinforces paper feel */
 body::after {
     content: '';
     position: fixed;
     inset: 0;
-    opacity: 0.03;
+    opacity: 0.045;
     pointer-events: none;
     z-index: 9999;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -140,13 +140,13 @@ header::after {
 }
 
 .status.connected {
-    background: #6abf88;
-    box-shadow: 0 0 6px rgba(106, 191, 136, 0.6);
+    background: #3a9e60;
+    box-shadow: 0 0 6px rgba(58, 158, 96, 0.5);
 }
 
 .status.disconnected {
     background: var(--critical);
-    box-shadow: 0 0 6px rgba(192, 80, 64, 0.5);
+    box-shadow: 0 0 6px rgba(176, 58, 42, 0.4);
 }
 
 /* ─── Main Layout ───────────────────────────────────────────── */
@@ -168,6 +168,7 @@ main {
     border-radius: var(--radius);
     overflow: hidden;
     min-height: 0;
+    box-shadow: 0 2px 16px rgba(26, 22, 18, 0.06);
 }
 
 .panel-header {
@@ -279,6 +280,7 @@ main {
     background: var(--bg-surface);
     border: 1px solid var(--border);
     color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(26, 22, 18, 0.05);
 }
 
 /* ─── Message Content (Markdown) ───────────────────────────── */
@@ -314,7 +316,7 @@ main {
 
 .message-content strong {
     font-weight: 600;
-    color: var(--accent);
+    color: #8a5e1e;
 }
 
 .message-content em {
@@ -335,15 +337,16 @@ main {
 .message-content code {
     font-family: var(--mono);
     font-size: 12px;
-    background: rgba(201, 145, 61, 0.08);
-    color: var(--accent);
+    background: rgba(166, 120, 48, 0.09);
+    color: #7a5018;
     padding: 2px 6px;
     border-radius: var(--radius-sm);
+    border: 1px solid rgba(166, 120, 48, 0.15);
 }
 
 .message-content pre {
     background: var(--bg-deep);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-warm);
     border-radius: var(--radius);
     padding: 12px 14px;
     margin-bottom: 12px;
@@ -353,6 +356,7 @@ main {
 .message-content pre code {
     background: none;
     padding: 0;
+    border: none;
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.6;
@@ -396,7 +400,7 @@ main {
 
 .message-content th {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: #7a5018;
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -420,14 +424,14 @@ main {
     cursor: pointer;
     vertical-align: super;
     line-height: 1;
-    transition: background 0.12s, color 0.12s;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
     user-select: none;
 }
 
 .citation:hover {
     background: var(--accent);
     border-color: var(--accent);
-    color: var(--bg-deep);
+    color: var(--bg-surface);
 }
 
 /* ─── Citation Card ─────────────────────────────────────────── */
@@ -440,7 +444,7 @@ main {
     border: 1px solid var(--accent-mid);
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--accent-glow);
+    box-shadow: 0 12px 48px rgba(26, 22, 18, 0.18), 0 2px 8px rgba(26, 22, 18, 0.1);
     pointer-events: auto;
 }
 
@@ -478,11 +482,12 @@ main {
     overflow: hidden;
 }
 
+/* Medical images keep dark background — lightbox effect */
 .card-image {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #060504;
+    background: #141210;
     display: block;
 }
 
@@ -514,7 +519,7 @@ main {
     content: "⏦";
     font-size: 48px;
     color: var(--accent);
-    opacity: 0.18;
+    opacity: 0.22;
     line-height: 1;
 }
 
@@ -585,7 +590,7 @@ main {
     text-transform: uppercase;
     border-bottom: 1px solid var(--accent-mid);
     white-space: nowrap;
-    color: var(--accent);
+    color: #7a5018;
 }
 
 .card-table td {
@@ -604,7 +609,7 @@ main {
 .log-entry {
     border-left: 2px solid;
     padding: 10px 14px;
-    background: var(--bg-deep);
+    background: rgba(26, 22, 18, 0.02);
     border-radius: var(--radius-sm);
 }
 
@@ -738,7 +743,7 @@ main {
 }
 
 .btn-attach:disabled {
-    opacity: 0.3;
+    opacity: 0.35;
     cursor: not-allowed;
 }
 
@@ -748,7 +753,7 @@ main {
 
 #message-input {
     flex: 1;
-    background: var(--bg-input);
+    background: var(--bg-surface);
     border: 1px solid var(--border-warm);
     border-radius: var(--radius-sm);
     padding: 12px 14px;
@@ -773,7 +778,7 @@ main {
 
 .btn-send {
     background: var(--accent);
-    color: var(--bg-deep);
+    color: var(--bg-surface);
     border: none;
     border-radius: var(--radius-sm);
     padding: 0 22px;
@@ -790,11 +795,11 @@ main {
 }
 
 .btn-send:hover:not(:disabled) {
-    background: #d99f4a;
+    background: #bc8e3a;
 }
 
 .btn-send:disabled {
-    opacity: 0.3;
+    opacity: 0.35;
     cursor: not-allowed;
 }
 
@@ -835,7 +840,7 @@ main {
 .btn-demo:hover {
     background: var(--accent);
     border-color: var(--accent);
-    color: var(--bg-deep);
+    color: var(--bg-surface);
 }
 
 /* ─── Empty State ───────────────────────────────────────────── */
@@ -848,7 +853,7 @@ main {
 .empty-state-icon {
     font-size: 40px;
     margin-bottom: 16px;
-    opacity: 0.25;
+    opacity: 0.2;
 }
 
 .empty-state-text {
