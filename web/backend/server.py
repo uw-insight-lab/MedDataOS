@@ -329,8 +329,8 @@ def _seed_demo_sessions():
 
     # ── Demo pins for P0001 ─────────────────────────────────────
     patient_pins["P0001"] = [
-        {"pin_id": str(uuid4()), "citation": _c_ecg(1)},
-        {"pin_id": str(uuid4()), "citation": _c_labs(2)},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1)},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2)},
     ]
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
@@ -651,21 +651,40 @@ async def get_patient_pins(patient_id: str):
 
 @app.post("/api/patients/{patient_id}/pins")
 async def add_patient_pin(patient_id: str, request: dict):
-    """Pin a citation for a patient. Deduplicates by agent+web_path."""
-    citation = request.get("citation")
-    if not citation:
-        return {"status": "error", "message": "citation is required"}
-
+    """Pin a citation or text selection. Deduplicates accordingly."""
+    pin_type = request.get("type", "citation")
     pins = patient_pins.setdefault(patient_id, [])
 
-    # Deduplicate by agent + web_path
-    for p in pins:
-        if p["citation"].get("agent") == citation.get("agent") and \
-           p["citation"].get("web_path") == citation.get("web_path"):
-            return {"status": "duplicate", "pin_id": p["pin_id"]}
+    if pin_type == "citation":
+        citation = request.get("citation")
+        if not citation:
+            return {"status": "error", "message": "citation is required"}
+        # Deduplicate by agent + web_path
+        for p in pins:
+            if p.get("type", "citation") == "citation" and \
+               p.get("citation", {}).get("agent") == citation.get("agent") and \
+               p.get("citation", {}).get("web_path") == citation.get("web_path"):
+                return {"status": "duplicate", "pin_id": p["pin_id"]}
+        pin_id = str(uuid4())
+        pins.append({"pin_id": pin_id, "type": "citation", "citation": citation})
+    elif pin_type == "text":
+        text = request.get("text", "").strip()
+        if not text:
+            return {"status": "error", "message": "text is required"}
+        # Deduplicate by exact text
+        for p in pins:
+            if p.get("type") == "text" and p.get("text") == text:
+                return {"status": "duplicate", "pin_id": p["pin_id"]}
+        pin_id = str(uuid4())
+        pins.append({
+            "pin_id": pin_id,
+            "type": "text",
+            "text": text,
+            "source": request.get("source", ""),
+        })
+    else:
+        return {"status": "error", "message": "invalid pin type"}
 
-    pin_id = str(uuid4())
-    pins.append({"pin_id": pin_id, "citation": citation})
     return {"status": "ok", "pin_id": pin_id}
 
 

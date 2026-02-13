@@ -560,6 +560,62 @@ header::after {
     opacity: 1 !important;
 }
 
+/* ─── Pinned Text Highlight ────────────────────────────────── */
+.pinned-highlight {
+    background: rgba(166, 120, 48, 0.13);
+    border-bottom: 1.5px solid var(--accent-mid);
+    padding: 0 1px;
+    border-radius: 1px;
+}
+
+/* ─── Pinned Card Source Link ─────────────────────────────── */
+.pinned-card-source {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+    cursor: pointer;
+    transition: color 0.12s;
+}
+
+.pinned-card-source:hover {
+    color: var(--accent);
+}
+
+/* ─── Text Selection Pin Button ────────────────────────────── */
+.text-select-pin {
+    position: fixed;
+    z-index: 1500;
+    display: none;
+    background: var(--bg-surface);
+    border: 1px solid var(--accent-mid);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(26, 22, 18, 0.18);
+    font-size: 13px;
+    line-height: 1;
+    transition: background 0.12s;
+    user-select: none;
+}
+
+.text-select-pin:hover {
+    background: var(--accent-soft);
+}
+
+.text-select-pin-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
 /* ─── Modal Actions ───────────────────────────────────────── */
 .modal-actions {
     display: flex;

@@ -106,15 +106,16 @@ async function fetchPins(patientId) {
     }
 }
 
-async function addPin(patientId, citation) {
+async function addPin(patientId, pinData) {
     try {
         await fetch(`/api/patients/${patientId}/pins`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ citation }),
+            body: JSON.stringify(pinData),
         });
         await fetchPins(patientId);
         renderInsightsPanel();
+        highlightPinnedText();
     } catch (e) {
         console.error('Failed to add pin:', e);
     }
@@ -125,6 +126,7 @@ async function removePin(patientId, pinId) {
         await fetch(`/api/patients/${patientId}/pins/${pinId}`, { method: 'DELETE' });
         await fetchPins(patientId);
         renderInsightsPanel();
+        highlightPinnedText();
     } catch (e) {
         console.error('Failed to remove pin:', e);
     }
@@ -137,8 +139,19 @@ function isPinned(patientId, citation) {
 function findPinId(patientId, citation) {
     const pins = patientPins[patientId] || [];
     const match = pins.find(p =>
+        p.type !== 'text' && p.citation &&
         p.citation.agent === citation.agent && p.citation.web_path === citation.web_path
     );
+    return match ? match.pin_id : null;
+}
+
+function isTextPinned(patientId, text) {
+    return !!findTextPinId(patientId, text);
+}
+
+function findTextPinId(patientId, text) {
+    const pins = patientPins[patientId] || [];
+    const match = pins.find(p => p.type === 'text' && p.text === text);
     return match ? match.pin_id : null;
 }
 
@@ -150,16 +163,30 @@ function renderInsightsPanel() {
     }
     insightsContent.innerHTML = '';
     pins.forEach(p => {
-        const agentLabel = agentCardLabels[p.citation.agent] || p.citation.agent.replace(/_/g, ' ');
         const card = document.createElement('div');
         card.className = 'pinned-card';
         card.dataset.pinId = p.pin_id;
-        card.dataset.citation = JSON.stringify(p.citation);
-        card.innerHTML = `
-            <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
-            <div class="pinned-card-summary">${escapeHtml(p.citation.summary)}</div>
-            <button class="btn-unpin" title="Unpin">&times;</button>
-        `;
+
+        if (p.type === 'text') {
+            card.dataset.pinType = 'text';
+            card.dataset.text = p.text;
+            card.dataset.source = p.source || '';
+            card.innerHTML = `
+                <div class="pinned-card-agent">Pinned Text</div>
+                <div class="pinned-card-summary">${escapeHtml(p.text)}</div>
+                ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
+                <button class="btn-unpin" title="Unpin">&times;</button>
+            `;
+        } else {
+            card.dataset.pinType = 'citation';
+            card.dataset.citation = JSON.stringify(p.citation);
+            const agentLabel = agentCardLabels[p.citation.agent] || p.citation.agent.replace(/_/g, ' ');
+            card.innerHTML = `
+                <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
+                <div class="pinned-card-summary">${escapeHtml(p.citation.summary)}</div>
+                <button class="btn-unpin" title="Unpin">&times;</button>
+            `;
+        }
         insightsContent.appendChild(card);
     });
 }
@@ -177,11 +204,37 @@ insightsContent.addEventListener('click', (e) => {
         return;
     }
 
-    // Card click → open modal
+    // Source link click → navigate to conversation
+    const sourceLink = e.target.closest('.pinned-card-source');
+    if (sourceLink) {
+        e.stopPropagation();
+        const sid = sourceLink.dataset.sessionId;
+        const card = sourceLink.closest('.pinned-card');
+        const text = card ? card.dataset.text : '';
+        if (sid && activePatientId) {
+            switchConversation(activePatientId, sid).then(() => {
+                scrollToTextInChat(text);
+            });
+        }
+        return;
+    }
+
+    // Card click
     const card = e.target.closest('.pinned-card');
     if (card) {
-        const citation = JSON.parse(card.dataset.citation);
-        openCitationModal(citation);
+        if (card.dataset.pinType === 'text') {
+            // Text pins → navigate to source conversation
+            const sid = card.dataset.source;
+            const text = card.dataset.text;
+            if (sid && activePatientId) {
+                switchConversation(activePatientId, sid).then(() => {
+                    scrollToTextInChat(text);
+                });
+            }
+        } else {
+            const citation = JSON.parse(card.dataset.citation);
+            openCitationModal(citation);
+        }
     }
 });
 
@@ -260,6 +313,7 @@ async function switchConversation(patientId, sid) {
     } catch (e) {
         console.error('Failed to load session:', e);
     }
+    highlightPinnedText();
 }
 
 // ─── Sidebar: Create New Conversation ───────────────────────
@@ -789,7 +843,7 @@ citationPopup.addEventListener('click', async (e) => {
         await removePin(activePatientId, existingPinId);
         pinBtn.classList.remove('pinned');
     } else {
-        await addPin(activePatientId, citation);
+        await addPin(activePatientId, { type: 'citation', citation });
         pinBtn.classList.add('pinned');
     }
 });
@@ -892,7 +946,7 @@ chatContainer.addEventListener('click', (e) => {
 modalClose.addEventListener('click', closeCitationModal);
 citationBackdrop.addEventListener('click', closeCitationModal);
 
-// Modal pin button
+// Modal pin button (citation pins only — text pins navigate directly)
 modalPin.addEventListener('click', async () => {
     if (!activePatientId || !modalCitation) return;
     const existingPinId = findPinId(activePatientId, modalCitation);
@@ -900,7 +954,7 @@ modalPin.addEventListener('click', async () => {
         await removePin(activePatientId, existingPinId);
         modalPin.classList.remove('pinned');
     } else {
-        await addPin(activePatientId, modalCitation);
+        await addPin(activePatientId, { type: 'citation', citation: modalCitation });
         modalPin.classList.add('pinned');
     }
 });
@@ -908,6 +962,138 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && citationModal.classList.contains('open')) {
         closeCitationModal();
     }
+});
+
+// ─── Pinned Text Highlighting ────────────────────────────────
+function clearPinnedHighlights() {
+    chatContainer.querySelectorAll('mark.pinned-highlight').forEach(mark => {
+        const parent = mark.parentNode;
+        parent.replaceChild(document.createTextNode(mark.textContent), mark);
+        parent.normalize();
+    });
+}
+
+function highlightPinnedText() {
+    clearPinnedHighlights();
+    if (!activePatientId) return;
+    const pins = patientPins[activePatientId] || [];
+    const textPins = pins.filter(p => p.type === 'text').map(p => p.text);
+    if (textPins.length === 0) return;
+
+    const bubbles = chatContainer.querySelectorAll('.chat-message.assistant .message-content');
+    bubbles.forEach(bubble => {
+        textPins.forEach(pinText => {
+            highlightTextInNode(bubble, pinText);
+        });
+    });
+}
+
+function highlightTextInNode(root, searchText) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const matches = [];
+
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const idx = node.textContent.indexOf(searchText);
+        if (idx !== -1) {
+            matches.push({ node, idx });
+        }
+    }
+
+    // Process in reverse to avoid invalidating offsets
+    for (let i = matches.length - 1; i >= 0; i--) {
+        const { node, idx } = matches[i];
+        const range = document.createRange();
+        range.setStart(node, idx);
+        range.setEnd(node, idx + searchText.length);
+        const mark = document.createElement('mark');
+        mark.className = 'pinned-highlight';
+        range.surroundContents(mark);
+    }
+}
+
+function scrollToTextInChat(text) {
+    if (!text) return;
+    const marks = chatContainer.querySelectorAll('mark.pinned-highlight');
+    for (const mark of marks) {
+        if (mark.textContent === text) {
+            mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Brief flash effect
+            mark.style.transition = 'background 0.3s';
+            mark.style.background = 'rgba(166, 120, 48, 0.35)';
+            setTimeout(() => { mark.style.background = ''; }, 1200);
+            return;
+        }
+    }
+    // Fallback: search text nodes directly
+    const bubbles = chatContainer.querySelectorAll('.chat-message.assistant .message-content');
+    for (const bubble of bubbles) {
+        if (bubble.textContent.includes(text)) {
+            bubble.closest('.chat-message').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+    }
+}
+
+// ─── Text Selection Pin Button ──────────────────────────────
+const textSelectPin = document.createElement('button');
+textSelectPin.className = 'text-select-pin';
+textSelectPin.innerHTML = '&#x1F4CC;<span class="text-select-pin-label">Pin</span>';
+document.body.appendChild(textSelectPin);
+
+function getActiveSessionId() {
+    return activeConversationId || sessionId || '';
+}
+
+function hideTextSelectPin() {
+    textSelectPin.style.display = 'none';
+}
+
+chatContainer.addEventListener('mouseup', (e) => {
+    // Ignore if clicking on citation badges or the pin button itself
+    if (e.target.closest('.citation') || e.target.closest('.text-select-pin')) return;
+    if (!activePatientId) return;
+
+    const sel = window.getSelection();
+    const text = sel.toString().trim();
+    if (!text) { hideTextSelectPin(); return; }
+
+    // Check if selection is inside an assistant message bubble
+    if (!sel.anchorNode) { hideTextSelectPin(); return; }
+    const bubble = sel.anchorNode.nodeType === Node.TEXT_NODE
+        ? sel.anchorNode.parentElement.closest('.chat-message.assistant .message-bubble')
+        : sel.anchorNode.closest('.chat-message.assistant .message-bubble');
+    if (!bubble) { hideTextSelectPin(); return; }
+
+    // Position above selection
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    textSelectPin.style.display = 'block';
+    const btnW = textSelectPin.offsetWidth;
+    let left = rect.left + (rect.width / 2) - (btnW / 2);
+    left = Math.max(8, Math.min(left, window.innerWidth - btnW - 8));
+    let top = rect.top - 36;
+    if (top < 8) top = rect.bottom + 8;
+    textSelectPin.style.left = `${left}px`;
+    textSelectPin.style.top = `${top}px`;
+});
+
+textSelectPin.addEventListener('mousedown', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const sel = window.getSelection();
+    const text = sel.toString().trim();
+    if (!text || !activePatientId) return;
+
+    const sourceSessionId = getActiveSessionId();
+    hideTextSelectPin();
+    await addPin(activePatientId, { type: 'text', text, source: sourceSessionId });
+    sel.removeAllRanges();
+});
+
+document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.text-select-pin')) return;
+    hideTextSelectPin();
 });
 
 // Event listeners
