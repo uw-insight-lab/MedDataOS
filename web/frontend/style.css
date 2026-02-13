@@ -1379,7 +1379,7 @@ main {
 .input-row {
     display: flex;
     gap: 8px;
-    align-items: flex-end;
+    align-items: stretch;
 }
 
 .file-attachment {
@@ -1433,8 +1433,6 @@ main {
     font-size: 16px;
     cursor: pointer;
     transition: all 0.15s;
-    align-self: flex-end;
-    height: 58px;
     color: var(--text-secondary);
 }
 
@@ -1457,12 +1455,12 @@ main {
     background: var(--bg-surface);
     border: 1px solid var(--border-warm);
     border-radius: var(--radius-sm);
-    padding: 12px 14px;
+    padding: 10px 14px;
     color: var(--text-primary);
     font-family: var(--serif);
     font-size: 14px;
     resize: none;
-    min-height: 58px;
+    min-height: 42px;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -1491,8 +1489,6 @@ main {
     cursor: pointer;
     transition: background 0.15s, opacity 0.15s;
     white-space: nowrap;
-    align-self: flex-end;
-    height: 58px;
 }
 
 .btn-send:hover:not(:disabled) {
