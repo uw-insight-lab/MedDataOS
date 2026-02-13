@@ -329,8 +329,8 @@ def _seed_demo_sessions():
 
     # ── Demo pins for P0001 ─────────────────────────────────────
     patient_pins["P0001"] = [
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1)},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2)},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1), "source": "demo-1"},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2), "source": "demo-2"},
     ]
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
@@ -666,7 +666,8 @@ async def add_patient_pin(patient_id: str, request: dict):
                p.get("citation", {}).get("web_path") == citation.get("web_path"):
                 return {"status": "duplicate", "pin_id": p["pin_id"]}
         pin_id = str(uuid4())
-        pins.append({"pin_id": pin_id, "type": "citation", "citation": citation})
+        pins.append({"pin_id": pin_id, "type": "citation", "citation": citation,
+                      "source": request.get("source", "")})
     elif pin_type == "text":
         text = request.get("text", "").strip()
         if not text:

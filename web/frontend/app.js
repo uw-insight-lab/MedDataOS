@@ -155,6 +155,20 @@ function findTextPinId(patientId, text) {
     return match ? match.pin_id : null;
 }
 
+function buildPinPreview(citation) {
+    const type = getCitationType(citation.file);
+    if (type === 'image') {
+        const isSvg = citation.file.endsWith('.svg');
+        return `<div class="pinned-card-preview"><img src="${citation.web_path}" alt="" style="${isSvg ? 'background:#f8f5f0;object-fit:contain;' : ''}"></div>`;
+    } else if (type === 'video') {
+        return '<div class="pinned-card-preview"><span class="pinned-card-preview-icon">&#x1F3AC;</span></div>';
+    } else if (type === 'audio') {
+        return '<div class="pinned-card-preview"><span class="pinned-card-preview-icon">&#x23E6;</span></div>';
+    } else {
+        return '<div class="pinned-card-preview"><span class="pinned-card-preview-icon">&#x1F4C4;</span></div>';
+    }
+}
+
 function renderInsightsPanel() {
     const pins = (activePatientId && patientPins[activePatientId]) || [];
     if (pins.length === 0) {
@@ -180,10 +194,14 @@ function renderInsightsPanel() {
         } else {
             card.dataset.pinType = 'citation';
             card.dataset.citation = JSON.stringify(p.citation);
+            card.dataset.source = p.source || '';
             const agentLabel = agentCardLabels[p.citation.agent] || p.citation.agent.replace(/_/g, ' ');
+            const previewHTML = buildPinPreview(p.citation);
             card.innerHTML = `
                 <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
+                ${previewHTML}
                 <div class="pinned-card-summary">${escapeHtml(p.citation.summary)}</div>
+                ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
             `;
         }
@@ -213,18 +231,29 @@ insightsContent.addEventListener('click', (e) => {
         const text = card ? card.dataset.text : '';
         if (sid && activePatientId) {
             switchConversation(activePatientId, sid).then(() => {
-                scrollToTextInChat(text);
+                if (text) scrollToTextInChat(text);
             });
         }
         return;
     }
 
-    // Card click
+    // Preview click → open citation modal
+    const preview = e.target.closest('.pinned-card-preview');
+    if (preview) {
+        e.stopPropagation();
+        const card = preview.closest('.pinned-card');
+        if (card && card.dataset.pinType === 'citation') {
+            const citation = JSON.parse(card.dataset.citation);
+            openCitationModal(citation);
+        }
+        return;
+    }
+
+    // Card click → navigate to source conversation
     const card = e.target.closest('.pinned-card');
     if (card) {
+        const sid = card.dataset.source;
         if (card.dataset.pinType === 'text') {
-            // Text pins → navigate to source conversation
-            const sid = card.dataset.source;
             const text = card.dataset.text;
             if (sid && activePatientId) {
                 switchConversation(activePatientId, sid).then(() => {
@@ -232,8 +261,10 @@ insightsContent.addEventListener('click', (e) => {
                 });
             }
         } else {
-            const citation = JSON.parse(card.dataset.citation);
-            openCitationModal(citation);
+            // Citation card click → navigate to source chat
+            if (sid && activePatientId) {
+                switchConversation(activePatientId, sid);
+            }
         }
     }
 });
@@ -843,7 +874,7 @@ citationPopup.addEventListener('click', async (e) => {
         await removePin(activePatientId, existingPinId);
         pinBtn.classList.remove('pinned');
     } else {
-        await addPin(activePatientId, { type: 'citation', citation });
+        await addPin(activePatientId, { type: 'citation', citation, source: getActiveSessionId() });
         pinBtn.classList.add('pinned');
     }
 });
@@ -954,7 +985,7 @@ modalPin.addEventListener('click', async () => {
         await removePin(activePatientId, existingPinId);
         modalPin.classList.remove('pinned');
     } else {
-        await addPin(activePatientId, { type: 'citation', citation: modalCitation });
+        await addPin(activePatientId, { type: 'citation', citation: modalCitation, source: getActiveSessionId() });
         modalPin.classList.add('pinned');
     }
 });
