@@ -149,6 +149,13 @@ header::after {
     box-shadow: 0 0 6px rgba(176, 58, 42, 0.4);
 }
 
+/* ─── Header Right (connection + insights toggle) ──────────── */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
 /* ─── Header Left (toggle + logo) ──────────────────────────── */
 .header-left {
     display: flex;
@@ -179,6 +186,25 @@ header::after {
     font-size: 16px;
     color: var(--text-secondary);
     line-height: 1;
+}
+
+.btn-insights-toggle {
+    background: transparent;
+    border: 1px solid var(--border-warm);
+    border-radius: var(--radius-sm);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-insights-toggle:hover {
+    border-color: var(--accent-mid);
+    background: var(--accent-soft);
 }
 
 /* ─── App Body (sidebar + main) ────────────────────────────── */
@@ -360,6 +386,185 @@ header::after {
     border-color: var(--accent-mid);
     color: var(--accent);
     background: var(--accent-soft);
+}
+
+/* ─── Insights Panel (right sidebar) ──────────────────────── */
+.insights-panel {
+    width: 280px;
+    min-width: 0;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: width 0.25s cubic-bezier(0.2, 0, 0, 1),
+                border-left-width 0.25s;
+}
+
+.insights-panel.collapsed {
+    width: 0;
+    border-left-width: 0;
+}
+
+.insights-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.insights-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.insights-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+}
+
+.insights-content::-webkit-scrollbar {
+    width: 3px;
+}
+
+.insights-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.insights-content::-webkit-scrollbar-thumb {
+    background: var(--text-dim);
+    border-radius: 0;
+}
+
+/* ─── Pinned Card ─────────────────────────────────────────── */
+.pinned-card {
+    position: relative;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.pinned-card:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent-mid);
+}
+
+.pinned-card-agent {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    margin-bottom: 4px;
+}
+
+.pinned-card-summary {
+    font-family: var(--serif);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.btn-unpin {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    color: var(--text-dim);
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+
+.pinned-card:hover .btn-unpin {
+    opacity: 1;
+}
+
+.btn-unpin:hover {
+    color: var(--critical);
+    background: var(--bg-hover);
+}
+
+/* ─── Pin Button (citation card & modal) ──────────────────── */
+.btn-pin {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    opacity: 0.4;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+.btn-pin:hover {
+    opacity: 0.8;
+    background: var(--bg-hover);
+}
+
+.btn-pin.pinned {
+    opacity: 1;
+}
+
+.btn-pin-card {
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transition: opacity 0.12s, background 0.12s;
+}
+
+#citation-popup:hover .btn-pin-card {
+    opacity: 0.5;
+}
+
+.btn-pin-card:hover {
+    opacity: 0.8 !important;
+    background: var(--bg-hover);
+}
+
+.btn-pin-card.pinned {
+    opacity: 1 !important;
+}
+
+/* ─── Modal Actions ───────────────────────────────────────── */
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 /* ─── Active Patient Label ─────────────────────────────────── */

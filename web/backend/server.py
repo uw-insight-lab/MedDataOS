@@ -38,6 +38,9 @@ set_websocket_manager(ws_manager)
 # Session storage (in-memory, persists until server restart)
 sessions = {}  # session_id -> {"history": [...], "processing": bool}
 
+# Per-patient pinned citations (patient_id -> list of {pin_id, citation})
+patient_pins = {}
+
 
 def _cite(cid, agent, file, web_path, summary):
     """Helper to build a citation dict."""
@@ -323,6 +326,12 @@ def _seed_demo_sessions():
         "uploaded_file": None,
         "patient_id": "P0002",
     }
+
+    # ── Demo pins for P0001 ─────────────────────────────────────
+    patient_pins["P0001"] = [
+        {"pin_id": str(uuid4()), "citation": _c_ecg(1)},
+        {"pin_id": str(uuid4()), "citation": _c_labs(2)},
+    ]
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
     sessions["demo-5"] = {
@@ -632,6 +641,40 @@ async def create_patient_conversation(patient_id: str):
         "patient_id": patient_id,
     }
     return {"session_id": sid, "patient_id": patient_id}
+
+
+@app.get("/api/patients/{patient_id}/pins")
+async def get_patient_pins(patient_id: str):
+    """Return pinned citations for a patient."""
+    return patient_pins.get(patient_id, [])
+
+
+@app.post("/api/patients/{patient_id}/pins")
+async def add_patient_pin(patient_id: str, request: dict):
+    """Pin a citation for a patient. Deduplicates by agent+web_path."""
+    citation = request.get("citation")
+    if not citation:
+        return {"status": "error", "message": "citation is required"}
+
+    pins = patient_pins.setdefault(patient_id, [])
+
+    # Deduplicate by agent + web_path
+    for p in pins:
+        if p["citation"].get("agent") == citation.get("agent") and \
+           p["citation"].get("web_path") == citation.get("web_path"):
+            return {"status": "duplicate", "pin_id": p["pin_id"]}
+
+    pin_id = str(uuid4())
+    pins.append({"pin_id": pin_id, "citation": citation})
+    return {"status": "ok", "pin_id": pin_id}
+
+
+@app.delete("/api/patients/{patient_id}/pins/{pin_id}")
+async def remove_patient_pin(patient_id: str, pin_id: str):
+    """Unpin a citation for a patient."""
+    pins = patient_pins.get(patient_id, [])
+    patient_pins[patient_id] = [p for p in pins if p["pin_id"] != pin_id]
+    return {"status": "ok"}
 
 
 @app.get("/api/health")

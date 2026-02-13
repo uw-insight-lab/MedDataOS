@@ -12,6 +12,11 @@ let activeConversationId = null;
 let patients = [];
 let sidebarOpen = true;
 
+// Insights panel state
+let insightsOpen = false;
+let patientPins = {};    // patient_id -> [{pin_id, citation}]
+let modalCitation = null; // citation currently shown in modal
+
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
 const connectionStatus = document.getElementById('connection-status');
@@ -29,6 +34,10 @@ const sidebarEl = document.getElementById('sidebar');
 const sidebarContent = document.getElementById('sidebar-content');
 const sidebarToggle = document.getElementById('sidebar-toggle');
 const activePatientLabel = document.getElementById('active-patient-label');
+const insightsPanel = document.getElementById('insights-panel');
+const insightsContent = document.getElementById('insights-content');
+const insightsToggle = document.getElementById('insights-toggle');
+const modalPin = document.getElementById('modal-pin');
 
 // ─── Sidebar: Load Patients ─────────────────────────────────
 async function loadPatients() {
@@ -80,6 +89,103 @@ function toggleSidebar() {
     sidebarOpen = !sidebarOpen;
     sidebarEl.classList.toggle('collapsed', !sidebarOpen);
 }
+
+// ─── Insights Panel ─────────────────────────────────────────
+function toggleInsights() {
+    insightsOpen = !insightsOpen;
+    insightsPanel.classList.toggle('collapsed', !insightsOpen);
+}
+
+async function fetchPins(patientId) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/pins`);
+        patientPins[patientId] = await res.json();
+    } catch (e) {
+        console.error('Failed to fetch pins:', e);
+        patientPins[patientId] = [];
+    }
+}
+
+async function addPin(patientId, citation) {
+    try {
+        await fetch(`/api/patients/${patientId}/pins`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ citation }),
+        });
+        await fetchPins(patientId);
+        renderInsightsPanel();
+    } catch (e) {
+        console.error('Failed to add pin:', e);
+    }
+}
+
+async function removePin(patientId, pinId) {
+    try {
+        await fetch(`/api/patients/${patientId}/pins/${pinId}`, { method: 'DELETE' });
+        await fetchPins(patientId);
+        renderInsightsPanel();
+    } catch (e) {
+        console.error('Failed to remove pin:', e);
+    }
+}
+
+function isPinned(patientId, citation) {
+    return !!findPinId(patientId, citation);
+}
+
+function findPinId(patientId, citation) {
+    const pins = patientPins[patientId] || [];
+    const match = pins.find(p =>
+        p.citation.agent === citation.agent && p.citation.web_path === citation.web_path
+    );
+    return match ? match.pin_id : null;
+}
+
+function renderInsightsPanel() {
+    const pins = (activePatientId && patientPins[activePatientId]) || [];
+    if (pins.length === 0) {
+        insightsContent.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CC;</div><div class="empty-state-text">No pinned citations</div></div>';
+        return;
+    }
+    insightsContent.innerHTML = '';
+    pins.forEach(p => {
+        const agentLabel = agentCardLabels[p.citation.agent] || p.citation.agent.replace(/_/g, ' ');
+        const card = document.createElement('div');
+        card.className = 'pinned-card';
+        card.dataset.pinId = p.pin_id;
+        card.dataset.citation = JSON.stringify(p.citation);
+        card.innerHTML = `
+            <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
+            <div class="pinned-card-summary">${escapeHtml(p.citation.summary)}</div>
+            <button class="btn-unpin" title="Unpin">&times;</button>
+        `;
+        insightsContent.appendChild(card);
+    });
+}
+
+// Insights panel event delegation
+insightsContent.addEventListener('click', (e) => {
+    // Unpin button
+    const unpinBtn = e.target.closest('.btn-unpin');
+    if (unpinBtn) {
+        e.stopPropagation();
+        const card = unpinBtn.closest('.pinned-card');
+        if (card && activePatientId) {
+            removePin(activePatientId, card.dataset.pinId);
+        }
+        return;
+    }
+
+    // Card click → open modal
+    const card = e.target.closest('.pinned-card');
+    if (card) {
+        const citation = JSON.parse(card.dataset.citation);
+        openCitationModal(citation);
+    }
+});
+
+insightsToggle.addEventListener('click', toggleInsights);
 
 // ─── Sidebar: Expand / Collapse Patient ─────────────────────
 async function togglePatient(patientEl) {
@@ -136,6 +242,10 @@ async function switchConversation(patientId, sid) {
     document.querySelectorAll('.conversation-item').forEach(el => {
         el.classList.toggle('active', el.dataset.sessionId === sid);
     });
+
+    // Fetch pins for this patient
+    await fetchPins(patientId);
+    renderInsightsPanel();
 
     // Clear chat and load history
     chatContainer.innerHTML = '';
@@ -417,9 +527,14 @@ async function showCitationPopup(anchor, citation) {
         contentHTML = `<div class="card-loading">Loading…</div>`;
     }
 
+    const pinBtnHTML = activePatientId
+        ? `<button class="btn-pin-card${isPinned(activePatientId, citation) ? ' pinned' : ''}" data-citation="${encodeURIComponent(JSON.stringify(citation))}" title="Pin citation">&#x1F4CC;</button>`
+        : '';
+
     citationPopup.innerHTML = `
         <div class="card-header">
             <span class="card-agent">${escapeHtml(agentLabel)}</span>
+            ${pinBtnHTML}
         </div>
         <div class="card-content" id="card-content-inner">${contentHTML}</div>
         <div class="card-summary">${escapeHtml(citation.summary)}</div>
@@ -567,6 +682,8 @@ function clearChat() {
     document.querySelectorAll('.conversation-item.active').forEach(el => {
         el.classList.remove('active');
     });
+    // Clear insights panel
+    renderInsightsPanel();
 }
 
 // Send message
@@ -661,6 +778,22 @@ chatContainer.addEventListener('mouseout', (e) => {
 citationPopup.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
 citationPopup.addEventListener('mouseleave', () => { citationPopup.style.display = 'none'; });
 
+// Pin button on hover card
+citationPopup.addEventListener('click', async (e) => {
+    const pinBtn = e.target.closest('.btn-pin-card');
+    if (!pinBtn || !activePatientId) return;
+    e.stopPropagation();
+    const citation = JSON.parse(decodeURIComponent(pinBtn.dataset.citation));
+    const existingPinId = findPinId(activePatientId, citation);
+    if (existingPinId) {
+        await removePin(activePatientId, existingPinId);
+        pinBtn.classList.remove('pinned');
+    } else {
+        await addPin(activePatientId, citation);
+        pinBtn.classList.add('pinned');
+    }
+});
+
 // ─── Citation Detail Modal ──────────────────────────────────
 const citationBackdrop = document.getElementById('citation-backdrop');
 const citationModal = document.getElementById('citation-modal');
@@ -689,11 +822,20 @@ function csvToModalHTML(csv, maxRows = 200) {
 }
 
 async function openCitationModal(citation) {
+    modalCitation = citation;
     const type = getCitationType(citation.file);
     const agentLabel = agentCardLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
 
     modalAgent.textContent = agentLabel;
     modalSummary.textContent = citation.summary;
+
+    // Update modal pin button state
+    if (activePatientId) {
+        modalPin.style.display = '';
+        modalPin.classList.toggle('pinned', isPinned(activePatientId, citation));
+    } else {
+        modalPin.style.display = 'none';
+    }
 
     // Build content
     let contentHTML = '';
@@ -749,6 +891,19 @@ chatContainer.addEventListener('click', (e) => {
 
 modalClose.addEventListener('click', closeCitationModal);
 citationBackdrop.addEventListener('click', closeCitationModal);
+
+// Modal pin button
+modalPin.addEventListener('click', async () => {
+    if (!activePatientId || !modalCitation) return;
+    const existingPinId = findPinId(activePatientId, modalCitation);
+    if (existingPinId) {
+        await removePin(activePatientId, existingPinId);
+        modalPin.classList.remove('pinned');
+    } else {
+        await addPin(activePatientId, modalCitation);
+        modalPin.classList.add('pinned');
+    }
+});
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && citationModal.classList.contains('open')) {
         closeCitationModal();
