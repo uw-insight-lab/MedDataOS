@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css?v=13">
+    <link rel="stylesheet" href="/static/style.css?v=14">
 </head>
 <body>
     <div class="container">
@@ -79,13 +79,24 @@
         </div>
     </div>
 
-    <!-- Citation card (content built dynamically) -->
+    <!-- Citation hover card (content built dynamically) -->
     <div id="citation-popup"></div>
+
+    <!-- Citation detail modal -->
+    <div id="citation-backdrop" class="citation-backdrop"></div>
+    <div id="citation-modal" class="citation-modal">
+        <div class="modal-header">
+            <span class="modal-agent" id="modal-agent"></span>
+            <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-summary" id="modal-summary"></div>
+    </div>
 
     <!-- Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 
-    <script src="/static/app.js?v=13"></script>
+    <script src="/static/app.js?v=14"></script>
 </body>
 </html>

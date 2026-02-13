@@ -352,6 +352,16 @@ function getCitationType(file) {
              csv: 'csv', txt: 'text', mp4: 'video', wav: 'audio' }[ext] || 'text';
 }
 
+// Convert plain text to reflowed HTML paragraphs (collapse hard line-wraps)
+function plainTextToHTML(text) {
+    return text
+        .split(/\n\s*\n/)                          // split on blank lines → paragraphs
+        .map(p => p.replace(/\s*\n\s*/g, ' ').trim()) // collapse single newlines
+        .filter(Boolean)
+        .map(p => `<p>${escapeHtml(p)}</p>`)
+        .join('');
+}
+
 // Parse CSV text into an HTML table (first maxRows rows, first maxCols columns)
 function csvToHTML(csv, maxRows = 100, maxCols = 5) {
     const lines = csv.trim().split('\n').filter(l => l.trim());
@@ -426,7 +436,7 @@ async function showCitationPopup(anchor, citation) {
             if (inner) {
                 inner.innerHTML = type === 'csv'
                     ? csvToHTML(text)
-                    : `<div class="card-text">${escapeHtml(text.slice(0, 600))}${text.length > 600 ? '…' : ''}</div>`;
+                    : `<div class="card-text">${plainTextToHTML(text.slice(0, 600))}${text.length > 600 ? '<p>…</p>' : ''}</div>`;
                 positionPopup(anchor);
             }
         } catch {
@@ -650,6 +660,100 @@ chatContainer.addEventListener('mouseout', (e) => {
 // Keep card open when mouse moves onto it (needed for audio/video interaction)
 citationPopup.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
 citationPopup.addEventListener('mouseleave', () => { citationPopup.style.display = 'none'; });
+
+// ─── Citation Detail Modal ──────────────────────────────────
+const citationBackdrop = document.getElementById('citation-backdrop');
+const citationModal = document.getElementById('citation-modal');
+const modalAgent = document.getElementById('modal-agent');
+const modalBody = document.getElementById('modal-body');
+const modalSummary = document.getElementById('modal-summary');
+const modalClose = document.getElementById('modal-close');
+
+// Build modal table from CSV (larger version — all columns)
+function csvToModalHTML(csv, maxRows = 200) {
+    const lines = csv.trim().split('\n').filter(l => l.trim());
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+    let html = '<div class="modal-table-wrap"><table><thead><tr>';
+    headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+    html += '</tr></thead><tbody>';
+
+    lines.slice(1, maxRows + 1).forEach(line => {
+        const cells = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        html += '<tr>';
+        cells.forEach(cell => html += `<td>${escapeHtml(cell)}</td>`);
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+}
+
+async function openCitationModal(citation) {
+    const type = getCitationType(citation.file);
+    const agentLabel = agentCardLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
+
+    modalAgent.textContent = agentLabel;
+    modalSummary.textContent = citation.summary;
+
+    // Build content
+    let contentHTML = '';
+    if (type === 'image') {
+        const isSvg = citation.file.endsWith('.svg');
+        contentHTML = `<img src="${citation.web_path}" alt="${escapeHtml(agentLabel)}"${isSvg ? ' class="modal-image-svg"' : ''}>`;
+    } else if (type === 'video') {
+        contentHTML = `<video src="${citation.web_path}" controls autoplay></video>`;
+    } else if (type === 'audio') {
+        contentHTML = `<div class="modal-audio-wrap"><audio src="${citation.web_path}" controls></audio></div>`;
+    } else {
+        contentHTML = '<div class="modal-loading">Loading\u2026</div>';
+    }
+
+    modalBody.innerHTML = contentHTML;
+
+    // Show modal
+    citationBackdrop.classList.add('open');
+    citationModal.classList.add('open');
+
+    // Fetch text-based content
+    if (type === 'csv' || type === 'text') {
+        try {
+            const text = await fetch(citation.web_path).then(r => r.text());
+            modalBody.innerHTML = type === 'csv'
+                ? csvToModalHTML(text)
+                : `<div class="modal-text">${plainTextToHTML(text)}</div>`;
+        } catch {
+            modalBody.innerHTML = '<div class="modal-text" style="color: var(--critical);">Could not load content.</div>';
+        }
+    }
+}
+
+function closeCitationModal() {
+    citationBackdrop.classList.remove('open');
+    citationModal.classList.remove('open');
+    // Stop any playing media
+    modalBody.querySelectorAll('video, audio').forEach(el => { el.pause(); el.src = ''; });
+    modalBody.innerHTML = '';
+}
+
+// Click citation → open modal
+chatContainer.addEventListener('click', (e) => {
+    const target = e.target.closest('.citation');
+    if (!target) return;
+    e.preventDefault();
+    // Hide hover card
+    citationPopup.style.display = 'none';
+    clearTimeout(hideTimeout);
+    const citation = JSON.parse(decodeURIComponent(target.dataset.citation));
+    openCitationModal(citation);
+});
+
+modalClose.addEventListener('click', closeCitationModal);
+citationBackdrop.addEventListener('click', closeCitationModal);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && citationModal.classList.contains('open')) {
+        closeCitationModal();
+    }
+});
 
 // Event listeners
 sendBtn.addEventListener('click', sendMessage);
