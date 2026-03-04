@@ -21,6 +21,7 @@ import asyncio
 import threading
 from uuid import uuid4
 from typing import Optional
+from datetime import datetime
 import shutil
 
 from src.utils.logging import WebSocketManager, set_websocket_manager
@@ -50,31 +51,52 @@ def _cite(cid, agent, file, web_path, summary):
 # Reusable P0001 citation builders (call with sequential id)
 def _c_notes(cid):
     return _cite(cid, "clinical_notes", "P0001.txt", "/multimodal-data/clinical-notes/P0001.txt",
-                 "58-year-old male with 2\u20133 week history of exertional chest pressure and dyspnea")
+                 "58-year-old male presenting with 2\u20133 week history of exertional chest pressure. "
+                 "Discomfort is pressure-like, rated 4/10, and resolves within 5 minutes of rest. "
+                 "Mild dyspnea on exertion and increased fatigue are also reported. "
+                 "No rest pain, palpitations, or syncope. Penicillin allergy documented.")
 
 def _c_xray(cid):
     return _cite(cid, "chest_xray", "P0001.png", "/multimodal-data/chest-xray/P0001.png",
-                 "No acute cardiopulmonary abnormality, normal cardiac silhouette")
+                 "No acute cardiopulmonary abnormality identified on this study. "
+                 "Cardiac silhouette is within normal limits with no cardiomegaly. "
+                 "Lung fields are clear with no consolidation, effusion, or pulmonary vascular congestion. "
+                 "Mediastinal contours and bony thorax appear unremarkable.")
 
 def _c_ecg(cid):
     return _cite(cid, "ecg", "P0001.svg", "/multimodal-data/ecg/P0001.svg",
-                 "Sinus rhythm, ST changes in lateral leads V4\u2013V6")
+                 "Sinus rhythm at 72 bpm with normal PR and QRS intervals. "
+                 "Subtle ST-segment depression noted in lateral leads V4\u2013V6. "
+                 "T-wave flattening observed in leads I and aVL. "
+                 "Findings are consistent with lateral ischemia and warrant clinical correlation.")
 
 def _c_heart(cid):
     return _cite(cid, "heart_sounds", "P0001.wav", "/multimodal-data/heart-sounds/P0001.wav",
-                 "S4 gallop present, grade 2/6 systolic murmur")
+                 "S4 gallop present, indicating impaired left ventricular compliance. "
+                 "Grade 2/6 systolic murmur audible at the apex, non-radiating. "
+                 "S1 and S2 are otherwise normal in character. "
+                 "No pericardial rub or diastolic murmur detected.")
 
 def _c_echo(cid):
     return _cite(cid, "echo", "P0001.mp4", "/multimodal-data/echo/P0001.mp4",
-                 "Mildly reduced LV ejection fraction, lateral wall motion abnormality")
+                 "Left ventricular ejection fraction is mildly reduced at approximately 45\u201350%. "
+                 "Regional wall motion abnormality identified in the lateral wall territory. "
+                 "No significant valvular pathology or pericardial effusion observed. "
+                 "Right ventricular size and function appear preserved.")
 
 def _c_labs(cid):
     return _cite(cid, "lab_results", "P0001.png", "/multimodal-data/lab-results/P0001.png",
-                 "Recurrent hyperkalemia: peaks at 5.9, 6.2, 5.8 mmol/L over Oct 2025\u2013Jan 2026")
+                 "Recurrent hyperkalemia documented with peaks of 5.9, 6.2, and 5.8 mmol/L over Oct 2025\u2013Jan 2026. "
+                 "Creatinine is trending at the upper limit of normal, suggesting mild renal impairment. "
+                 "Troponin levels are within the reference range on most recent draw. "
+                 "CBC and hepatic function panels are unremarkable.")
 
 def _c_meds(cid):
     return _cite(cid, "medication", "P0001.csv", "/multimodal-data/medications/P0001.csv",
-                 "Active medications include Lisinopril 20mg \u2014 ACE inhibitor contributing to elevated potassium")
+                 "Lisinopril 20mg daily (ACE inhibitor) is the likely driver of recurrent hyperkalemia. "
+                 "Cardiovascular regimen includes Amlodipine 5mg, Atorvastatin 20mg, and Aspirin 81mg. "
+                 "Diabetes managed with Metformin 1000mg twice daily and Semaglutide 0.5mg weekly. "
+                 "Albuterol PRN is prescribed for asthma. Penicillin allergy is documented.")
 
 
 # Reusable P0002 citation builders
@@ -329,8 +351,12 @@ def _seed_demo_sessions():
 
     # ── Demo pins for P0001 ─────────────────────────────────────
     patient_pins["P0001"] = [
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1), "source": "demo-1"},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2), "source": "demo-2"},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1), "source": "demo-1",
+         "created_at": datetime.utcnow().isoformat(), "query": "",
+         "annotations": {"text": "", "tags": []}, "checklist_state": {}},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2), "source": "demo-2",
+         "created_at": datetime.utcnow().isoformat(), "query": "",
+         "annotations": {"text": "", "tags": []}, "checklist_state": {}},
     ]
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
@@ -667,7 +693,11 @@ async def add_patient_pin(patient_id: str, request: dict):
                 return {"status": "duplicate", "pin_id": p["pin_id"]}
         pin_id = str(uuid4())
         pins.append({"pin_id": pin_id, "type": "citation", "citation": citation,
-                      "source": request.get("source", "")})
+                      "source": request.get("source", ""),
+                      "created_at": datetime.utcnow().isoformat(),
+                      "query": request.get("query", ""),
+                      "annotations": {"text": "", "tags": []},
+                      "checklist_state": {}})
     elif pin_type == "text":
         text = request.get("text", "").strip()
         if not text:
@@ -695,6 +725,20 @@ async def remove_patient_pin(patient_id: str, pin_id: str):
     pins = patient_pins.get(patient_id, [])
     patient_pins[patient_id] = [p for p in pins if p["pin_id"] != pin_id]
     return {"status": "ok"}
+
+
+@app.patch("/api/patients/{patient_id}/pins/{pin_id}")
+async def patch_patient_pin(patient_id: str, pin_id: str, request: dict):
+    """Update annotations or checklist_state for a pin."""
+    pins = patient_pins.get(patient_id, [])
+    for p in pins:
+        if p["pin_id"] == pin_id:
+            if "annotations" in request:
+                p["annotations"] = request["annotations"]
+            if "checklist_state" in request:
+                p["checklist_state"] = request["checklist_state"]
+            return p
+    return {"status": "error", "message": "Pin not found"}
 
 
 @app.get("/api/health")

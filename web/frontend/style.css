@@ -1223,6 +1223,7 @@ main {
     max-height: 70vh;
     object-fit: contain;
     display: block;
+    cursor: zoom-in;
 }
 
 .modal-body img.modal-image-svg {
@@ -1321,13 +1322,14 @@ main {
 }
 
 .modal-summary {
-    padding: 12px 20px;
+    padding: 16px 20px 12px;
     font-family: var(--serif);
     font-style: italic;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.6;
     color: var(--text-secondary);
     border-top: 1px solid var(--border);
+    background: var(--bg-surface);
     flex-shrink: 0;
 }
 
@@ -1564,4 +1566,383 @@ main {
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-dim);
+}
+
+
+/* ─── Modal Agent Group (name + ⓘ button) ─────────────────── */
+.modal-agent-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    position: relative;
+}
+
+/* ─── Agent Info Button ────────────────────────────────────── */
+.btn-agent-info {
+    background: transparent;
+    border: 1.5px solid var(--border-warm);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s;
+    line-height: 1;
+}
+
+.btn-agent-info:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent-mid);
+    color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* ─── Agent Info Tooltip ───────────────────────────────────── */
+.agent-info-tooltip {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 16px;
+    width: 288px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-warm);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(26, 22, 18, 0.18), 0 2px 8px rgba(26, 22, 18, 0.08);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1),
+                transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.agent-info-tooltip::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+}
+
+.agent-info-tooltip.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.agent-info-tooltip-body {
+    padding: 12px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.agent-info-tooltip-row {
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    gap: 0 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.agent-info-tooltip-row:last-of-type {
+    border-bottom: none;
+}
+
+.agent-info-tooltip-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    padding-top: 2px;
+    line-height: 1.5;
+}
+
+.agent-info-tooltip-value {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.agent-info-tooltip-disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 14px 10px;
+    background: var(--accent-soft);
+    border-top: 1px solid var(--accent-mid);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.agent-info-tooltip-disclaimer::before {
+    content: '⚕';
+    font-style: normal;
+    font-size: 14px;
+    color: var(--accent);
+    opacity: 0.55;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* ─── Modal Provenance ─────────────────────────────────────── */
+.modal-provenance {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 0 20px 14px;
+    background: var(--bg-surface);
+    flex-shrink: 0;
+}
+
+.modal-provenance:empty {
+    display: none;
+}
+
+.modal-provenance div {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+}
+
+.modal-provenance div + div::before {
+    content: '·';
+    color: var(--accent-mid);
+    font-size: 14px;
+    line-height: 1;
+    margin: 0 10px;
+}
+
+/* ─── Modal Annotations ────────────────────────────────────── */
+.modal-annotations {
+    border-top: 1px solid var(--border-warm);
+    padding: 14px 20px 18px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-deep);
+}
+
+.annotation-section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+}
+
+#modal-annotation-text {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-warm);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--border-warm);
+    padding: 10px 13px;
+    font-family: var(--serif);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-primary);
+    resize: none;
+    overflow: hidden;
+    min-height: 52px;
+    transition: border-left-color 0.2s, box-shadow 0.2s;
+}
+
+#modal-annotation-text:focus {
+    outline: none;
+    border-left-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+#modal-annotation-text::placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.annotation-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.annotation-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 5px 13px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border-warm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    background: var(--bg-surface);
+    transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+    user-select: none;
+    line-height: 1.3;
+}
+
+.annotation-tag:hover {
+    border-color: var(--accent-mid);
+    color: var(--accent);
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+.annotation-tag.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fdf8ee;
+    box-shadow: 0 3px 10px rgba(166, 120, 48, 0.32);
+    transform: translateY(-1px);
+}
+
+.annotation-tag.active:hover {
+    background: #bc8e3a;
+    border-color: #bc8e3a;
+}
+
+/* ─── Pinned Card Annotation Preview ──────────────────────── */
+.pinned-card-annotation {
+    font-family: var(--serif);
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-dim);
+    margin-top: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.pinned-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.pinned-card-tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent-mid);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+}
+
+/* ─── Findings Checklist ───────────────────────────────────── */
+.findings-checklist {
+    list-style: none;
+    padding: 8px 20px 14px;
+    margin: 0;
+}
+
+.findings-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    transition: opacity 0.15s;
+}
+
+.findings-checklist li:last-child {
+    border-bottom: none;
+}
+
+/* Custom checkbox */
+.findings-checklist input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    border: 1.5px solid var(--border-warm);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.18s, border-color 0.18s;
+}
+
+.findings-checklist input[type="checkbox"]:hover {
+    border-color: var(--accent-mid);
+}
+
+.findings-checklist input[type="checkbox"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.findings-checklist input[type="checkbox"]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='%23fdf8ee' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 10px 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.findings-checklist input[type="checkbox"]:checked::after {
+    opacity: 1;
+}
+
+.findings-checklist label {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: opacity 0.22s, color 0.22s;
+}
+
+.findings-checklist li.checked label {
+    opacity: 0.42;
+    text-decoration: line-through;
+    text-decoration-color: var(--accent-mid);
+    text-decoration-thickness: 1px;
+}
+
+/* ─── Image Zoom ───────────────────────────────────────────── */
+.citation-modal {
+    transition: opacity 0.2s ease, transform 0.2s ease,
+                width 0.28s cubic-bezier(0.2, 0, 0, 1),
+                max-width 0.28s cubic-bezier(0.2, 0, 0, 1),
+                max-height 0.28s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.citation-modal.zoomed {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 95vh;
+}
+
+.citation-modal.zoomed .modal-body img {
+    max-height: 80vh;
+    cursor: zoom-out;
 }

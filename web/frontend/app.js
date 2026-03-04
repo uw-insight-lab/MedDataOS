@@ -16,6 +16,8 @@ let sidebarOpen = true;
 let insightsOpen = false;
 let patientPins = {};    // patient_id -> [{pin_id, citation}]
 let modalCitation = null; // citation currently shown in modal
+let currentModalPin = null; // full pin object for modal (or null if not pinned)
+let lastUserQuery = '';     // last query text captured before sending
 
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
@@ -38,6 +40,11 @@ const insightsPanel = document.getElementById('insights-panel');
 const insightsContent = document.getElementById('insights-content');
 const insightsToggle = document.getElementById('insights-toggle');
 const modalPin = document.getElementById('modal-pin');
+const modalAnnotationText = document.getElementById('modal-annotation-text');
+const modalAnnotationTags = document.getElementById('modal-annotation-tags');
+const modalInfoBtn = document.getElementById('modal-info-btn');
+const modalAgentInfo = document.getElementById('modal-agent-info');
+const modalProvenance = document.getElementById('modal-provenance');
 
 // ─── Sidebar: Load Patients ─────────────────────────────────
 async function loadPatients() {
@@ -108,10 +115,12 @@ async function fetchPins(patientId) {
 
 async function addPin(patientId, pinData) {
     try {
+        const body = { ...pinData };
+        if (body.type === 'citation') body.query = lastUserQuery;
         await fetch(`/api/patients/${patientId}/pins`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(pinData),
+            body: JSON.stringify(body),
         });
         await fetchPins(patientId);
         renderInsightsPanel();
@@ -197,10 +206,14 @@ function renderInsightsPanel() {
             card.dataset.source = p.source || '';
             const agentLabel = agentCardLabels[p.citation.agent] || p.citation.agent.replace(/_/g, ' ');
             const previewHTML = buildPinPreview(p.citation);
+            const annotationText = p.annotations && p.annotations.text ? p.annotations.text : '';
+            const annotationTags = p.annotations && p.annotations.tags && p.annotations.tags.length > 0 ? p.annotations.tags : [];
             card.innerHTML = `
                 <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
                 ${previewHTML}
                 <div class="pinned-card-summary">${escapeHtml(p.citation.summary)}</div>
+                ${annotationText ? `<div class="pinned-card-annotation">${escapeHtml(annotationText.slice(0, 60))}${annotationText.length > 60 ? '…' : ''}</div>` : ''}
+                ${annotationTags.length > 0 ? `<div class="pinned-card-tags">${annotationTags.map(t => `<span class="pinned-card-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
                 ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
             `;
@@ -244,7 +257,9 @@ insightsContent.addEventListener('click', (e) => {
         const card = preview.closest('.pinned-card');
         if (card && card.dataset.pinType === 'citation') {
             const citation = JSON.parse(card.dataset.citation);
-            openCitationModal(citation);
+            const pinId = card.dataset.pinId;
+            const pin = (patientPins[activePatientId] || []).find(p => p.pin_id === pinId) || null;
+            openCitationModal(citation, pin);
         }
         return;
     }
@@ -312,6 +327,7 @@ async function loadConversations(patientId, patientEl) {
 
 // ─── Sidebar: Switch Conversation ───────────────────────────
 async function switchConversation(patientId, sid) {
+    const changingPatient = activePatientId !== patientId;
     activePatientId = patientId;
     activeConversationId = sid;
     sessionId = sid;
@@ -327,8 +343,12 @@ async function switchConversation(patientId, sid) {
         el.classList.toggle('active', el.dataset.sessionId === sid);
     });
 
-    // Fetch pins for this patient
-    await fetchPins(patientId);
+    // Only re-fetch pins when switching to a different patient;
+    // within the same patient the local cache is authoritative and
+    // a fresh fetch would race with any in-flight PATCH requests.
+    if (changingPatient) {
+        await fetchPins(patientId);
+    }
     renderInsightsPanel();
 
     // Clear chat and load history
@@ -517,13 +537,24 @@ const agentBadgeLabels = {
 
 // Agent ID → full display name for citation card header
 const agentCardLabels = {
-    'clinical_notes': 'Clinical Notes Agent',
-    'chest_xray':     'Chest X-Ray Agent',
-    'ecg':            'ECG Agent',
-    'heart_sounds':   'Heart Sounds Agent',
-    'echo':           'Echocardiogram Agent',
-    'lab_results':    'Lab Results Agent',
-    'medication':     'Medications Agent',
+    'clinical_notes': 'Findings from Clinical Notes',
+    'chest_xray':     'Findings from Chest X-Ray',
+    'ecg':            'Findings from ECG',
+    'heart_sounds':   'Findings from Heart Sounds',
+    'echo':           'Findings from Echocardiogram',
+    'lab_results':    'Findings from Lab Results',
+    'medication':     'Findings from Medications',
+};
+
+// Agent info for tooltip (per agent type)
+const agentInfo = {
+    'clinical_notes': { analyzes: 'Clinical text notes and physician documentation', output: 'Text summary' },
+    'chest_xray':     { analyzes: 'Chest X-ray images (PNG)', output: 'Image + findings' },
+    'ecg':            { analyzes: '12-lead ECG waveforms from HL7 source data', output: 'SVG waveform + findings' },
+    'heart_sounds':   { analyzes: 'Heart auscultation audio recordings', output: 'Audio + findings' },
+    'echo':           { analyzes: 'Echocardiogram video recordings', output: 'Video + findings' },
+    'lab_results':    { analyzes: 'Laboratory results from HL7v2 source data', output: 'Chart image + findings' },
+    'medication':     { analyzes: 'Medication history and prescriptions', output: 'CSV table + findings' },
 };
 
 // Replace [cite:X] tokens with hoverable <sup> badges
@@ -752,6 +783,76 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Format ISO date string for display
+function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    });
+}
+
+// Debounce utility
+function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// Split summary text into checklist items; returns null if < 2 items
+function parseSummaryToChecklist(text) {
+    const parts = text.split(/\.\s+|\n+/)
+        .map(s => s.replace(/\.$/, '').trim())
+        .filter(s => s.length >= 20);
+    if (parts.length < 2) return null;
+    return parts.slice(0, 8);
+}
+
+// Build checklist UL element from items + saved state
+function renderModalChecklist(items, checklist_state) {
+    const ul = document.createElement('ul');
+    ul.className = 'findings-checklist';
+    items.forEach((item, i) => {
+        const li = document.createElement('li');
+        const checked = checklist_state[String(i)] || false;
+        if (checked) li.classList.add('checked');
+        li.innerHTML = `
+            <input type="checkbox" id="chk-${i}"${checked ? ' checked' : ''}>
+            <label for="chk-${i}">${escapeHtml(item)}</label>
+        `;
+        ul.appendChild(li);
+    });
+    return ul;
+}
+
+// PATCH a pin's annotations or checklist_state; updates local cache
+async function patchPin(patientId, pinId, data) {
+    try {
+        await fetch(`/api/patients/${patientId}/pins/${pinId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        // Update local cache directly
+        const pins = patientPins[patientId] || [];
+        const pin = pins.find(p => p.pin_id === pinId);
+        if (pin) {
+            if (data.annotations !== undefined) pin.annotations = data.annotations;
+            if (data.checklist_state !== undefined) pin.checklist_state = data.checklist_state;
+        }
+    } catch (e) {
+        console.error('Failed to patch pin:', e);
+    }
+}
+
+const debouncedPatchAnnotations = debounce((patientId, pinId, annotations) => {
+    patchPin(patientId, pinId, { annotations });
+}, 500);
+
+const debouncedPatchChecklist = debounce((patientId, pinId, checklist_state) => {
+    patchPin(patientId, pinId, { checklist_state });
+}, 500);
+
 // Clear chat
 function clearChat() {
     chatContainer.innerHTML = '';
@@ -778,6 +879,9 @@ async function sendMessage() {
     if (!message) {
         return;
     }
+
+    // Capture query for provenance before clearing input
+    lastUserQuery = message;
 
     // Disable input while processing
     isProcessing = true;
@@ -906,13 +1010,26 @@ function csvToModalHTML(csv, maxRows = 200) {
     return html;
 }
 
-async function openCitationModal(citation) {
+async function openCitationModal(citation, pin = null) {
     modalCitation = citation;
+
+    // Look up pin if not provided
+    if (!pin && activePatientId) {
+        const pins = patientPins[activePatientId] || [];
+        pin = pins.find(p =>
+            p.type !== 'text' && p.citation &&
+            p.citation.agent === citation.agent && p.citation.web_path === citation.web_path
+        ) || null;
+    }
+    currentModalPin = pin;
+
     const type = getCitationType(citation.file);
     const agentLabel = agentCardLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
 
     modalAgent.textContent = agentLabel;
-    modalSummary.textContent = citation.summary;
+
+    // Remove zoom state from previous open
+    citationModal.classList.remove('zoomed');
 
     // Update modal pin button state
     if (activePatientId) {
@@ -922,7 +1039,52 @@ async function openCitationModal(citation) {
         modalPin.style.display = 'none';
     }
 
-    // Build content
+    // ── Agent info tooltip ──────────────────────────────────
+    const info = agentInfo[citation.agent];
+    if (info) {
+        modalAgentInfo.innerHTML = `
+            <div class="agent-info-tooltip-body">
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Analyzes</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.analyzes)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Output</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.output)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Model</span>
+                    <span class="agent-info-tooltip-value">Gemini 3.1 Pro</span>
+                </div>
+            </div>
+            <div class="agent-info-tooltip-disclaimer">AI-generated — requires clinical verification</div>
+        `;
+        modalInfoBtn.style.display = '';
+    } else {
+        modalInfoBtn.style.display = 'none';
+    }
+
+    // ── Provenance ──────────────────────────────────────────
+    let provenanceHTML = '';
+    if (pin && pin.query) {
+        const q = pin.query.length > 80 ? pin.query.slice(0, 77) + '…' : pin.query;
+        provenanceHTML += `<div>Asked: "${escapeHtml(q)}"</div>`;
+    }
+    if (pin && pin.created_at) {
+        provenanceHTML += `<div>Generated: ${formatDate(pin.created_at)}</div>`;
+    }
+    modalProvenance.innerHTML = provenanceHTML;
+
+    // ── Annotations ─────────────────────────────────────────
+    const annotations = pin ? (pin.annotations || { text: '', tags: [] }) : { text: '', tags: [] };
+    modalAnnotationText.value = annotations.text || '';
+    modalAnnotationText.style.height = 'auto';
+    setTimeout(() => {
+        modalAnnotationText.style.height = modalAnnotationText.scrollHeight + 'px';
+    }, 0);
+    renderAnnotationTags(annotations.tags || []);
+
+    // ── Build body content ───────────────────────────────────
     let contentHTML = '';
     if (type === 'image') {
         const isSvg = citation.file.endsWith('.svg');
@@ -934,8 +1096,33 @@ async function openCitationModal(citation) {
     } else {
         contentHTML = '<div class="modal-loading">Loading\u2026</div>';
     }
-
     modalBody.innerHTML = contentHTML;
+
+    // ── Summary or Checklist ─────────────────────────────────
+    const checklistItems = parseSummaryToChecklist(citation.summary);
+    if (checklistItems) {
+        const checklist_state = pin ? (pin.checklist_state || {}) : {};
+        modalSummary.innerHTML = '';
+        modalSummary.style.padding = '0';
+        const ul = renderModalChecklist(checklistItems, checklist_state);
+        modalSummary.appendChild(ul);
+        // Checkbox change handlers
+        ul.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => {
+            cb.addEventListener('change', async () => {
+                const li = cb.closest('li');
+                li.classList.toggle('checked', cb.checked);
+                if (!activePatientId) return;
+                if (!currentModalPin && !(await ensurePinned())) return;
+                currentModalPin.checklist_state = currentModalPin.checklist_state || {};
+                currentModalPin.checklist_state[String(i)] = cb.checked;
+                debouncedPatchChecklist(activePatientId, currentModalPin.pin_id,
+                    { ...currentModalPin.checklist_state });
+            });
+        });
+    } else {
+        modalSummary.style.padding = '';
+        modalSummary.textContent = citation.summary;
+    }
 
     // Show modal
     citationBackdrop.classList.add('open');
@@ -954,12 +1141,52 @@ async function openCitationModal(citation) {
     }
 }
 
+// Pin the current modal citation if not already pinned; returns true on success
+async function ensurePinned() {
+    if (currentModalPin) return true;
+    if (!activePatientId || !modalCitation) return false;
+    await addPin(activePatientId, { type: 'citation', citation: modalCitation, source: getActiveSessionId() });
+    const pins = patientPins[activePatientId] || [];
+    currentModalPin = pins.find(p =>
+        p.type !== 'text' && p.citation &&
+        p.citation.agent === modalCitation.agent && p.citation.web_path === modalCitation.web_path
+    ) || null;
+    if (currentModalPin) modalPin.classList.add('pinned');
+    return !!currentModalPin;
+}
+
+// Render predefined tag chips with active state
+function renderAnnotationTags(activeTags) {
+    const predefinedTags = ['#follow-up', '#critical', '#reviewed', '#discuss', '#normal'];
+    modalAnnotationTags.innerHTML = '';
+    predefinedTags.forEach(tag => {
+        const btn = document.createElement('button');
+        btn.className = 'annotation-tag' + (activeTags.includes(tag) ? ' active' : '');
+        btn.textContent = tag;
+        btn.addEventListener('click', async () => {
+            if (!activePatientId) return;
+            if (!currentModalPin && !(await ensurePinned())) return;
+            const ann = currentModalPin.annotations = currentModalPin.annotations || { text: '', tags: [] };
+            const tags = ann.tags || [];
+            const idx = tags.indexOf(tag);
+            if (idx === -1) tags.push(tag); else tags.splice(idx, 1);
+            ann.tags = tags;
+            renderAnnotationTags(tags);
+            renderInsightsPanel();
+            patchPin(activePatientId, currentModalPin.pin_id, { annotations: { ...ann } });
+        });
+        modalAnnotationTags.appendChild(btn);
+    });
+}
+
 function closeCitationModal() {
     citationBackdrop.classList.remove('open');
     citationModal.classList.remove('open');
+    citationModal.classList.remove('zoomed');
     // Stop any playing media
     modalBody.querySelectorAll('video, audio').forEach(el => { el.pause(); el.src = ''; });
     modalBody.innerHTML = '';
+    currentModalPin = null;
 }
 
 // Click citation → open modal
@@ -991,8 +1218,43 @@ modalPin.addEventListener('click', async () => {
 });
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && citationModal.classList.contains('open')) {
-        closeCitationModal();
+        if (citationModal.classList.contains('zoomed')) {
+            citationModal.classList.remove('zoomed');
+        } else {
+            closeCitationModal();
+        }
     }
+});
+
+// Image zoom toggle
+modalBody.addEventListener('click', (e) => {
+    if (e.target.tagName === 'IMG') {
+        citationModal.classList.toggle('zoomed');
+    }
+});
+
+// Agent info tooltip hover (button + tooltip both keep it visible)
+let tooltipHideTimeout = null;
+modalInfoBtn.addEventListener('mouseenter', () => {
+    clearTimeout(tooltipHideTimeout);
+    modalAgentInfo.classList.add('visible');
+});
+modalInfoBtn.addEventListener('mouseleave', () => {
+    tooltipHideTimeout = setTimeout(() => modalAgentInfo.classList.remove('visible'), 100);
+});
+modalAgentInfo.addEventListener('mouseenter', () => clearTimeout(tooltipHideTimeout));
+modalAgentInfo.addEventListener('mouseleave', () => modalAgentInfo.classList.remove('visible'));
+
+// Annotation textarea: auto-grow + debounced save (auto-pins if needed)
+modalAnnotationText.addEventListener('input', async () => {
+    modalAnnotationText.style.height = 'auto';
+    modalAnnotationText.style.height = modalAnnotationText.scrollHeight + 'px';
+    if (!activePatientId) return;
+    if (!currentModalPin && !(await ensurePinned())) return;
+    currentModalPin.annotations = currentModalPin.annotations || { text: '', tags: [] };
+    currentModalPin.annotations.text = modalAnnotationText.value;
+    debouncedPatchAnnotations(activePatientId, currentModalPin.pin_id,
+        { ...currentModalPin.annotations });
 });
 
 // ─── Pinned Text Highlighting ────────────────────────────────
