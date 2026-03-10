@@ -68,9 +68,75 @@ async function loadPatients() {
     }
 }
 
+// ─── Patient Tooltip ────────────────────────────────────────
+const patientTooltip = document.createElement('div');
+patientTooltip.className = 'patient-tooltip';
+document.body.appendChild(patientTooltip);
+const patientDataMap = {};  // id -> full patient object
+let patientTooltipShowTimer = null;
+let patientTooltipHideTimer = null;
+
+function showPatientTooltip(headerEl, patient) {
+    clearTimeout(patientTooltipHideTimer);
+    patientTooltipShowTimer = setTimeout(() => {
+        // Build content
+        const conditionsHTML = patient.conditions.length
+            ? patient.conditions.map(c => `<span class="patient-tooltip-chip">${escapeHtml(c)}</span>`).join('')
+            : '<span class="patient-tooltip-none">None recorded</span>';
+        const allergiesHTML = patient.allergies.length
+            ? patient.allergies.map(a => `<span class="patient-tooltip-chip allergy">${escapeHtml(a)}</span>`).join('')
+            : '<span class="patient-tooltip-none">No known allergies</span>';
+        const modsHTML = patient.modalities.map(m => `<span class="patient-tooltip-mod">${escapeHtml(m)}</span>`).join('');
+
+        patientTooltip.innerHTML = `
+            <div class="patient-tooltip-header">
+                <span class="patient-tooltip-name">${escapeHtml(patient.name)}</span>
+                <span class="patient-tooltip-demo">${patient.age} · ${patient.sex}${patient.blood_type ? ' · ' + patient.blood_type : ''}</span>
+            </div>
+            <div class="patient-tooltip-section">
+                <span class="patient-tooltip-label">Conditions</span>
+                <div class="patient-tooltip-chips">${conditionsHTML}</div>
+            </div>
+            <div class="patient-tooltip-section">
+                <span class="patient-tooltip-label">Allergies</span>
+                <div class="patient-tooltip-chips">${allergiesHTML}</div>
+            </div>
+            ${modsHTML ? `<div class="patient-tooltip-section">
+                <span class="patient-tooltip-label">Data</span>
+                <div class="patient-tooltip-modalities">${modsHTML}</div>
+            </div>` : ''}
+        `;
+
+        // Position to right of sidebar
+        const rect = headerEl.getBoundingClientRect();
+        const sidebarRect = sidebarEl.getBoundingClientRect();
+        let top = rect.top;
+        let left = sidebarRect.right + 8;
+
+        // Ensure it doesn't overflow the bottom of the viewport
+        patientTooltip.classList.add('visible');
+        const tooltipHeight = patientTooltip.offsetHeight;
+        if (top + tooltipHeight > window.innerHeight - 12) {
+            top = window.innerHeight - tooltipHeight - 12;
+        }
+        if (top < 12) top = 12;
+
+        patientTooltip.style.top = top + 'px';
+        patientTooltip.style.left = left + 'px';
+    }, 200);
+}
+
+function hidePatientTooltip() {
+    clearTimeout(patientTooltipShowTimer);
+    patientTooltipHideTimer = setTimeout(() => {
+        patientTooltip.classList.remove('visible');
+    }, 150);
+}
+
 function renderPatientList() {
     sidebarContent.innerHTML = '';
     patients.forEach(p => {
+        patientDataMap[p.id] = p;
         const div = document.createElement('div');
         div.className = 'sidebar-patient';
         div.dataset.patientId = p.id;
@@ -87,9 +153,19 @@ function renderPatientList() {
                 <button class="btn-new-conversation" data-patient-id="${p.id}">+ New</button>
             </div>
         `;
+
+        // Tooltip hover handlers
+        const header = div.querySelector('.sidebar-patient-header');
+        header.addEventListener('mouseenter', () => showPatientTooltip(header, p));
+        header.addEventListener('mouseleave', hidePatientTooltip);
+
         sidebarContent.appendChild(div);
     });
 }
+
+// Keep tooltip open when hovering over it
+patientTooltip.addEventListener('mouseenter', () => clearTimeout(patientTooltipHideTimer));
+patientTooltip.addEventListener('mouseleave', hidePatientTooltip);
 
 // ─── Sidebar: Toggle ────────────────────────────────────────
 function toggleSidebar() {

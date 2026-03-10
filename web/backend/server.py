@@ -620,16 +620,34 @@ async def get_session(session_id: str):
 async def get_patients():
     """Return list of patients from multimodal-data/patient-info/*.json."""
     patient_dir = project_root / "multimodal-data" / "patient-info"
+    multimodal_dir = project_root / "multimodal-data"
+    modality_dirs = [
+        ("chest-xray", "CXR"),
+        ("ecg", "ECG"),
+        ("clinical-notes", "Notes"),
+        ("echo", "Echo"),
+        ("heart-sounds", "Heart"),
+        ("lab-results", "Labs"),
+        ("medications", "Meds"),
+    ]
     patients = []
     for f in sorted(patient_dir.glob("P*.json")):
         try:
             data = json.loads(f.read_text())
+            pid = f.stem
+            modalities = [
+                label for dir_name, label in modality_dirs
+                if any((multimodal_dir / dir_name).glob(f"{pid}.*"))
+            ]
             patients.append({
-                "id": f.stem,
+                "id": pid,
                 "name": data.get("name", f.stem),
                 "age": data.get("age"),
                 "sex": data.get("sex"),
+                "blood_type": data.get("blood_type"),
+                "allergies": data.get("allergies", []),
                 "conditions": data.get("conditions", []),
+                "modalities": modalities,
             })
         except Exception:
             continue
