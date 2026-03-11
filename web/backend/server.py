@@ -129,11 +129,11 @@ def _c2_meds(cid):
                  "Albuterol PRN, Amoxicillin 875mg + Azithromycin 500mg for pneumonia, Acetaminophen PRN")
 
 
-def _msg(role, content, citations=None):
+def _msg(role, content, citations=None, ts=None):
     """Build a history message. For assistant with citations, encodes as JSON."""
     if role == "assistant" and citations:
-        return {"role": "assistant", "content": json.dumps({"response": content, "citations": citations})}
-    return {"role": role, "content": content}
+        return {"role": "assistant", "content": json.dumps({"response": content, "citations": citations}), "timestamp": ts}
+    return {"role": role, "content": content, "timestamp": ts}
 
 
 def _seed_demo_sessions():
@@ -144,7 +144,8 @@ def _seed_demo_sessions():
         "history": [
             _msg("user",
                  "James Carter is presenting today with chest discomfort. "
-                 "Can you pull up his clinical notes and give me a summary of his presentation?"),
+                 "Can you pull up his clinical notes and give me a summary of his presentation?",
+                 ts="2026-03-03T09:15:00"),
             _msg("assistant",
                  "Based on the clinical notes [cite:1], James Carter presents with a 2\u20133 week history "
                  "of exertional, pressure-like chest discomfort rated 4/10, accompanied by mild dyspnea on "
@@ -155,11 +156,12 @@ def _seed_demo_sessions():
                  "Aspirin 81mg for cardiovascular prevention, and Albuterol PRN for asthma. Note the documented "
                  "Penicillin allergy.\n\n"
                  "Would you like me to review his imaging and cardiac workup?",
-                 [_c_notes(1), _c_meds(2)]),
+                 [_c_notes(1), _c_meds(2)], ts="2026-03-03T09:15:32"),
 
             _msg("user",
                  "Yes, let\u2019s review his imaging. What does the chest X-ray show? "
-                 "And pull up the ECG and echocardiogram."),
+                 "And pull up the ECG and echocardiogram.",
+                 ts="2026-03-03T09:17:05"),
             _msg("assistant",
                  "The chest radiograph [cite:1] is clear \u2014 no acute cardiopulmonary abnormality and "
                  "normal cardiac silhouette, which rules out overt cardiomegaly or pulmonary congestion.\n\n"
@@ -169,10 +171,11 @@ def _seed_demo_sessions():
                  "ventricular ejection fraction with a regional wall motion abnormality specifically in the "
                  "lateral wall. The concordance between the ECG lateral ST changes and the echo lateral wall "
                  "abnormality raises suspicion for underlying coronary artery disease in that vascular territory.",
-                 [_c_xray(1), _c_ecg(2), _c_echo(3)]),
+                 [_c_xray(1), _c_ecg(2), _c_echo(3)], ts="2026-03-03T09:17:48"),
 
             _msg("user",
-                 "What about the heart sounds and lab work? Anything critical I should flag?"),
+                 "What about the heart sounds and lab work? Anything critical I should flag?",
+                 ts="2026-03-03T09:19:20"),
             _msg("assistant",
                  "Auscultation [cite:1] reveals an S4 gallop and a grade 2/6 systolic murmur. The S4 is "
                  "consistent with impaired ventricular compliance, which aligns with the echocardiographic "
@@ -185,7 +188,7 @@ def _seed_demo_sessions():
                  "switching to an alternative is strongly recommended.\n\n"
                  "Additionally, the clinical notes [cite:4] document a Penicillin allergy, which is important "
                  "to flag for any future antibiotic prescriptions or procedural prophylaxis.",
-                 [_c_heart(1), _c_labs(2), _c_meds(3), _c_notes(4)]),
+                 [_c_heart(1), _c_labs(2), _c_meds(3), _c_notes(4)], ts="2026-03-03T09:20:05"),
         ],
         "processing": False,
         "uploaded_file": None,
@@ -197,7 +200,8 @@ def _seed_demo_sessions():
         "history": [
             _msg("user",
                  "I need to review James Carter\u2019s medications against his recent lab work. "
-                 "His potassium has been running high \u2014 can you cross-reference and flag any concerns?"),
+                 "His potassium has been running high \u2014 can you cross-reference and flag any concerns?",
+                 ts="2026-03-04T10:30:00"),
             _msg("assistant",
                  "**Current medication list** [cite:1]:\n"
                  "- Lisinopril 20mg daily (ACE inhibitor)\n"
@@ -214,11 +218,12 @@ def _seed_demo_sessions():
                  "context for any medication changes.\n\n"
                  "Auscultation [cite:4] shows an S4 gallop suggesting diastolic dysfunction, so whatever "
                  "replacement we select must maintain adequate cardioprotection.",
-                 [_c_meds(1), _c_labs(2), _c_notes(3), _c_heart(4)]),
+                 [_c_meds(1), _c_labs(2), _c_notes(3), _c_heart(4)], ts="2026-03-04T10:30:45"),
 
             _msg("user",
                  "If we switch from Lisinopril to an ARB, what\u2019s the cardiac picture we\u2019re "
-                 "working with? I want to make sure we\u2019re not compromising anything."),
+                 "working with? I want to make sure we\u2019re not compromising anything.",
+                 ts="2026-03-04T10:32:10"),
             _msg("assistant",
                  "The ECG [cite:1] shows lateral ST changes in V4\u2013V6, indicating ischemia in that "
                  "territory. The echocardiogram [cite:2] confirms a lateral wall motion abnormality with "
@@ -234,7 +239,7 @@ def _seed_demo_sessions():
                  "This switch should reduce the hyperkalemia risk. Labs [cite:4] should be rechecked "
                  "1\u20132 weeks after the transition. His diabetes medications [cite:5] (Metformin + "
                  "Semaglutide) do not contribute to hyperkalemia and can continue unchanged.",
-                 [_c_ecg(1), _c_echo(2), _c_xray(3), _c_labs(4), _c_meds(5)]),
+                 [_c_ecg(1), _c_echo(2), _c_xray(3), _c_labs(4), _c_meds(5)], ts="2026-03-04T10:33:02"),
         ],
         "processing": False,
         "uploaded_file": None,
@@ -246,7 +251,8 @@ def _seed_demo_sessions():
         "history": [
             _msg("user",
                  "James Carter is being considered for an elective surgical procedure. "
-                 "I need a cardiac risk assessment \u2014 walk me through his cardiac studies."),
+                 "I need a cardiac risk assessment \u2014 walk me through his cardiac studies.",
+                 ts="2026-03-05T14:00:00"),
             _msg("assistant",
                  "**Cardiac risk assessment for surgical clearance:**\n\n"
                  "The echocardiogram [cite:1] is the most significant finding \u2014 mildly reduced LVEF "
@@ -263,10 +269,11 @@ def _seed_demo_sessions():
                  "ischemia rather than acute coronary syndrome.\n\n"
                  "**Overall risk classification:** Intermediate cardiac risk. The lateral wall abnormality "
                  "and functional limitation warrant cardiology clearance before proceeding with the procedure.",
-                 [_c_echo(1), _c_ecg(2), _c_heart(3), _c_xray(4), _c_notes(5)]),
+                 [_c_echo(1), _c_ecg(2), _c_heart(3), _c_xray(4), _c_notes(5)], ts="2026-03-05T14:00:52"),
 
             _msg("user",
-                 "What about his labs and medications \u2014 anything to adjust before surgery?"),
+                 "What about his labs and medications \u2014 anything to adjust before surgery?",
+                 ts="2026-03-05T14:02:30"),
             _msg("assistant",
                  "**Pre-operative medication and lab review:**\n\n"
                  "\u26a0\ufe0f **Potassium** [cite:1]: Recurrent hyperkalemia with a peak of 6.2 mmol/L. "
@@ -286,7 +293,7 @@ def _seed_demo_sessions():
                  "\u26a0\ufe0f **Allergy alert** [cite:3]: Penicillin allergy is documented. This directly "
                  "impacts surgical antibiotic prophylaxis \u2014 standard cefazolin may pose cross-reactivity "
                  "risk. Use clindamycin or vancomycin as alternatives.",
-                 [_c_labs(1), _c_meds(2), _c_notes(3)]),
+                 [_c_labs(1), _c_meds(2), _c_notes(3)], ts="2026-03-05T14:03:18"),
         ],
         "processing": False,
         "uploaded_file": None,
@@ -298,7 +305,8 @@ def _seed_demo_sessions():
         "history": [
             _msg("user",
                  "Maria Lopez came in with fever and a productive cough. "
-                 "Can you review her clinical notes and tell me what we\u2019re dealing with?"),
+                 "Can you review her clinical notes and tell me what we\u2019re dealing with?",
+                 ts="2026-03-06T08:45:00"),
             _msg("assistant",
                  "Based on the clinical notes [cite:1], Maria Lopez is a 34-year-old female presenting "
                  "with a 5-day history of fever (peak 39.2\u00b0C), productive cough with yellowish-green "
@@ -310,11 +318,12 @@ def _seed_demo_sessions():
                  "She has been started on dual antibiotic therapy [cite:2]: Amoxicillin 875mg twice daily and "
                  "Azithromycin 500mg, along with Acetaminophen PRN for fever. Her baseline medication is "
                  "Albuterol inhaler PRN for asthma. No known drug allergies.",
-                 [_c2_notes(1), _c2_meds(2)]),
+                 [_c2_notes(1), _c2_meds(2)], ts="2026-03-06T08:45:40"),
 
             _msg("user",
                  "What does her chest X-ray show? And let\u2019s check the ECG \u2014 "
-                 "she\u2019s tachycardic at 112."),
+                 "she\u2019s tachycardic at 112.",
+                 ts="2026-03-06T08:47:15"),
             _msg("assistant",
                  "The chest X-ray [cite:1] shows right lower lobe consolidation, which is consistent "
                  "with the clinical exam findings of crackles, bronchial breath sounds, and dullness to "
@@ -326,11 +335,12 @@ def _seed_demo_sessions():
                  "The echocardiogram [cite:3] confirms normal left ventricular function with no valvular "
                  "abnormality and no pericardial effusion \u2014 the heart is structurally normal. This "
                  "effectively rules out any cardiac complication from the infection.",
-                 [_c2_xray(1), _c2_ecg(2), _c2_echo(3)]),
+                 [_c2_xray(1), _c2_ecg(2), _c2_echo(3)], ts="2026-03-06T08:48:03"),
 
             _msg("user",
                  "How about her labs and heart sounds? Anything unexpected, "
-                 "or is this straightforward pneumonia?"),
+                 "or is this straightforward pneumonia?",
+                 ts="2026-03-06T08:49:30"),
             _msg("assistant",
                  "Heart sounds [cite:1] are normal \u2014 no murmurs, no gallops, no rubs. This is "
                  "reassuring and consistent with a non-cardiac cause for her symptoms.\n\n"
@@ -342,7 +352,7 @@ def _seed_demo_sessions():
                  "**Assessment:** This is a straightforward community-acquired pneumonia in an otherwise "
                  "healthy 34-year-old. Key monitoring points: repeat SpO2 trending, fever curve, and ensure "
                  "adequate hydration given her reduced oral intake over the past 2 days.",
-                 [_c2_heart(1), _c2_labs(2), _c2_notes(3), _c2_meds(4)]),
+                 [_c2_heart(1), _c2_labs(2), _c2_notes(3), _c2_meds(4)], ts="2026-03-06T08:50:12"),
         ],
         "processing": False,
         "uploaded_file": None,
@@ -364,7 +374,8 @@ def _seed_demo_sessions():
         "history": [
             _msg("user",
                  "I\u2019m concerned about Maria Lopez\u2019s asthma complicating her pneumonia. "
-                 "Can you cross-reference her respiratory data and medications?"),
+                 "Can you cross-reference her respiratory data and medications?",
+                 ts="2026-03-07T11:00:00"),
             _msg("assistant",
                  "Clinical notes [cite:1] confirm mild intermittent asthma, well-controlled with PRN "
                  "albuterol, and no recent exacerbations. However, the pneumonia introduces significant "
@@ -378,11 +389,12 @@ def _seed_demo_sessions():
                  "discontinued in January 2023.\n\n"
                  "Heart sounds [cite:4] are clear \u2014 no wheezing transmitted to the cardiac exam, "
                  "which is a good sign for current asthma control.",
-                 [_c2_notes(1), _c2_xray(2), _c2_meds(3), _c2_heart(4)]),
+                 [_c2_notes(1), _c2_xray(2), _c2_meds(3), _c2_heart(4)], ts="2026-03-07T11:00:48"),
 
             _msg("user",
                  "Should we restart the Montelukast? And give me the full cardiac picture "
-                 "to rule out any complications."),
+                 "to rule out any complications.",
+                 ts="2026-03-07T11:02:15"),
             _msg("assistant",
                  "Restarting Montelukast 10mg daily is reasonable as a temporary measure during the acute "
                  "illness to provide additional bronchodilation and anti-inflammatory coverage alongside "
@@ -399,7 +411,7 @@ def _seed_demo_sessions():
                  "- Restart Montelukast 10mg daily\n"
                  "- Monitor SpO2 closely \u2014 supplement O2 if she drops below 92%\n"
                  "- Reassess in 48\u201372 hours for clinical improvement",
-                 [_c2_meds(1), _c2_ecg(2), _c2_echo(3), _c2_labs(4)]),
+                 [_c2_meds(1), _c2_ecg(2), _c2_echo(3), _c2_labs(4)], ts="2026-03-07T11:03:05"),
         ],
         "processing": False,
         "uploaded_file": None,
@@ -561,7 +573,7 @@ async def chat(
     user_message = message
     if file:
         user_message += f"\n[Uploaded file: {file.filename}]"
-    session["history"].append({"role": "user", "content": user_message})
+    session["history"].append({"role": "user", "content": user_message, "timestamp": datetime.utcnow().isoformat()})
 
     # Load patient info if patient_id is set
     p_id = session.get("patient_id")
@@ -586,7 +598,7 @@ async def chat(
             )
             # Add assistant response to history
             if assistant_response:
-                session["history"].append({"role": "assistant", "content": assistant_response})
+                session["history"].append({"role": "assistant", "content": assistant_response, "timestamp": datetime.utcnow().isoformat()})
         finally:
             # Mark session as no longer processing
             session["processing"] = False
@@ -635,10 +647,14 @@ async def get_patients():
         try:
             data = json.loads(f.read_text())
             pid = f.stem
-            modalities = [
-                label for dir_name, label in modality_dirs
-                if any((multimodal_dir / dir_name).glob(f"{pid}.*"))
-            ]
+            data_dates = data.get("data_dates", {})
+            modalities = []
+            for dir_name, label in modality_dirs:
+                if any((multimodal_dir / dir_name).glob(f"{pid}.*")):
+                    modalities.append({
+                        "label": label,
+                        "date": data_dates.get(dir_name)
+                    })
             patients.append({
                 "id": pid,
                 "name": data.get("name", f.stem),

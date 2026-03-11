@@ -76,6 +76,24 @@ const patientDataMap = {};  // id -> full patient object
 let patientTooltipShowTimer = null;
 let patientTooltipHideTimer = null;
 
+function formatShortDate(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const now = new Date();
+    const month = months[d.getMonth()];
+    const day = d.getDate();
+    return d.getFullYear() === now.getFullYear() ? `${month} ${day}` : `${month} ${day}, ${d.getFullYear()}`;
+}
+
+function formatMessageTime(iso) {
+    const d = new Date(iso);
+    let h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+}
+
 function showPatientTooltip(headerEl, patient) {
     clearTimeout(patientTooltipHideTimer);
     patientTooltipShowTimer = setTimeout(() => {
@@ -86,7 +104,10 @@ function showPatientTooltip(headerEl, patient) {
         const allergiesHTML = patient.allergies.length
             ? patient.allergies.map(a => `<span class="patient-tooltip-chip allergy">${escapeHtml(a)}</span>`).join('')
             : '<span class="patient-tooltip-none">No known allergies</span>';
-        const modsHTML = patient.modalities.map(m => `<span class="patient-tooltip-mod">${escapeHtml(m)}</span>`).join('');
+        const modsHTML = patient.modalities.map(m => {
+            const dateStr = m.date ? formatShortDate(m.date) : '';
+            return `<span class="patient-tooltip-mod">${escapeHtml(m.label)}${dateStr ? `<span class="patient-tooltip-mod-date">${dateStr}</span>` : ''}</span>`;
+        }).join('');
 
         patientTooltip.innerHTML = `
             <div class="patient-tooltip-header">
@@ -434,7 +455,7 @@ async function switchConversation(patientId, sid) {
         const data = await res.json();
         if (data.status === 'success' && data.history) {
             data.history.forEach(msg => {
-                addChatMessage(msg.role, msg.content);
+                addChatMessage(msg.role, msg.content, msg.timestamp);
             });
         }
     } catch (e) {
@@ -537,7 +558,7 @@ function handleWebSocketMessage(data) {
     if (data.type === 'assistant') {
         isProcessing = false;
         updateSendButton();
-        addChatMessage('assistant', data.message);
+        addChatMessage('assistant', data.message, data.timestamp || new Date().toISOString());
         // Refresh sidebar to update conversation preview
         refreshSidebarConversations();
         return;
@@ -754,7 +775,7 @@ async function showCitationPopup(anchor, citation) {
 }
 
 // Add chat message to UI
-function addChatMessage(role, content) {
+function addChatMessage(role, content, timestamp) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${role}`;
 
@@ -782,11 +803,13 @@ function addChatMessage(role, content) {
         messageContent = escapeHtml(content);
     }
 
+    const timeStr = timestamp ? formatMessageTime(timestamp) : '';
     messageDiv.innerHTML = `
         <div class="message-header">${escapeHtml(label)}</div>
         <div class="message-bubble">
             <div class="message-content">${messageContent}</div>
         </div>
+        ${timeStr ? `<span class="message-time">${timeStr}</span>` : ''}
     `;
 
     chatContainer.appendChild(messageDiv);
@@ -972,7 +995,7 @@ async function sendMessage() {
     }
 
     // Add user message to chat immediately
-    addChatMessage('user', displayMessage);
+    addChatMessage('user', displayMessage, new Date().toISOString());
 
     // Clear input
     messageInput.value = '';
