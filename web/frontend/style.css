@@ -315,7 +315,8 @@ header::after {
 .sidebar-patient-meta {
     font-family: var(--mono);
     font-size: 10px;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     flex-shrink: 0;
 }
 
@@ -348,7 +349,8 @@ header::after {
     position: absolute;
     left: 26px;
     top: 6px;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     font-size: 12px;
     line-height: 1;
 }
@@ -376,7 +378,8 @@ header::after {
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     cursor: pointer;
     transition: all 0.15s;
     text-align: center;
@@ -385,6 +388,7 @@ header::after {
 .btn-new-conversation:hover {
     border-color: var(--accent-mid);
     color: var(--accent);
+    opacity: 1;
     background: var(--accent-soft);
 }
 
@@ -436,7 +440,8 @@ header::after {
 .patient-tooltip-demo {
     font-family: var(--mono);
     font-size: 10.5px;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     letter-spacing: 0.06em;
 }
 
@@ -523,7 +528,7 @@ header::after {
     font-weight: 400;
     margin-left: 4px;
     letter-spacing: 0.02em;
-    opacity: 0.75;
+    opacity: 0.7;
 }
 
 /* ─── Insights Panel (right sidebar) ──────────────────────── */
@@ -738,14 +743,16 @@ header::after {
     font-size: 9px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     margin-top: 4px;
     cursor: pointer;
-    transition: color 0.12s;
+    transition: color 0.12s, opacity 0.12s;
 }
 
 .pinned-card-source:hover {
     color: var(--accent);
+    opacity: 1;
 }
 
 /* ─── Text Selection Pin Button ────────────────────────────── */
@@ -1088,6 +1095,17 @@ main {
     white-space: nowrap;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
     user-select: none;
+}
+
+.citation-date {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    margin-left: 2px;
+    letter-spacing: 0.02em;
+    vertical-align: super;
 }
 
 .citation:hover {

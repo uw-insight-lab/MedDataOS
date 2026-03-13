@@ -664,6 +664,7 @@ async def get_patients():
                 "allergies": data.get("allergies", []),
                 "conditions": data.get("conditions", []),
                 "modalities": modalities,
+                "data_dates": data.get("data_dates", {}),
             })
         except Exception:
             continue

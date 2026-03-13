@@ -654,6 +654,18 @@ const agentInfo = {
     'medication':     { analyzes: 'Medication history and prescriptions', output: 'CSV table + findings' },
 };
 
+// Extract data date for a citation from active patient's data_dates
+function getCitationDate(citation) {
+    if (!activePatientId || !citation.web_path) return '';
+    const patient = patientDataMap[activePatientId];
+    if (!patient || !patient.data_dates) return '';
+    // web_path like "/multimodal-data/ecg/P0001.svg" → extract "ecg"
+    const parts = citation.web_path.split('/');
+    const modalityDir = parts.length >= 3 ? parts[2] : '';
+    const date = patient.data_dates[modalityDir];
+    return date ? formatShortDate(date) : '';
+}
+
 // Replace [cite:X] tokens with hoverable <sup> badges
 function renderWithCitations(html, citations) {
     const citationMap = {};
@@ -664,7 +676,8 @@ function renderWithCitations(html, citations) {
         if (!citation) return match;
         const data = encodeURIComponent(JSON.stringify(citation));
         const label = agentBadgeLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
-        return `<sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>`;
+        const dateStr = getCitationDate(citation);
+        return `<sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>${dateStr ? `<span class="citation-date">${dateStr}</span>` : ''}`;
     });
 }
 
