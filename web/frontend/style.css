@@ -1374,19 +1374,18 @@ main {
 }
 
 .modal-body {
-    flex: 1;
+    flex: none;
+    height: 320px;
     overflow: auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 200px;
-    max-height: 70vh;
     background: var(--bg-panel);
 }
 
 .modal-body img {
     max-width: 100%;
-    max-height: 70vh;
+    max-height: 320px;
     object-fit: contain;
     display: block;
     cursor: zoom-in;
@@ -1398,17 +1397,18 @@ main {
 
 .modal-body video {
     max-width: 100%;
-    max-height: 70vh;
+    max-height: 320px;
     display: block;
 }
 
 .modal-body .modal-audio-wrap {
     width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 48px 24px;
+    padding: 0 24px;
     gap: 24px;
 }
 
@@ -1433,7 +1433,7 @@ main {
     line-height: 1.7;
     color: var(--text-secondary);
     overflow-y: auto;
-    max-height: 70vh;
+    height: 100%;
     box-sizing: border-box;
 }
 
@@ -1448,7 +1448,7 @@ main {
 .modal-body .modal-table-wrap {
     width: 100%;
     overflow: auto;
-    max-height: 70vh;
+    height: 100%;
 }
 
 .modal-body .modal-table-wrap table {
@@ -1774,11 +1774,12 @@ main {
     position: absolute;
     top: calc(100% + 10px);
     left: 16px;
-    width: 288px;
+    width: 340px;
+    max-height: 70vh;
+    overflow-y: auto;
     background: var(--bg-surface);
     border: 1px solid var(--border-warm);
     border-radius: var(--radius);
-    overflow: hidden;
     box-shadow: 0 8px 32px rgba(26, 22, 18, 0.18), 0 2px 8px rgba(26, 22, 18, 0.08);
     z-index: 100;
     opacity: 0;
@@ -1810,7 +1811,7 @@ main {
 
 .agent-info-tooltip-row {
     display: grid;
-    grid-template-columns: 68px 1fr;
+    grid-template-columns: 72px 1fr;
     gap: 0 10px;
     padding: 6px 0;
     border-bottom: 1px solid var(--border);
@@ -1826,7 +1827,8 @@ main {
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     padding-top: 2px;
     line-height: 1.5;
 }
@@ -1840,7 +1842,7 @@ main {
 
 .agent-info-tooltip-disclaimer {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
     padding: 9px 14px 10px;
     background: var(--accent-soft);
@@ -1859,7 +1861,6 @@ main {
     color: var(--accent);
     opacity: 0.55;
     flex-shrink: 0;
-    margin-top: 1px;
 }
 
 /* ─── Modal Provenance ─────────────────────────────────────── */
@@ -2106,6 +2107,11 @@ main {
     width: 95vw;
     max-width: 95vw;
     max-height: 95vh;
+}
+
+.citation-modal.zoomed .modal-body {
+    height: auto;
+    max-height: 80vh;
 }
 
 .citation-modal.zoomed .modal-body img {

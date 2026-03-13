@@ -643,15 +643,64 @@ const agentCardLabels = {
     'medication':     'Findings from Medications',
 };
 
-// Agent info for tooltip (per agent type)
+// Agent info for tooltip (per agent type) — model-card style
 const agentInfo = {
-    'clinical_notes': { analyzes: 'Clinical text notes and physician documentation', output: 'Text summary' },
-    'chest_xray':     { analyzes: 'Chest X-ray images (PNG)', output: 'Image + findings' },
-    'ecg':            { analyzes: '12-lead ECG waveforms from HL7 source data', output: 'SVG waveform + findings' },
-    'heart_sounds':   { analyzes: 'Heart auscultation audio recordings', output: 'Audio + findings' },
-    'echo':           { analyzes: 'Echocardiogram video recordings', output: 'Video + findings' },
-    'lab_results':    { analyzes: 'Laboratory results from HL7v2 source data', output: 'Chart image + findings' },
-    'medication':     { analyzes: 'Medication history and prescriptions', output: 'CSV table + findings' },
+    'clinical_notes': {
+        purpose: 'Extracts diagnoses, medications, and clinical relationships from unstructured physician notes',
+        input: 'Free-text clinical notes (.txt)',
+        method: 'Transformer-based clinical NLP trained on 90B words of EHR text',
+        model: 'GatorTron 8.9B',
+        accuracy: 'F1 +7.5% vs ClinicalBERT',
+        limitations: 'May miss implicit clinical reasoning or abbreviations not seen in training data. Not validated for non-English notes.',
+    },
+    'chest_xray': {
+        purpose: 'Detects and classifies thoracic pathologies on frontal chest radiographs',
+        input: 'Frontal chest X-ray (PNG)',
+        method: 'DenseNet-121 multi-label classifier trained on 700k+ images from 6 merged public datasets',
+        model: 'TorchXRayVision',
+        accuracy: 'AUC 0.84 (18 pathologies)',
+        limitations: 'Reduced accuracy on lateral views and portable/bedside radiographs. May miss subtle nodules <1 cm.',
+    },
+    'ecg': {
+        purpose: 'Interprets 12-lead ECG waveforms for rhythm, conduction, and structural abnormalities',
+        input: '12-lead ECG (HL7 aECG \u2192 SVG)',
+        method: 'Transformer foundation model pretrained on 1.3M ECGs via self-supervised learning',
+        model: 'ECG-FM',
+        accuracy: 'AUC 0.93\u20130.99',
+        limitations: 'May miss subtle arrhythmias or pacemaker-related artifacts. Not validated for pediatric ECGs.',
+    },
+    'heart_sounds': {
+        purpose: 'Screens for structural heart murmurs and atrial fibrillation from auscultation recordings',
+        input: 'Heart sound recording (WAV)',
+        method: 'Masked autoencoder foundation model trained on 4M+ de-identified recordings',
+        model: 'Eko EFAST',
+        accuracy: '86% sens / 84% spec',
+        limitations: 'Performance degrades with ambient noise or poor stethoscope contact. May not detect low-grade (1/6) murmurs.',
+    },
+    'echo': {
+        purpose: 'Estimates left ventricular ejection fraction and detects systolic dysfunction from echo video',
+        input: 'Apical 4-chamber echocardiogram (MP4)',
+        method: 'Video-based 3D CNN (R2+1D ResNet) with semantic segmentation, trained on 10k+ studies',
+        model: 'EchoNet-Dynamic',
+        accuracy: 'AUC 0.97 (EF MAE 4.1%)',
+        limitations: 'Optimized for apical 4-chamber view only. Accuracy decreases with poor acoustic windows or foreshortened views.',
+    },
+    'lab_results': {
+        purpose: 'Flags abnormal values, identifies trends, and interprets clinical significance of lab panels',
+        input: 'Structured lab results (HL7v2 \u2192 PNG chart)',
+        method: 'Reference range engine with delta checks + LLM-based clinical interpretation',
+        model: 'Rule-based + Gemini 2.5 Pro',
+        accuracy: 'Rule-based',
+        limitations: 'Reference ranges may not account for age/sex/ethnicity-specific norms. LLM interpretation requires clinical verification.',
+    },
+    'medication': {
+        purpose: 'Reviews medication lists for drug interactions, contraindications, and dosing concerns',
+        input: 'Medication history (CSV)',
+        method: 'Curated pharmaceutical knowledge base (500k+ products) with LLM reasoning layer',
+        model: 'DrugBank + Gemini 2.5 Pro',
+        accuracy: 'Knowledge-base',
+        limitations: 'May not reflect most recent FDA labeling changes. Does not account for patient-specific pharmacogenomics.',
+    },
 };
 
 // Extract data date for a citation from active patient's data_dates
@@ -1157,19 +1206,31 @@ async function openCitationModal(citation, pin = null) {
         modalAgentInfo.innerHTML = `
             <div class="agent-info-tooltip-body">
                 <div class="agent-info-tooltip-row">
-                    <span class="agent-info-tooltip-label">Analyzes</span>
-                    <span class="agent-info-tooltip-value">${escapeHtml(info.analyzes)}</span>
-                </div>
-                <div class="agent-info-tooltip-row">
-                    <span class="agent-info-tooltip-label">Output</span>
-                    <span class="agent-info-tooltip-value">${escapeHtml(info.output)}</span>
-                </div>
-                <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Model</span>
-                    <span class="agent-info-tooltip-value">Gemini 3.1 Pro</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.model)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Purpose</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.purpose)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Method</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.method)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Input</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.input)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Accuracy</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.accuracy)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Limits</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.limitations)}</span>
                 </div>
             </div>
-            <div class="agent-info-tooltip-disclaimer">AI-generated — requires clinical verification</div>
+            <div class="agent-info-tooltip-disclaimer">Advisory only — verify clinically</div>
         `;
         modalInfoBtn.style.display = '';
     } else {
