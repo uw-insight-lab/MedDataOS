@@ -1495,8 +1495,34 @@ main {
     line-height: 1.6;
     color: var(--text-secondary);
     border-top: 1px solid var(--border);
-    background: var(--bg-surface);
+    background: var(--bg-panel);
     flex-shrink: 0;
+}
+
+.findings-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 20px 0;
+}
+
+.findings-header-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.findings-header-hint {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    opacity: 0.45;
 }
 
 /* ─── Log Entries ───────────────────────────────────────────── */
@@ -1870,7 +1896,8 @@ main {
     align-items: center;
     flex-wrap: wrap;
     gap: 0;
-    padding: 0 20px 14px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
     background: var(--bg-surface);
     flex-shrink: 0;
 }
@@ -1897,13 +1924,13 @@ main {
 
 /* ─── Modal Annotations ────────────────────────────────────── */
 .modal-annotations {
-    border-top: 1px solid var(--border-warm);
+    border-top: 1px solid var(--border);
     padding: 14px 20px 18px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: var(--bg-deep);
+    background: var(--bg-surface);
 }
 
 .annotation-section-label {
@@ -2021,7 +2048,9 @@ main {
 .findings-checklist {
     list-style: none;
     padding: 8px 20px 14px;
-    margin: 0;
+    margin: 0 20px 0 20px;
+    border-left: 3px solid var(--accent-mid);
+    padding-left: 16px;
 }
 
 .findings-checklist li {

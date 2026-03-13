@@ -643,6 +643,17 @@ const agentCardLabels = {
     'medication':     'Findings from Medications',
 };
 
+// Agent-specific checklist section headers
+const agentFindingsLabel = {
+    'clinical_notes': 'Clinical Summary',
+    'chest_xray':     'Radiographic Findings',
+    'ecg':            'ECG Findings',
+    'heart_sounds':   'Auscultation Findings',
+    'echo':           'Echocardiographic Findings',
+    'lab_results':    'Lab Findings',
+    'medication':     'Medication Review',
+};
+
 // Agent info for tooltip (per agent type) — model-card style
 const agentInfo = {
     'clinical_notes': {
@@ -1277,6 +1288,12 @@ async function openCitationModal(citation, pin = null) {
         const checklist_state = pin ? (pin.checklist_state || {}) : {};
         modalSummary.innerHTML = '';
         modalSummary.style.padding = '0';
+        // Section header
+        const headerLabel = agentFindingsLabel[citation.agent] || 'Findings';
+        const header = document.createElement('div');
+        header.className = 'findings-header';
+        header.innerHTML = `<span class="findings-header-label">${escapeHtml(headerLabel)}</span><span class="findings-header-hint">verify each</span>`;
+        modalSummary.appendChild(header);
         const ul = renderModalChecklist(checklistItems, checklist_state);
         modalSummary.appendChild(ul);
         // Checkbox change handlers
