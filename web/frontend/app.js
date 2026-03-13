@@ -261,6 +261,55 @@ function findTextPinId(patientId, text) {
     return match ? match.pin_id : null;
 }
 
+// Compute review progress for a pin: { checked, total, complete }
+function getPinProgress(pin) {
+    if (!pin || pin.type === 'text' || !pin.citation) return null;
+    const items = parseSummaryToChecklist(pin.citation.summary);
+    if (!items) return null;
+    const total = items.length;
+    const state = pin.checklist_state || {};
+    const checked = items.filter((_, i) => state[String(i)]).length;
+    return { checked, total, complete: checked === total };
+}
+
+// Update citation badges in chat to reflect review status
+function updateCitationBadgeStates() {
+    if (!activePatientId) return;
+    const pins = patientPins[activePatientId] || [];
+    // Build lookup: "agent|web_path" -> progress
+    const progressMap = {};
+    pins.forEach(p => {
+        if (p.type === 'text' || !p.citation) return;
+        const progress = getPinProgress(p);
+        if (progress) {
+            const key = p.citation.agent + '|' + p.citation.web_path;
+            progressMap[key] = progress;
+        }
+    });
+    // Scan all citation badges in chat
+    chatContainer.querySelectorAll('.citation').forEach(badge => {
+        badge.classList.remove('citation-review-none', 'citation-review-partial', 'citation-review-complete');
+        try {
+            const citation = JSON.parse(decodeURIComponent(badge.dataset.citation));
+            const key = citation.agent + '|' + citation.web_path;
+            const progress = progressMap[key];
+            if (progress) {
+                // Pinned citation — use actual progress
+                if (progress.checked === 0) {
+                    badge.classList.add('citation-review-none');
+                } else if (progress.complete) {
+                    badge.classList.add('citation-review-complete');
+                } else {
+                    badge.classList.add('citation-review-partial');
+                }
+            } else if (citation.summary && parseSummaryToChecklist(citation.summary)) {
+                // Not pinned but has findings — default to red
+                badge.classList.add('citation-review-none');
+            }
+        } catch (e) { /* skip malformed */ }
+    });
+}
+
 function buildPinPreview(citation) {
     const type = getCitationType(citation.file);
     if (type === 'image') {
@@ -314,6 +363,19 @@ function renderInsightsPanel() {
                 ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
             `;
+            // Add progress bar if checklist exists
+            const progress = getPinProgress(p);
+            if (progress) {
+                const pct = Math.round((progress.checked / progress.total) * 100);
+                const state = progress.checked === 0 ? 'review-none' : progress.complete ? 'review-complete' : 'review-partial';
+                const progressEl = document.createElement('div');
+                progressEl.className = 'pinned-card-progress ' + state;
+                progressEl.innerHTML = `
+                    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+                    <span class="progress-label">${progress.checked}/${progress.total}</span>
+                `;
+                card.appendChild(progressEl);
+            }
         }
         insightsContent.appendChild(card);
     });
@@ -462,6 +524,7 @@ async function switchConversation(patientId, sid) {
         console.error('Failed to load session:', e);
     }
     highlightPinnedText();
+    updateCitationBadgeStates();
 }
 
 // ─── Sidebar: Create New Conversation ───────────────────────
@@ -661,6 +724,7 @@ const agentInfo = {
         input: 'Free-text clinical notes (.txt)',
         method: 'Transformer-based clinical NLP trained on 90B words of EHR text',
         model: 'GatorTron 8.9B',
+        modelUrl: 'https://huggingface.co/UFNLP/gatortron-large',
         accuracy: 'F1 +7.5% vs ClinicalBERT',
         limitations: 'May miss implicit clinical reasoning or abbreviations not seen in training data. Not validated for non-English notes.',
     },
@@ -669,6 +733,7 @@ const agentInfo = {
         input: 'Frontal chest X-ray (PNG)',
         method: 'DenseNet-121 multi-label classifier trained on 700k+ images from 6 merged public datasets',
         model: 'TorchXRayVision',
+        modelUrl: 'https://huggingface.co/torchxrayvision/densenet121-res224-all',
         accuracy: 'AUC 0.84 (18 pathologies)',
         limitations: 'Reduced accuracy on lateral views and portable/bedside radiographs. May miss subtle nodules <1 cm.',
     },
@@ -677,6 +742,7 @@ const agentInfo = {
         input: '12-lead ECG (HL7 aECG \u2192 SVG)',
         method: 'Transformer foundation model pretrained on 1.3M ECGs via self-supervised learning',
         model: 'ECG-FM',
+        modelUrl: 'https://huggingface.co/wanglab/ecg-fm',
         accuracy: 'AUC 0.93\u20130.99',
         limitations: 'May miss subtle arrhythmias or pacemaker-related artifacts. Not validated for pediatric ECGs.',
     },
@@ -685,6 +751,7 @@ const agentInfo = {
         input: 'Heart sound recording (WAV)',
         method: 'Masked autoencoder foundation model trained on 4M+ de-identified recordings',
         model: 'Eko EFAST',
+        modelUrl: 'https://www.ekohealth.com/blogs/newsroom/fda-clearance-efast-sensora',
         accuracy: '86% sens / 84% spec',
         limitations: 'Performance degrades with ambient noise or poor stethoscope contact. May not detect low-grade (1/6) murmurs.',
     },
@@ -693,6 +760,7 @@ const agentInfo = {
         input: 'Apical 4-chamber echocardiogram (MP4)',
         method: 'Video-based 3D CNN (R2+1D ResNet) with semantic segmentation, trained on 10k+ studies',
         model: 'EchoNet-Dynamic',
+        modelUrl: 'https://echonet.github.io/dynamic/',
         accuracy: 'AUC 0.97 (EF MAE 4.1%)',
         limitations: 'Optimized for apical 4-chamber view only. Accuracy decreases with poor acoustic windows or foreshortened views.',
     },
@@ -701,6 +769,7 @@ const agentInfo = {
         input: 'Structured lab results (HL7v2 \u2192 PNG chart)',
         method: 'Reference range engine with delta checks + LLM-based clinical interpretation',
         model: 'Rule-based + Gemini 2.5 Pro',
+        modelUrl: null,
         accuracy: 'Rule-based',
         limitations: 'Reference ranges may not account for age/sex/ethnicity-specific norms. LLM interpretation requires clinical verification.',
     },
@@ -709,6 +778,7 @@ const agentInfo = {
         input: 'Medication history (CSV)',
         method: 'Curated pharmaceutical knowledge base (500k+ products) with LLM reasoning layer',
         model: 'DrugBank + Gemini 2.5 Pro',
+        modelUrl: 'https://go.drugbank.com/',
         accuracy: 'Knowledge-base',
         limitations: 'May not reflect most recent FDA labeling changes. Does not account for patient-specific pharmacogenomics.',
     },
@@ -1218,7 +1288,7 @@ async function openCitationModal(citation, pin = null) {
             <div class="agent-info-tooltip-body">
                 <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Model</span>
-                    <span class="agent-info-tooltip-value">${escapeHtml(info.model)}</span>
+                    <span class="agent-info-tooltip-value">${info.modelUrl ? `<a href="${escapeHtml(info.modelUrl)}" target="_blank" rel="noopener" class="agent-model-link">${escapeHtml(info.model)} &#x2197;</a>` : escapeHtml(info.model)}</span>
                 </div>
                 <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Purpose</span>
@@ -1307,6 +1377,9 @@ async function openCitationModal(citation, pin = null) {
                 currentModalPin.checklist_state[String(i)] = cb.checked;
                 debouncedPatchChecklist(activePatientId, currentModalPin.pin_id,
                     { ...currentModalPin.checklist_state });
+                // Refresh progress indicators
+                renderInsightsPanel();
+                updateCitationBadgeStates();
             });
         });
     } else {
