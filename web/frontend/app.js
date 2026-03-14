@@ -1491,12 +1491,38 @@ function buildProvenanceHTML(citation) {
     const bus = citation.knowledge_bus || { supported_by: [], contradicted_by: [] };
     const agentLabel = agentBadgeLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
 
+    // Map agent name to data_dates directory key
+    const agentToDirKey = (agent) => {
+        if (agent === 'medication') return 'medications';
+        return agent.replace(/_/g, '-');
+    };
+
+    // Extract data date for this citation's modality
+    const patient = activePatientId ? patientDataMap[activePatientId] : null;
+    let dataDate = '';
+    if (patient?.data_dates && citation.web_path) {
+        const parts = citation.web_path.split('/');
+        const modalityDir = parts.length >= 3 ? parts[2] : '';
+        const rawDate = patient.data_dates[modalityDir] || '';
+        if (rawDate) dataDate = formatShortDate(rawDate);
+    }
+
+    // Look up date for a knowledge bus entry by agent name
+    const getAgentDate = (agent) => {
+        if (!patient?.data_dates) return '';
+        const raw = patient.data_dates[agentToDirKey(agent)] || '';
+        return raw ? formatShortDate(raw) : '';
+    };
+
     let html = '<div class="prov-pipeline">';
 
     // Processing steps
+    const todayDate = formatShortDate(new Date().toISOString().slice(0, 10));
     for (const step of steps) {
+        const dateStr = step.label === 'Data Origin' ? dataDate : todayDate;
+        const timeHTML = dateStr ? `<span class="prov-step-time">${dateStr}</span>` : '';
         html += `<div class="prov-step">
-            <div class="prov-step-label">${escapeHtml(step.label)}</div>
+            <div class="prov-step-label">${escapeHtml(step.label)}${timeHTML}</div>
             <div class="prov-step-desc">${escapeHtml(step.desc)}</div>
         </div>`;
     }
@@ -1515,11 +1541,14 @@ function buildProvenanceHTML(citation) {
             html += '<div class="prov-bus-group-label supported">\u2713 Supported by</div>';
             for (const entry of bus.supported_by) {
                 const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
+                const entryDate = getAgentDate(entry.agent);
+                const entryDateHTML = entryDate ? `<span class="prov-step-time">${entryDate}</span>` : '';
                 html += `<div class="prov-bus-entry">
                     <span class="prov-bus-icon supported">\u2713</span>
                     <span class="prov-bus-agent">${escapeHtml(entryAgent)}:</span>
                     <span class="prov-bus-finding">${escapeHtml(entry.finding)}</span>
                     <span class="prov-bus-reason">\u2014 ${escapeHtml(entry.reason)}</span>
+                    ${entryDateHTML}
                 </div>`;
             }
             html += '</div>';
@@ -1529,11 +1558,14 @@ function buildProvenanceHTML(citation) {
             html += '<div class="prov-bus-group-label contradicted">\u2717 Contradicted by</div>';
             for (const entry of bus.contradicted_by) {
                 const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
+                const entryDate = getAgentDate(entry.agent);
+                const entryDateHTML = entryDate ? `<span class="prov-step-time">${entryDate}</span>` : '';
                 html += `<div class="prov-bus-entry">
                     <span class="prov-bus-icon contradicted">\u2717</span>
                     <span class="prov-bus-agent">${escapeHtml(entryAgent)}:</span>
                     <span class="prov-bus-finding">${escapeHtml(entry.finding)}</span>
                     <span class="prov-bus-reason">\u2014 ${escapeHtml(entry.reason)}</span>
+                    ${entryDateHTML}
                 </div>`;
             }
             html += '</div>';
@@ -1544,12 +1576,9 @@ function buildProvenanceHTML(citation) {
     html += '</div>';
 
     // Citation generated node
-    const summaryPreview = citation.summary
-        ? (citation.summary.length > 120 ? citation.summary.slice(0, 117) + '\u2026' : citation.summary)
-        : '';
     html += `<div class="prov-citation">
-        <div class="prov-citation-label">Citation Generated</div>
-        <div class="prov-citation-text">"${escapeHtml(summaryPreview)}"</div>
+        <div class="prov-citation-label">Citation Generated<span class="prov-step-time">${todayDate}</span></div>
+        <div class="prov-citation-text">Gemini 3.1 Pro \u2014 orchestrator synthesis and citation formatting</div>
     </div>`;
 
     html += '</div>';

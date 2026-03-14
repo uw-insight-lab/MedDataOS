@@ -2337,6 +2337,9 @@ main {
 }
 
 .prov-step-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
     font-family: var(--mono);
     font-size: 10px;
     font-weight: 500;
@@ -2344,6 +2347,16 @@ main {
     letter-spacing: 0.14em;
     color: var(--text-secondary);
     margin-bottom: 3px;
+}
+
+.prov-step-time {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    letter-spacing: 0.04em;
+    margin-left: auto;
+    text-transform: none;
 }
 
 .prov-step-desc {
@@ -2502,6 +2515,9 @@ main {
 }
 
 .prov-citation-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
     font-family: var(--mono);
     font-size: 10px;
     font-weight: 500;
@@ -2513,7 +2529,6 @@ main {
 
 .prov-citation-text {
     font-family: var(--serif);
-    font-style: italic;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-secondary);
