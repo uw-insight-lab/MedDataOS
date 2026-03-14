@@ -2236,3 +2236,288 @@ main {
     max-height: 80vh;
     cursor: zoom-out;
 }
+
+/* ─── Modal Tab Toggle ────────────────────────────────────── */
+.modal-tab-toggle {
+    display: flex;
+    border: 1.5px solid var(--border-warm);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 auto 0 16px;
+}
+
+.modal-tab {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.4;
+}
+
+.modal-tab + .modal-tab {
+    border-left: 1.5px solid var(--border-warm);
+}
+
+.modal-tab:hover {
+    color: var(--text-secondary);
+    background: var(--accent-soft);
+}
+
+.modal-tab.active {
+    background: var(--accent);
+    color: #fdf8ee;
+}
+
+/* ─── Modal Flip State ────────────────────────────────────── */
+.citation-modal.flipped .modal-body,
+.citation-modal.flipped .modal-summary,
+.citation-modal.flipped .modal-provenance,
+.citation-modal.flipped .modal-annotations {
+    display: none;
+}
+
+.modal-provenance-panel {
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 24px 28px;
+    background: var(--bg-surface);
+    flex: 1;
+    min-height: 0;
+}
+
+.citation-modal.flipped .modal-provenance-panel {
+    display: flex;
+}
+
+/* ─── Provenance Pipeline ─────────────────────────────────── */
+.prov-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 20px;
+}
+
+/* Vertical connecting line */
+.prov-pipeline::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 10px;
+    bottom: 10px;
+    width: 1.5px;
+    background: var(--border-warm);
+}
+
+.prov-step {
+    position: relative;
+    padding: 8px 0 14px 0;
+}
+
+/* Node circle */
+.prov-step::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 0 0 1.5px var(--accent-mid);
+}
+
+.prov-step-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+}
+
+.prov-step-desc {
+    font-family: var(--serif);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+/* ─── Knowledge Bus Separator ─────────────────────────────── */
+.prov-separator {
+    position: relative;
+    margin: 6px 0 6px -20px;
+    padding-left: 20px;
+    border-top: 1.5px dashed var(--border-warm);
+    height: 0;
+}
+
+/* ─── Knowledge Bus Node ──────────────────────────────────── */
+.prov-bus {
+    position: relative;
+    padding: 8px 0 14px 0;
+}
+
+.prov-bus::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--data-blue);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 0 0 1.5px var(--data-blue-soft);
+}
+
+.prov-bus-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--data-blue);
+    margin-bottom: 6px;
+}
+
+.prov-bus-group {
+    margin-bottom: 8px;
+}
+
+.prov-bus-group-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+}
+
+.prov-bus-group-label.supported {
+    color: var(--success);
+}
+
+.prov-bus-group-label.contradicted {
+    color: var(--critical);
+}
+
+.prov-bus-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 0 3px 12px;
+    position: relative;
+}
+
+/* Tree branch lines */
+.prov-bus-entry::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 50%;
+    width: 8px;
+    border-left: 1px solid var(--border-warm);
+    border-bottom: 1px solid var(--border-warm);
+    border-bottom-left-radius: 3px;
+}
+
+.prov-bus-entry:last-child::before {
+    bottom: 50%;
+}
+
+.prov-bus-icon {
+    font-size: 11px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.prov-bus-icon.supported {
+    color: var(--success);
+}
+
+.prov-bus-icon.contradicted {
+    color: var(--critical);
+}
+
+.prov-bus-agent {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.prov-bus-finding {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.prov-bus-reason {
+    font-family: var(--serif);
+    font-size: 11px;
+    font-style: italic;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.prov-bus-empty {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    opacity: 0.5;
+    letter-spacing: 0.04em;
+    padding: 4px 0;
+}
+
+/* ─── Citation Generated Node ─────────────────────────────── */
+.prov-citation {
+    position: relative;
+    padding: 8px 0 4px 0;
+}
+
+.prov-citation::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 0 0 1.5px var(--accent-mid);
+}
+
+.prov-citation-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+}
+
+.prov-citation-text {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

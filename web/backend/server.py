@@ -43,9 +43,12 @@ sessions = {}  # session_id -> {"history": [...], "processing": bool}
 patient_pins = {}
 
 
-def _cite(cid, agent, file, web_path, summary):
+def _cite(cid, agent, file, web_path, summary, knowledge_bus=None):
     """Helper to build a citation dict."""
-    return {"id": str(cid), "agent": agent, "file": file, "web_path": web_path, "summary": summary}
+    c = {"id": str(cid), "agent": agent, "file": file, "web_path": web_path, "summary": summary}
+    if knowledge_bus:
+        c["knowledge_bus"] = knowledge_bus
+    return c
 
 
 # Reusable P0001 citation builders (call with sequential id)
@@ -54,49 +57,74 @@ def _c_notes(cid):
                  "58-year-old male presenting with 2\u20133 week history of exertional chest pressure. "
                  "Discomfort is pressure-like, rated 4/10, and resolves within 5 minutes of rest. "
                  "Mild dyspnea on exertion and increased fatigue are also reported. "
-                 "No rest pain, palpitations, or syncope. Penicillin allergy documented.")
+                 "No rest pain, palpitations, or syncope. Penicillin allergy documented.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "ecg", "finding": "Lateral ST changes in V4\u2013V6", "reason": "cardiac origin confirmed"},
+                     {"agent": "echo", "finding": "Wall motion abnormality", "reason": "structural basis for symptoms"},
+                 ], "contradicted_by": []})
 
 def _c_xray(cid):
     return _cite(cid, "chest_xray", "P0001.png", "/multimodal-data/chest-xray/P0001.png",
                  "No acute cardiopulmonary abnormality identified on this study. "
                  "Cardiac silhouette is within normal limits with no cardiomegaly. "
                  "Lung fields are clear with no consolidation, effusion, or pulmonary vascular congestion. "
-                 "Mediastinal contours and bony thorax appear unremarkable.")
+                 "Mediastinal contours and bony thorax appear unremarkable.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "clinical_notes", "finding": "No orthopnea or decompensation signs", "reason": "consistent with clear radiograph"},
+                 ], "contradicted_by": []})
 
 def _c_ecg(cid):
     return _cite(cid, "ecg", "P0001.svg", "/multimodal-data/ecg/P0001.svg",
                  "Sinus rhythm at 72 bpm with normal PR and QRS intervals. "
                  "Subtle ST-segment depression noted in lateral leads V4\u2013V6. "
                  "T-wave flattening observed in leads I and aVL. "
-                 "Findings are consistent with lateral ischemia and warrant clinical correlation.")
+                 "Findings are consistent with lateral ischemia and warrant clinical correlation.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "echo", "finding": "Lateral wall motion abnormality", "reason": "same vascular territory"},
+                     {"agent": "clinical_notes", "finding": "Exertional chest pressure", "reason": "symptom correlation"},
+                 ], "contradicted_by": []})
 
 def _c_heart(cid):
     return _cite(cid, "heart_sounds", "P0001.wav", "/multimodal-data/heart-sounds/P0001.wav",
                  "S4 gallop present, indicating impaired left ventricular compliance. "
                  "Grade 2/6 systolic murmur audible at the apex, non-radiating. "
                  "S1 and S2 are otherwise normal in character. "
-                 "No pericardial rub or diastolic murmur detected.")
+                 "No pericardial rub or diastolic murmur detected.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "echo", "finding": "LVEF 45\u201350%", "reason": "confirms ventricular dysfunction"},
+                 ], "contradicted_by": []})
 
 def _c_echo(cid):
     return _cite(cid, "echo", "P0001.mp4", "/multimodal-data/echo/P0001.mp4",
                  "Left ventricular ejection fraction is mildly reduced at approximately 45\u201350%. "
                  "Regional wall motion abnormality identified in the lateral wall territory. "
                  "No significant valvular pathology or pericardial effusion observed. "
-                 "Right ventricular size and function appear preserved.")
+                 "Right ventricular size and function appear preserved.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "ecg", "finding": "ST depression V4\u2013V6", "reason": "same vascular territory"},
+                     {"agent": "heart_sounds", "finding": "S4 gallop", "reason": "confirms impaired compliance"},
+                 ], "contradicted_by": []})
 
 def _c_labs(cid):
     return _cite(cid, "lab_results", "P0001.png", "/multimodal-data/lab-results/P0001.png",
                  "Recurrent hyperkalemia documented with peaks of 5.9, 6.2, and 5.8 mmol/L over Oct 2025\u2013Jan 2026. "
                  "Creatinine is trending at the upper limit of normal, suggesting mild renal impairment. "
                  "Troponin levels are within the reference range on most recent draw. "
-                 "CBC and hepatic function panels are unremarkable.")
+                 "CBC and hepatic function panels are unremarkable.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "medication", "finding": "Lisinopril 20mg (ACE inhibitor)", "reason": "explains K+ retention"},
+                 ], "contradicted_by": []})
 
 def _c_meds(cid):
     return _cite(cid, "medication", "P0001.csv", "/multimodal-data/medications/P0001.csv",
                  "Lisinopril 20mg daily (ACE inhibitor) is the likely driver of recurrent hyperkalemia. "
                  "Cardiovascular regimen includes Amlodipine 5mg, Atorvastatin 20mg, and Aspirin 81mg. "
                  "Diabetes managed with Metformin 1000mg twice daily and Semaglutide 0.5mg weekly. "
-                 "Albuterol PRN is prescribed for asthma. Penicillin allergy is documented.")
+                 "Albuterol PRN is prescribed for asthma. Penicillin allergy is documented.",
+                 knowledge_bus={"supported_by": [],
+                 "contradicted_by": [
+                     {"agent": "lab_results", "finding": "K+ 6.2 mmol/L", "reason": "unsafe to continue Lisinopril at current dose"},
+                 ]})
 
 
 # Reusable P0002 citation builders

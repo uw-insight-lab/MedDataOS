@@ -40,11 +40,13 @@ const insightsPanel = document.getElementById('insights-panel');
 const insightsContent = document.getElementById('insights-content');
 const insightsToggle = document.getElementById('insights-toggle');
 const modalPin = document.getElementById('modal-pin');
+const modalTabToggle = document.getElementById('modal-tab-toggle');
 const modalAnnotationText = document.getElementById('modal-annotation-text');
 const modalAnnotationTags = document.getElementById('modal-annotation-tags');
 const modalInfoBtn = document.getElementById('modal-info-btn');
 const modalAgentInfo = document.getElementById('modal-agent-info');
 const modalProvenance = document.getElementById('modal-provenance');
+const modalProvenancePanel = document.getElementById('modal-provenance-panel');
 
 // ─── Sidebar: Load Patients ─────────────────────────────────
 async function loadPatients() {
@@ -715,6 +717,47 @@ const agentFindingsLabel = {
     'echo':           'Echocardiographic Findings',
     'lab_results':    'Lab Findings',
     'medication':     'Medication Review',
+};
+
+// Provenance pipeline steps per agent (static processing stages)
+const provenanceSteps = {
+    'clinical_notes': [
+        { label: 'Data Origin', desc: 'Physician documentation, EHR export' },
+        { label: 'NLP Extraction', desc: 'Named entity recognition: conditions, medications, vitals' },
+        { label: 'Summarization', desc: 'Key findings extraction, temporal ordering' },
+    ],
+    'chest_xray': [
+        { label: 'Data Origin', desc: 'Posteroanterior chest radiograph, digital acquisition' },
+        { label: 'DICOM Processing', desc: 'DICOM \u2192 PNG, window/level normalization' },
+        { label: 'AI Analysis', desc: 'CheXNet DenseNet-121, 18 pathology classification' },
+    ],
+    'ecg': [
+        { label: 'Data Origin', desc: '12-lead resting ECG, bedside recording' },
+        { label: 'Format Conversion', desc: 'HL7v2 aECG \u2192 SVG waveform rendering' },
+        { label: 'Signal Analysis', desc: 'Baseline correction, QRS detection, interval measurement' },
+        { label: 'AI Interpretation', desc: 'ECG-FM transformer, trained on 1.3M ECGs' },
+    ],
+    'heart_sounds': [
+        { label: 'Data Origin', desc: 'Digital auscultation, 4 standard positions' },
+        { label: 'Audio Processing', desc: 'WAV normalization, noise reduction, segmentation' },
+        { label: 'AI Classification', desc: 'HeartNet CNN, murmur detection & grading' },
+    ],
+    'echo': [
+        { label: 'Data Origin', desc: 'Transthoracic echocardiogram, standard views' },
+        { label: 'Video Processing', desc: 'DICOM cine \u2192 MP4, frame extraction' },
+        { label: 'Chamber Quantification', desc: 'LV/RV volumes, wall motion, EF estimation' },
+        { label: 'AI Analysis', desc: 'EchoNet-Dynamic, video-based EF prediction' },
+    ],
+    'lab_results': [
+        { label: 'Data Origin', desc: 'Laboratory panel, hospital LIS' },
+        { label: 'HL7 Parsing', desc: 'HL7v2 OBX segments \u2192 structured results with reference ranges' },
+        { label: 'Trend Analysis', desc: 'Delta checks, critical value flagging, longitudinal trends' },
+    ],
+    'medication': [
+        { label: 'Data Origin', desc: 'Medication reconciliation, pharmacy system' },
+        { label: 'Regimen Parsing', desc: 'Active/discontinued classification, dose timeline construction' },
+        { label: 'Interaction Screening', desc: 'Drug-drug interaction check, contraindication review' },
+    ],
 };
 
 // Agent info for tooltip (per agent type) — model-card style
@@ -1442,13 +1485,89 @@ function renderAnnotationTags(activeTags) {
     });
 }
 
+// Build provenance pipeline HTML for a citation
+function buildProvenanceHTML(citation) {
+    const steps = provenanceSteps[citation.agent] || [];
+    const bus = citation.knowledge_bus || { supported_by: [], contradicted_by: [] };
+    const agentLabel = agentBadgeLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
+
+    let html = '<div class="prov-pipeline">';
+
+    // Processing steps
+    for (const step of steps) {
+        html += `<div class="prov-step">
+            <div class="prov-step-label">${escapeHtml(step.label)}</div>
+            <div class="prov-step-desc">${escapeHtml(step.desc)}</div>
+        </div>`;
+    }
+
+    // Separator before knowledge bus
+    html += '<div class="prov-separator"></div>';
+
+    // Knowledge bus node
+    const hasBus = (bus.supported_by && bus.supported_by.length) || (bus.contradicted_by && bus.contradicted_by.length);
+    html += '<div class="prov-bus">';
+    html += '<div class="prov-bus-label">Knowledge Bus</div>';
+
+    if (hasBus) {
+        if (bus.supported_by && bus.supported_by.length) {
+            html += '<div class="prov-bus-group">';
+            html += '<div class="prov-bus-group-label supported">\u2713 Supported by</div>';
+            for (const entry of bus.supported_by) {
+                const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
+                html += `<div class="prov-bus-entry">
+                    <span class="prov-bus-icon supported">\u2713</span>
+                    <span class="prov-bus-agent">${escapeHtml(entryAgent)}:</span>
+                    <span class="prov-bus-finding">${escapeHtml(entry.finding)}</span>
+                    <span class="prov-bus-reason">\u2014 ${escapeHtml(entry.reason)}</span>
+                </div>`;
+            }
+            html += '</div>';
+        }
+        if (bus.contradicted_by && bus.contradicted_by.length) {
+            html += '<div class="prov-bus-group">';
+            html += '<div class="prov-bus-group-label contradicted">\u2717 Contradicted by</div>';
+            for (const entry of bus.contradicted_by) {
+                const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
+                html += `<div class="prov-bus-entry">
+                    <span class="prov-bus-icon contradicted">\u2717</span>
+                    <span class="prov-bus-agent">${escapeHtml(entryAgent)}:</span>
+                    <span class="prov-bus-finding">${escapeHtml(entry.finding)}</span>
+                    <span class="prov-bus-reason">\u2014 ${escapeHtml(entry.reason)}</span>
+                </div>`;
+            }
+            html += '</div>';
+        }
+    } else {
+        html += '<div class="prov-bus-empty">No cross-modal data yet</div>';
+    }
+    html += '</div>';
+
+    // Citation generated node
+    const summaryPreview = citation.summary
+        ? (citation.summary.length > 120 ? citation.summary.slice(0, 117) + '\u2026' : citation.summary)
+        : '';
+    html += `<div class="prov-citation">
+        <div class="prov-citation-label">Citation Generated</div>
+        <div class="prov-citation-text">"${escapeHtml(summaryPreview)}"</div>
+    </div>`;
+
+    html += '</div>';
+    return html;
+}
+
 function closeCitationModal() {
     citationBackdrop.classList.remove('open');
     citationModal.classList.remove('open');
     citationModal.classList.remove('zoomed');
+    citationModal.classList.remove('flipped');
+    citationModal.style.height = '';
+    // Reset tabs to data
+    modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'data'));
     // Stop any playing media
     modalBody.querySelectorAll('video, audio').forEach(el => { el.pause(); el.src = ''; });
     modalBody.innerHTML = '';
+    modalProvenancePanel.innerHTML = '';
     currentModalPin = null;
 }
 
@@ -1479,10 +1598,37 @@ modalPin.addEventListener('click', async () => {
         modalPin.classList.add('pinned');
     }
 });
+
+// Tab toggle — switch between data and provenance views
+modalTabToggle.addEventListener('click', (e) => {
+    const tab = e.target.closest('.modal-tab');
+    if (!tab || !modalCitation) return;
+    const target = tab.dataset.tab;
+    const isFlipped = target === 'provenance';
+    // Lock height before toggling to prevent jump
+    if (!citationModal.style.height) {
+        citationModal.style.height = citationModal.offsetHeight + 'px';
+    }
+    citationModal.classList.toggle('flipped', isFlipped);
+    // Update active tab
+    modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
+    // Build provenance content on first flip
+    if (isFlipped && !modalProvenancePanel.innerHTML) {
+        modalProvenancePanel.innerHTML = buildProvenanceHTML(modalCitation);
+    }
+    if (!isFlipped) {
+        citationModal.style.height = '';
+    }
+});
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && citationModal.classList.contains('open')) {
         if (citationModal.classList.contains('zoomed')) {
             citationModal.classList.remove('zoomed');
+        } else if (citationModal.classList.contains('flipped')) {
+            citationModal.classList.remove('flipped');
+            citationModal.style.height = '';
+            modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'data'));
         } else {
             closeCitationModal();
         }

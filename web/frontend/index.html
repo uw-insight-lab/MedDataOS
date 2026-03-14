@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css?v=33">
+    <link rel="stylesheet" href="/static/style.css?v=37">
 </head>
 <body>
     <div class="container">
@@ -105,6 +105,10 @@
                 <button class="btn-agent-info" id="modal-info-btn" title="About this agent">ⓘ</button>
                 <div class="agent-info-tooltip" id="modal-agent-info"></div>
             </div>
+            <div class="modal-tab-toggle" id="modal-tab-toggle">
+                <button class="modal-tab active" data-tab="data">Data</button>
+                <button class="modal-tab" data-tab="provenance">Provenance</button>
+            </div>
             <div class="modal-actions">
                 <button class="btn-pin" id="modal-pin" title="Pin citation">&#x1F4CC;</button>
                 <button class="modal-close" id="modal-close">&times;</button>
@@ -117,12 +121,13 @@
             <div class="annotation-tags" id="modal-annotation-tags"></div>
             <textarea id="modal-annotation-text" placeholder="Add clinical notes..." rows="2"></textarea>
         </div>
+        <div class="modal-provenance-panel" id="modal-provenance-panel"></div>
     </div>
 
     <!-- Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 
-    <script src="/static/app.js?v=33"></script>
+    <script src="/static/app.js?v=37"></script>
 </body>
 </html>
