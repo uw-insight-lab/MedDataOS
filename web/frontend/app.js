@@ -763,66 +763,87 @@ const provenanceSteps = {
 // Agent info for tooltip (per agent type) — model-card style
 const agentInfo = {
     'clinical_notes': {
-        purpose: 'Extracts diagnoses, medications, and clinical relationships from unstructured physician notes',
-        input: 'Free-text clinical notes (.txt)',
-        method: 'Transformer-based clinical NLP trained on 90B words of EHR text',
         model: 'GatorTron 8.9B',
         modelUrl: 'https://huggingface.co/UFNLP/gatortron-large',
+        purpose: 'Extracts diagnoses, medications, and clinical relationships from unstructured physician notes',
+        input: 'Free-text clinical notes (.txt)',
+        output: 'Named entities (conditions, medications, vitals), clinical relationships, temporal ordering',
+        method: 'Transformer-based clinical NLP trained on 90B words of EHR text',
         accuracy: 'F1 +7.5% vs ClinicalBERT',
+        paper: 'https://www.nature.com/articles/s41746-022-00742-2',
+        license: 'Apache 2.0',
         limitations: 'May miss implicit clinical reasoning or abbreviations not seen in training data. Not validated for non-English notes.',
     },
     'chest_xray': {
-        purpose: 'Detects and classifies thoracic pathologies on frontal chest radiographs',
-        input: 'Frontal chest X-ray (PNG)',
-        method: 'DenseNet-121 multi-label classifier trained on 700k+ images from 6 merged public datasets',
         model: 'TorchXRayVision',
         modelUrl: 'https://huggingface.co/torchxrayvision/densenet121-res224-all',
+        purpose: 'Detects and classifies thoracic pathologies on frontal chest radiographs',
+        input: 'Frontal chest X-ray (PNG)',
+        output: '18 pathology classifications: atelectasis, cardiomegaly, effusion, infiltration, pneumothorax, and others',
+        method: 'DenseNet-121 multi-label classifier trained on 700k+ images from 6 merged public datasets',
         accuracy: 'AUC 0.84 (18 pathologies)',
+        paper: 'https://arxiv.org/abs/2111.00595',
+        license: 'Apache 2.0',
         limitations: 'Reduced accuracy on lateral views and portable/bedside radiographs. May miss subtle nodules <1 cm.',
     },
     'ecg': {
-        purpose: 'Interprets 12-lead ECG waveforms for rhythm, conduction, and structural abnormalities',
-        input: '12-lead ECG (HL7 aECG \u2192 SVG)',
-        method: 'Transformer foundation model pretrained on 1.3M ECGs via self-supervised learning',
         model: 'ECG-FM',
         modelUrl: 'https://huggingface.co/wanglab/ecg-fm',
+        purpose: 'Interprets 12-lead ECG waveforms for rhythm, conduction, and structural abnormalities',
+        input: '12-lead ECG (HL7 aECG \u2192 SVG)',
+        output: 'Rhythm classification, multi-label diagnostic statements, LVEF prediction',
+        method: 'Transformer foundation model pretrained on 1.3M ECGs via self-supervised learning',
         accuracy: 'AUC 0.93\u20130.99',
+        paper: 'https://arxiv.org/abs/2408.05178',
+        license: 'MIT',
         limitations: 'May miss subtle arrhythmias or pacemaker-related artifacts. Not validated for pediatric ECGs.',
     },
     'heart_sounds': {
-        purpose: 'Screens for structural heart murmurs and atrial fibrillation from auscultation recordings',
-        input: 'Heart sound recording (WAV)',
-        method: 'Masked autoencoder foundation model trained on 4M+ de-identified recordings',
         model: 'Eko EFAST',
         modelUrl: 'https://www.ekohealth.com/blogs/newsroom/fda-clearance-efast-sensora',
+        purpose: 'Screens for structural heart murmurs and atrial fibrillation from auscultation recordings',
+        input: 'Heart sound recording (WAV)',
+        output: 'Murmur detection (present/absent, timing, character), atrial fibrillation detection',
+        method: 'Masked autoencoder foundation model trained on 4M+ de-identified recordings',
         accuracy: '86% sens / 84% spec',
+        paper: null,
+        license: 'Proprietary',
         limitations: 'Performance degrades with ambient noise or poor stethoscope contact. May not detect low-grade (1/6) murmurs.',
     },
     'echo': {
-        purpose: 'Estimates left ventricular ejection fraction and detects systolic dysfunction from echo video',
-        input: 'Apical 4-chamber echocardiogram (MP4)',
-        method: 'Video-based 3D CNN (R2+1D ResNet) with semantic segmentation, trained on 10k+ studies',
         model: 'EchoNet-Dynamic',
         modelUrl: 'https://echonet.github.io/dynamic/',
+        purpose: 'Estimates left ventricular ejection fraction and detects systolic dysfunction from echo video',
+        input: 'Apical 4-chamber echocardiogram (MP4)',
+        output: 'LV ejection fraction estimation, LV segmentation, beat-to-beat cardiac function tracking',
+        method: 'Video-based 3D CNN (R2+1D ResNet) with semantic segmentation, trained on 10k+ studies',
         accuracy: 'AUC 0.97 (EF MAE 4.1%)',
+        paper: 'https://www.nature.com/articles/s41586-020-2145-8',
+        license: 'Stanford Non-Commercial',
         limitations: 'Optimized for apical 4-chamber view only. Accuracy decreases with poor acoustic windows or foreshortened views.',
     },
     'lab_results': {
+        model: 'Rule-based + Gemini 3.1 Pro',
+        modelUrl: null,
         purpose: 'Flags abnormal values, identifies trends, and interprets clinical significance of lab panels',
         input: 'Structured lab results (HL7v2 \u2192 PNG chart)',
+        output: 'Abnormal value flags, delta checks, critical value alerts, longitudinal trend analysis',
         method: 'Reference range engine with delta checks + LLM-based clinical interpretation',
-        model: 'Rule-based + Gemini 2.5 Pro',
-        modelUrl: null,
         accuracy: 'Rule-based',
+        paper: null,
+        license: 'Proprietary',
         limitations: 'Reference ranges may not account for age/sex/ethnicity-specific norms. LLM interpretation requires clinical verification.',
     },
     'medication': {
+        model: 'DrugBank + Gemini 3.1 Pro',
+        modelUrl: 'https://go.drugbank.com/',
         purpose: 'Reviews medication lists for drug interactions, contraindications, and dosing concerns',
         input: 'Medication history (CSV)',
+        output: 'Drug-drug interactions, contraindication flags, dosing timeline, regimen classification',
         method: 'Curated pharmaceutical knowledge base (500k+ products) with LLM reasoning layer',
-        model: 'DrugBank + Gemini 2.5 Pro',
-        modelUrl: 'https://go.drugbank.com/',
         accuracy: 'Knowledge-base',
+        paper: null,
+        license: 'CC BY-NC 4.0',
         limitations: 'May not reflect most recent FDA labeling changes. Does not account for patient-specific pharmacogenomics.',
     },
 };
@@ -1327,6 +1348,9 @@ async function openCitationModal(citation, pin = null) {
     // ── Agent info tooltip ──────────────────────────────────
     const info = agentInfo[citation.agent];
     if (info) {
+        const paperHTML = info.paper
+            ? `<a href="${escapeHtml(info.paper)}" target="_blank" rel="noopener" class="agent-model-link">${info.paper.includes('arxiv') ? 'arXiv' : 'Paper'} &#x2197;</a>`
+            : 'N/A';
         modalAgentInfo.innerHTML = `
             <div class="agent-info-tooltip-body">
                 <div class="agent-info-tooltip-row">
@@ -1338,16 +1362,28 @@ async function openCitationModal(citation, pin = null) {
                     <span class="agent-info-tooltip-value">${escapeHtml(info.purpose)}</span>
                 </div>
                 <div class="agent-info-tooltip-row">
-                    <span class="agent-info-tooltip-label">Method</span>
-                    <span class="agent-info-tooltip-value">${escapeHtml(info.method)}</span>
-                </div>
-                <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Input</span>
                     <span class="agent-info-tooltip-value">${escapeHtml(info.input)}</span>
                 </div>
                 <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Output</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.output)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Method</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.method)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Accuracy</span>
                     <span class="agent-info-tooltip-value">${escapeHtml(info.accuracy)}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">Paper</span>
+                    <span class="agent-info-tooltip-value">${paperHTML}</span>
+                </div>
+                <div class="agent-info-tooltip-row">
+                    <span class="agent-info-tooltip-label">License</span>
+                    <span class="agent-info-tooltip-value">${escapeHtml(info.license)}</span>
                 </div>
                 <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Limits</span>
