@@ -476,12 +476,9 @@ insightsToggle.addEventListener('click', toggleInsights);
 async function togglePatient(patientEl) {
     const wasExpanded = patientEl.classList.contains('expanded');
 
-    // Collapse all
-    document.querySelectorAll('.sidebar-patient.expanded').forEach(el => {
-        el.classList.remove('expanded');
-    });
-
-    if (!wasExpanded) {
+    if (wasExpanded) {
+        patientEl.classList.remove('expanded');
+    } else {
         patientEl.classList.add('expanded');
         // Load conversations for this patient
         const pid = patientEl.dataset.patientId;
@@ -1900,17 +1897,25 @@ function highlightTextInNode(root, searchText) {
 
 function scrollToTextInChat(text) {
     if (!text) return;
+    // Find the first mark whose text starts the pinned text, then collect
+    // all sibling marks in the same parent that together form the full highlight
+    // (marks may be separated by citation <sup> or date <span> elements).
     const marks = chatContainer.querySelectorAll('mark.pinned-highlight');
     for (const mark of marks) {
         if (mark.textContent === text || text.startsWith(mark.textContent)) {
             mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Brief flash effect — flash all adjacent marks for multi-node highlights
-            const allMarks = [mark];
-            let sibling = mark.nextElementSibling;
-            while (sibling && sibling.tagName === 'MARK' && sibling.classList.contains('pinned-highlight')) {
-                allMarks.push(sibling);
-                sibling = sibling.nextElementSibling;
+            // Collect all marks in the same parent that belong to this highlight
+            const parent = mark.parentNode;
+            const allMarks = [];
+            let found = false;
+            for (const child of parent.childNodes) {
+                if (child === mark) found = true;
+                if (found && child.nodeType === Node.ELEMENT_NODE &&
+                    child.tagName === 'MARK' && child.classList.contains('pinned-highlight')) {
+                    allMarks.push(child);
+                }
             }
+            if (allMarks.length === 0) allMarks.push(mark);
             allMarks.forEach(m => {
                 m.style.transition = 'background 0.3s';
                 m.style.background = 'rgba(166, 120, 48, 0.35)';

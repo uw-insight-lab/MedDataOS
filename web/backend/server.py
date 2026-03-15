@@ -550,8 +550,9 @@ async def chat(
             "patient_id": patient_id,
         }
 
-    # Update patient_id if provided on existing session
-    if patient_id:
+    # Set patient_id only if not already assigned to a different patient
+    current_patient = sessions[session_id].get("patient_id")
+    if patient_id and (not current_patient or current_patient == patient_id):
         sessions[session_id]["patient_id"] = patient_id
 
     session = sessions[session_id]
