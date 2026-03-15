@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css?v=39">
+    <link rel="stylesheet" href="/static/style.css?v=41">
 </head>
 <body>
     <div class="container">
@@ -100,27 +100,29 @@
     <div id="citation-backdrop" class="citation-backdrop"></div>
     <div id="citation-modal" class="citation-modal">
         <div class="modal-header">
-            <div class="modal-agent-group">
-                <span class="modal-agent" id="modal-agent"></span>
-                <button class="btn-agent-info" id="modal-info-btn" title="About this agent">ⓘ</button>
-                <div class="agent-info-tooltip" id="modal-agent-info"></div>
-            </div>
+            <span class="modal-agent" id="modal-agent"></span>
+            <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <div class="modal-toolbar">
             <div class="modal-tab-toggle" id="modal-tab-toggle">
                 <button class="modal-tab active" data-tab="data">Data</button>
                 <button class="modal-tab" data-tab="provenance">Provenance</button>
             </div>
             <div class="modal-actions">
+                <div class="modal-agent-group">
+                    <button class="btn-agent-info" id="modal-info-btn" title="About this agent">ⓘ</button>
+                    <div class="agent-info-tooltip" id="modal-agent-info"></div>
+                </div>
                 <button class="btn-pin" id="modal-pin" title="Pin citation">&#x1F4CC;</button>
-                <button class="modal-close" id="modal-close">&times;</button>
             </div>
         </div>
         <div class="modal-body" id="modal-body"></div>
         <div class="modal-summary" id="modal-summary"></div>
-        <div class="modal-provenance" id="modal-provenance"></div>
         <div class="modal-annotations" id="modal-annotations">
             <div class="annotation-tags" id="modal-annotation-tags"></div>
             <textarea id="modal-annotation-text" placeholder="Add clinical notes..." rows="2"></textarea>
         </div>
+        <div class="modal-footer" id="modal-provenance"></div>
         <div class="modal-provenance-panel" id="modal-provenance-panel"></div>
     </div>
 
@@ -128,6 +130,6 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 
-    <script src="/static/app.js?v=39"></script>
+    <script src="/static/app.js?v=41"></script>
 </body>
 </html>

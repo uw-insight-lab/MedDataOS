@@ -1415,7 +1415,16 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 20px;
+    padding: 14px 20px 10px;
+    background: var(--accent-soft);
+    flex-shrink: 0;
+}
+
+.modal-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px 10px;
     background: var(--accent-soft);
     border-bottom: 1px solid var(--accent-mid);
     flex-shrink: 0;
@@ -1876,7 +1885,7 @@ main {
 .agent-info-tooltip {
     position: absolute;
     top: calc(100% + 10px);
-    left: 16px;
+    right: 0;
     width: 340px;
     max-height: 70vh;
     overflow-y: auto;
@@ -1979,7 +1988,7 @@ main {
 }
 
 /* ─── Modal Provenance ─────────────────────────────────────── */
-.modal-provenance {
+.modal-footer {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -1987,15 +1996,15 @@ main {
     gap: 0;
     padding: 10px 20px;
     border-top: 1px solid var(--border);
-    background: var(--bg-surface);
+    background: var(--bg-panel);
     flex-shrink: 0;
 }
 
-.modal-provenance:empty {
+.modal-footer:empty {
     display: none;
 }
 
-.modal-provenance div {
+.modal-footer div {
     font-family: var(--mono);
     font-size: 10px;
     color: var(--text-dim);
@@ -2003,7 +2012,7 @@ main {
     line-height: 1.6;
 }
 
-.modal-provenance div + div::before {
+.modal-footer div + div::before {
     content: '·';
     color: var(--accent-mid);
     font-size: 14px;
@@ -2240,10 +2249,7 @@ main {
 /* ─── Modal Tab Toggle ────────────────────────────────────── */
 .modal-tab-toggle {
     display: flex;
-    border: 1.5px solid var(--border-warm);
-    border-radius: 3px;
-    overflow: hidden;
-    margin: 0 auto 0 16px;
+    gap: 16px;
 }
 
 .modal-tab {
@@ -2252,34 +2258,30 @@ main {
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: 4px 12px;
+    padding: 4px 0;
     border: none;
+    border-bottom: 2px solid transparent;
     background: transparent;
     color: var(--text-dim);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease, border-color 0.15s ease;
     line-height: 1.4;
-}
-
-.modal-tab + .modal-tab {
-    border-left: 1.5px solid var(--border-warm);
 }
 
 .modal-tab:hover {
     color: var(--text-secondary);
-    background: var(--accent-soft);
 }
 
 .modal-tab.active {
-    background: var(--accent);
-    color: #fdf8ee;
+    color: var(--accent);
+    border-bottom-color: var(--accent);
 }
 
 /* ─── Modal Flip State ────────────────────────────────────── */
 .citation-modal.flipped .modal-body,
 .citation-modal.flipped .modal-summary,
-.citation-modal.flipped .modal-provenance,
-.citation-modal.flipped .modal-annotations {
+.citation-modal.flipped .modal-annotations,
+.citation-modal.flipped .modal-footer {
     display: none;
 }
 
