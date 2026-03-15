@@ -290,7 +290,7 @@ function updateCitationBadgeStates() {
     });
     // Scan all citation badges in chat
     chatContainer.querySelectorAll('.citation').forEach(badge => {
-        badge.classList.remove('citation-review-none', 'citation-review-partial', 'citation-review-complete');
+        badge.classList.remove('citation-review-none', 'citation-review-partial', 'citation-review-complete', 'citation-has-conflict');
         try {
             const citation = JSON.parse(decodeURIComponent(badge.dataset.citation));
             const key = citation.agent + '|' + citation.web_path;
@@ -307,6 +307,11 @@ function updateCitationBadgeStates() {
             } else if (citation.summary && parseSummaryToChecklist(citation.summary)) {
                 // Not pinned but has findings — default to red
                 badge.classList.add('citation-review-none');
+            }
+            // Conflict indicator (independent of review state)
+            const conflict = getCitationConflict(citation);
+            if (conflict) {
+                badge.classList.add('citation-has-conflict');
             }
         } catch (e) { /* skip malformed */ }
     });
@@ -375,6 +380,10 @@ function renderInsightsPanel() {
                     <span class="progress-label">${progress.checked}/${progress.total}</span>
                 </div>`;
             }
+            const conflict = getCitationConflict(p.citation);
+            const conflictHTML = conflict
+                ? `<div class="pinned-card-conflict">\u26A0 Contradicted by ${escapeHtml(conflict.firstAgent)}</div>`
+                : '';
             card.innerHTML = `
                 <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
                 ${previewHTML}
@@ -382,6 +391,7 @@ function renderInsightsPanel() {
                 ${annotationText ? `<div class="pinned-card-annotation">${escapeHtml(annotationText.slice(0, 60))}${annotationText.length > 60 ? '…' : ''}</div>` : ''}
                 ${annotationTags.length > 0 ? `<div class="pinned-card-tags">${annotationTags.map(t => `<span class="pinned-card-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
                 ${progressHTML}
+                ${conflictHTML}
                 ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
             `;
@@ -871,6 +881,15 @@ function getCitationDate(citation) {
     return date ? formatShortDate(date) : '';
 }
 
+// Check if a citation has knowledge_bus conflicts
+function getCitationConflict(citation) {
+    const bus = citation.knowledge_bus;
+    if (!bus || !bus.contradicted_by || !bus.contradicted_by.length) return null;
+    const first = bus.contradicted_by[0];
+    const label = agentBadgeLabels[first.agent] || first.agent.replace(/_/g, ' ');
+    return { count: bus.contradicted_by.length, firstAgent: label, finding: first.finding };
+}
+
 // Replace [cite:X] tokens with hoverable <sup> badges
 function renderWithCitations(html, citations) {
     const citationMap = {};
@@ -977,6 +996,11 @@ async function showCitationPopup(anchor, citation) {
         summaryHTML = escapeHtml(citation.summary);
     }
 
+    const conflict = getCitationConflict(citation);
+    const conflictHTML = conflict
+        ? `<div class="card-conflict">\u26A0 Contradicted by ${escapeHtml(conflict.firstAgent)}${conflict.count > 1 ? ` +${conflict.count - 1}` : ''}</div>`
+        : '';
+
     citationPopup.innerHTML = `
         <div class="card-header">
             <span class="card-agent">${escapeHtml(agentLabel)}</span>
@@ -984,6 +1008,7 @@ async function showCitationPopup(anchor, citation) {
         </div>
         <div class="card-content" id="card-content-inner">${contentHTML}</div>
         <div class="card-summary">${summaryHTML}</div>
+        ${conflictHTML}
     `;
 
     citationPopup.style.display = 'block';

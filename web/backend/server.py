@@ -395,6 +395,9 @@ def _seed_demo_sessions():
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2), "source": "demo-2",
          "created_at": datetime.utcnow().isoformat(), "query": "",
          "annotations": {"text": "", "tags": []}, "checklist_state": {}},
+        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_meds(3), "source": "demo-1",
+         "created_at": datetime.utcnow().isoformat(), "query": "",
+         "annotations": {"text": "", "tags": []}, "checklist_state": {}},
     ]
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
