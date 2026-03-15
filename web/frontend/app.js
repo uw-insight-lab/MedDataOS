@@ -17,7 +17,7 @@ let insightsOpen = false;
 let patientPins = {};    // patient_id -> [{pin_id, citation}]
 let modalCitation = null; // citation currently shown in modal
 let currentModalPin = null; // full pin object for modal (or null if not pinned)
-let lastUserQuery = '';     // last query text captured before sending
+let lastUserQuery = '';     // last query text for pin provenance
 
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
@@ -317,13 +317,22 @@ function buildPinPreview(citation) {
     if (type === 'image') {
         const isSvg = citation.file.endsWith('.svg');
         return `<div class="pinned-card-preview"><img src="${citation.web_path}" alt="" style="${isSvg ? 'background:#f8f5f0;object-fit:contain;' : ''}"></div>`;
-    } else if (type === 'video') {
-        return '<div class="pinned-card-preview"><span class="pinned-card-preview-icon">&#x1F3AC;</span></div>';
-    } else if (type === 'audio') {
-        return '<div class="pinned-card-preview"><span class="pinned-card-preview-icon">&#x23E6;</span></div>';
-    } else {
-        return '<div class="pinned-card-preview"><span class="pinned-card-preview-icon">&#x1F4C4;</span></div>';
     }
+    const typeLabels = { video: 'Video', audio: 'Audio', csv: 'Table', text: 'Text' };
+    const label = typeLabels[type] || 'Data';
+    return `<div class="pinned-card-preview"><span class="pinned-card-preview-label">${label}</span></div>`;
+}
+
+function buildPinSummaryHTML(summary) {
+    const items = parseSummaryToChecklist(summary);
+    if (!items) return escapeHtml(summary);
+    const maxShow = 2;
+    const shown = items.slice(0, maxShow);
+    const remaining = items.length - maxShow;
+    return '<ul class="pin-summary-list">'
+        + shown.map(s => `<li>${escapeHtml(s)}</li>`).join('')
+        + (remaining > 0 ? `<li class="pin-summary-more">${remaining} more</li>` : '')
+        + '</ul>';
 }
 
 function renderInsightsPanel() {
@@ -356,28 +365,26 @@ function renderInsightsPanel() {
             const previewHTML = buildPinPreview(p.citation);
             const annotationText = p.annotations && p.annotations.text ? p.annotations.text : '';
             const annotationTags = p.annotations && p.annotations.tags && p.annotations.tags.length > 0 ? p.annotations.tags : [];
-            card.innerHTML = `
-                <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
-                ${previewHTML}
-                <div class="pinned-card-summary">${escapeHtml(p.citation.summary)}</div>
-                ${annotationText ? `<div class="pinned-card-annotation">${escapeHtml(annotationText.slice(0, 60))}${annotationText.length > 60 ? '…' : ''}</div>` : ''}
-                ${annotationTags.length > 0 ? `<div class="pinned-card-tags">${annotationTags.map(t => `<span class="pinned-card-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-                ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
-                <button class="btn-unpin" title="Unpin">&times;</button>
-            `;
-            // Add progress bar if checklist exists
             const progress = getPinProgress(p);
+            let progressHTML = '';
             if (progress) {
                 const pct = Math.round((progress.checked / progress.total) * 100);
                 const state = progress.checked === 0 ? 'review-none' : progress.complete ? 'review-complete' : 'review-partial';
-                const progressEl = document.createElement('div');
-                progressEl.className = 'pinned-card-progress ' + state;
-                progressEl.innerHTML = `
+                progressHTML = `<div class="pinned-card-progress ${state}">
                     <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
                     <span class="progress-label">${progress.checked}/${progress.total}</span>
-                `;
-                card.appendChild(progressEl);
+                </div>`;
             }
+            card.innerHTML = `
+                <div class="pinned-card-agent">${escapeHtml(agentLabel)}</div>
+                ${previewHTML}
+                <div class="pinned-card-summary">${buildPinSummaryHTML(p.citation.summary)}</div>
+                ${annotationText ? `<div class="pinned-card-annotation">${escapeHtml(annotationText.slice(0, 60))}${annotationText.length > 60 ? '…' : ''}</div>` : ''}
+                ${annotationTags.length > 0 ? `<div class="pinned-card-tags">${annotationTags.map(t => `<span class="pinned-card-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+                ${progressHTML}
+                ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
+                <button class="btn-unpin" title="Unpin">&times;</button>
+            `;
         }
         insightsContent.appendChild(card);
     });
@@ -406,6 +413,9 @@ insightsContent.addEventListener('click', (e) => {
         if (sid && activePatientId) {
             switchConversation(activePatientId, sid).then(() => {
                 if (text) scrollToTextInChat(text);
+                else if (card && card.dataset.pinType === 'citation') {
+                    try { scrollToCitationInChat(JSON.parse(card.dataset.citation)); } catch (e) {}
+                }
             });
         }
         return;
@@ -436,10 +446,11 @@ insightsContent.addEventListener('click', (e) => {
                     scrollToTextInChat(text);
                 });
             }
-        } else {
-            // Citation card click → navigate to source chat
+        } else if (card.dataset.pinType === 'citation') {
             if (sid && activePatientId) {
-                switchConversation(activePatientId, sid);
+                switchConversation(activePatientId, sid).then(() => {
+                    try { scrollToCitationInChat(JSON.parse(card.dataset.citation)); } catch (e) {}
+                });
             }
         }
     }
@@ -1412,14 +1423,11 @@ async function openCitationModal(citation, pin = null) {
         modalInfoBtn.style.display = 'none';
     }
 
-    // ── Provenance ──────────────────────────────────────────
+    // ── Footer provenance ──────────────────────────────────
     let provenanceHTML = '';
-    if (pin && pin.query) {
-        const q = pin.query.length > 80 ? pin.query.slice(0, 77) + '…' : pin.query;
-        provenanceHTML += `<div>Asked: "${escapeHtml(q)}"</div>`;
-    }
-    if (pin && pin.created_at) {
-        provenanceHTML += `<div>Generated: ${formatDate(pin.created_at)}</div>`;
+    const citDate = getCitationDate(citation);
+    if (citDate) {
+        provenanceHTML += `<div>Source data: ${citDate}</div>`;
     }
     modalProvenance.innerHTML = provenanceHTML;
 
@@ -1440,7 +1448,7 @@ async function openCitationModal(citation, pin = null) {
     } else if (type === 'video') {
         contentHTML = `<video src="${citation.web_path}" controls autoplay></video>`;
     } else if (type === 'audio') {
-        contentHTML = `<div class="modal-audio-wrap"><audio src="${citation.web_path}" controls></audio></div>`;
+        contentHTML = `<div class="modal-audio-wrap"><div class="audio-label">Heart sound recording</div><audio src="${citation.web_path}" controls></audio></div>`;
     } else {
         contentHTML = '<div class="modal-loading">Loading\u2026</div>';
     }
@@ -1814,6 +1822,23 @@ function scrollToTextInChat(text) {
             bubble.closest('.chat-message').scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
+    }
+}
+
+function scrollToCitationInChat(citation) {
+    if (!citation) return;
+    const badges = chatContainer.querySelectorAll('sup.citation');
+    for (const badge of badges) {
+        try {
+            const c = JSON.parse(decodeURIComponent(badge.dataset.citation));
+            if (c.agent === citation.agent && c.web_path === citation.web_path) {
+                badge.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                badge.style.transition = 'background 0.3s';
+                badge.style.background = 'rgba(166, 120, 48, 0.35)';
+                setTimeout(() => { badge.style.background = ''; }, 1200);
+                return;
+            }
+        } catch (e) { /* skip malformed */ }
     }
 }
 

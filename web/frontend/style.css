@@ -612,6 +612,16 @@ header::after {
     line-height: 1;
 }
 
+.pinned-card-preview-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
 /* ─── Pinned Card ─────────────────────────────────────────── */
 .pinned-card {
     position: relative;
@@ -644,10 +654,43 @@ header::after {
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-secondary);
+    overflow: hidden;
+}
+
+.pin-summary-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pin-summary-list li {
+    position: relative;
+    padding-left: 10px;
+    margin-bottom: 2px;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.pin-summary-list li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    color: var(--text-dim);
+}
+
+.pin-summary-more {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    padding-left: 10px;
+}
+
+.pin-summary-more::before {
+    display: none !important;
 }
 
 .btn-unpin {
@@ -1264,19 +1307,10 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    padding-top: 28px;
-    gap: 20px;
+    justify-content: center;
+    gap: 12px;
     background: var(--bg-deep);
     box-sizing: border-box;
-}
-
-.card-audio-wrap::before {
-    content: "⏦";
-    font-size: 48px;
-    color: var(--accent);
-    opacity: 0.22;
-    line-height: 1;
 }
 
 .card-audio {
@@ -1522,20 +1556,29 @@ main {
     align-items: center;
     justify-content: center;
     padding: 0 24px;
-    gap: 24px;
-}
-
-.modal-body .modal-audio-wrap::before {
-    content: "⏦";
-    font-size: 64px;
-    color: var(--accent);
-    opacity: 0.18;
-    line-height: 1;
+    gap: 8px;
 }
 
 .modal-body audio {
     width: 80%;
     max-width: 480px;
+    margin-top: 16px;
+}
+
+.audio-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    opacity: 0.6;
+}
+
+.audio-desc {
+    font-family: var(--serif);
+    font-size: 13px;
+    color: var(--text-dim);
 }
 
 .modal-body .modal-text {
@@ -1544,7 +1587,7 @@ main {
     font-family: var(--serif);
     font-size: 14px;
     line-height: 1.7;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     overflow-y: auto;
     height: 100%;
     box-sizing: border-box;
@@ -1606,7 +1649,7 @@ main {
     font-style: italic;
     font-size: 13px;
     line-height: 1.6;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     border-top: 1px solid var(--border);
     background: var(--bg-panel);
     flex-shrink: 0;
@@ -1635,7 +1678,7 @@ main {
     font-weight: 400;
     letter-spacing: 0.06em;
     color: var(--text-secondary);
-    opacity: 0.45;
+    opacity: 0.7;
 }
 
 /* ─── Log Entries ───────────────────────────────────────────── */
@@ -2034,7 +2077,8 @@ main {
 .modal-footer div {
     font-family: var(--mono);
     font-size: 10px;
-    color: var(--text-dim);
+    color: var(--text-secondary);
+    opacity: 0.7;
     letter-spacing: 0.04em;
     line-height: 1.6;
 }
@@ -2237,7 +2281,7 @@ main {
     font-style: italic;
     font-size: 13px;
     line-height: 1.65;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     cursor: pointer;
     transition: opacity 0.22s, color 0.22s;
 }
