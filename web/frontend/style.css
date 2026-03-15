@@ -693,6 +693,13 @@ header::after {
     display: none !important;
 }
 
+.pinned-text-more {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+}
+
 .btn-unpin {
     position: absolute;
     top: 6px;

@@ -356,9 +356,13 @@ function renderInsightsPanel() {
             card.dataset.pinType = 'text';
             card.dataset.text = p.text;
             card.dataset.source = p.source || '';
+            const maxLen = 120;
+            const truncated = p.text.length > maxLen
+                ? escapeHtml(p.text.slice(0, maxLen)) + '<span class="pinned-text-more">\u2026more</span>'
+                : escapeHtml(p.text);
             card.innerHTML = `
                 <div class="pinned-card-agent">Pinned Text</div>
-                <div class="pinned-card-summary">${escapeHtml(p.text)}</div>
+                <div class="pinned-card-summary">${truncated}</div>
                 ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
             `;
@@ -1817,26 +1821,80 @@ function highlightPinnedText() {
 }
 
 function highlightTextInNode(root, searchText) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const matches = [];
+    // Collect text nodes, skipping those inside citation badges and date spans
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            const el = node.parentElement;
+            if (el && (el.closest('.citation') || el.closest('.citation-date'))) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+    if (textNodes.length === 0) return;
 
-    while (walker.nextNode()) {
-        const node = walker.currentNode;
-        const idx = node.textContent.indexOf(searchText);
-        if (idx !== -1) {
-            matches.push({ node, idx });
+    // Build combined string and map each char to its text node + offset
+    let combined = '';
+    const charMap = []; // charMap[i] = { node, offset }
+    for (const node of textNodes) {
+        for (let j = 0; j < node.textContent.length; j++) {
+            charMap.push({ node, offset: j });
+            combined += node.textContent[j];
         }
     }
 
-    // Process in reverse to avoid invalidating offsets
+    // Find all occurrences in the combined string
+    const matches = [];
+    let searchFrom = 0;
+    while (true) {
+        const idx = combined.indexOf(searchText, searchFrom);
+        if (idx === -1) break;
+        matches.push(idx);
+        searchFrom = idx + 1;
+    }
+
+    // Create highlights in reverse order to preserve offsets
     for (let i = matches.length - 1; i >= 0; i--) {
-        const { node, idx } = matches[i];
-        const range = document.createRange();
-        range.setStart(node, idx);
-        range.setEnd(node, idx + searchText.length);
-        const mark = document.createElement('mark');
-        mark.className = 'pinned-highlight';
-        range.surroundContents(mark);
+        try {
+            const startIdx = matches[i];
+            const endIdx = startIdx + searchText.length - 1;
+            const startInfo = charMap[startIdx];
+            const endInfo = charMap[endIdx];
+
+            // If the match spans a single text node, wrap simply
+            if (startInfo.node === endInfo.node) {
+                const range = document.createRange();
+                range.setStart(startInfo.node, startInfo.offset);
+                range.setEnd(endInfo.node, endInfo.offset + 1);
+                const mark = document.createElement('mark');
+                mark.className = 'pinned-highlight';
+                range.surroundContents(mark);
+            } else {
+                // Multi-node span: wrap each text node segment individually
+                const segments = [];
+                let curNode = null;
+                let segStart = 0;
+                for (let c = startIdx; c <= endIdx; c++) {
+                    if (charMap[c].node !== curNode) {
+                        if (curNode) segments.push({ node: curNode, start: segStart, end: charMap[c - 1].offset + 1 });
+                        curNode = charMap[c].node;
+                        segStart = charMap[c].offset;
+                    }
+                }
+                if (curNode) segments.push({ node: curNode, start: segStart, end: charMap[endIdx].offset + 1 });
+
+                // Wrap segments in reverse to preserve earlier offsets
+                for (let s = segments.length - 1; s >= 0; s--) {
+                    const seg = segments[s];
+                    const range = document.createRange();
+                    range.setStart(seg.node, seg.start);
+                    range.setEnd(seg.node, seg.end);
+                    const mark = document.createElement('mark');
+                    mark.className = 'pinned-highlight';
+                    range.surroundContents(mark);
+                }
+            }
+        } catch (e) { /* skip if wrapping fails at element boundary */ }
     }
 }
 
@@ -1844,12 +1902,20 @@ function scrollToTextInChat(text) {
     if (!text) return;
     const marks = chatContainer.querySelectorAll('mark.pinned-highlight');
     for (const mark of marks) {
-        if (mark.textContent === text) {
+        if (mark.textContent === text || text.startsWith(mark.textContent)) {
             mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Brief flash effect
-            mark.style.transition = 'background 0.3s';
-            mark.style.background = 'rgba(166, 120, 48, 0.35)';
-            setTimeout(() => { mark.style.background = ''; }, 1200);
+            // Brief flash effect — flash all adjacent marks for multi-node highlights
+            const allMarks = [mark];
+            let sibling = mark.nextElementSibling;
+            while (sibling && sibling.tagName === 'MARK' && sibling.classList.contains('pinned-highlight')) {
+                allMarks.push(sibling);
+                sibling = sibling.nextElementSibling;
+            }
+            allMarks.forEach(m => {
+                m.style.transition = 'background 0.3s';
+                m.style.background = 'rgba(166, 120, 48, 0.35)';
+                setTimeout(() => { m.style.background = ''; }, 1200);
+            });
             return;
         }
     }
@@ -1894,13 +1960,23 @@ function hideTextSelectPin() {
     textSelectPin.style.display = 'none';
 }
 
+// Extract selected text, skipping citation badge and date elements
+function getCleanSelectionText(sel) {
+    if (!sel.rangeCount) return '';
+    const range = sel.getRangeAt(0);
+    const frag = range.cloneContents();
+    // Remove citation badges and date spans from the clone
+    frag.querySelectorAll('.citation, .citation-date').forEach(el => el.remove());
+    return (frag.textContent || '').trim();
+}
+
 chatContainer.addEventListener('mouseup', (e) => {
     // Ignore if clicking on citation badges or the pin button itself
     if (e.target.closest('.citation') || e.target.closest('.text-select-pin')) return;
     if (!activePatientId) return;
 
     const sel = window.getSelection();
-    const text = sel.toString().trim();
+    const text = getCleanSelectionText(sel);
     if (!text) { hideTextSelectPin(); return; }
 
     // Check if selection is inside an assistant message bubble
@@ -1927,7 +2003,7 @@ textSelectPin.addEventListener('mousedown', async (e) => {
     e.preventDefault();
     e.stopPropagation();
     const sel = window.getSelection();
-    const text = sel.toString().trim();
+    const text = getCleanSelectionText(sel);
     if (!text || !activePatientId) return;
 
     const sourceSessionId = getActiveSessionId();
