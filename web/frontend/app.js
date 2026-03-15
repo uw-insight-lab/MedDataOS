@@ -951,13 +951,28 @@ async function showCitationPopup(anchor, citation) {
         ? `<button class="btn-pin-card${isPinned(activePatientId, citation) ? ' pinned' : ''}" data-citation="${encodeURIComponent(JSON.stringify(citation))}" title="Pin citation">&#x1F4CC;</button>`
         : '';
 
+    // Build summary as bullet list or fallback to plain text
+    const summaryItems = parseSummaryToChecklist(citation.summary);
+    let summaryHTML;
+    if (summaryItems) {
+        const maxShow = 3;
+        const shown = summaryItems.slice(0, maxShow);
+        const remaining = summaryItems.length - maxShow;
+        summaryHTML = '<ul class="card-summary-list">'
+            + shown.map(s => `<li>${escapeHtml(s)}</li>`).join('')
+            + (remaining > 0 ? `<li class="card-summary-more">${remaining} more — click to review</li>` : '')
+            + '</ul>';
+    } else {
+        summaryHTML = escapeHtml(citation.summary);
+    }
+
     citationPopup.innerHTML = `
         <div class="card-header">
             <span class="card-agent">${escapeHtml(agentLabel)}</span>
             ${pinBtnHTML}
         </div>
         <div class="card-content" id="card-content-inner">${contentHTML}</div>
-        <div class="card-summary">${escapeHtml(citation.summary)}</div>
+        <div class="card-summary">${summaryHTML}</div>
     `;
 
     citationPopup.style.display = 'block';
