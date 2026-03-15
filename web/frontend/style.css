@@ -2293,28 +2293,30 @@ main {
     text-decoration-thickness: 1px;
 }
 
-/* ─── Image Zoom ───────────────────────────────────────────── */
-.citation-modal {
-    transition: opacity 0.2s ease, transform 0.2s ease,
-                width 0.28s cubic-bezier(0.2, 0, 0, 1),
-                max-width 0.28s cubic-bezier(0.2, 0, 0, 1),
-                max-height 0.28s cubic-bezier(0.2, 0, 0, 1);
+/* ─── Image Lightbox ───────────────────────────────────────── */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(26, 22, 18, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
-.citation-modal.zoomed {
-    width: 95vw;
+.image-lightbox.open {
+    opacity: 1;
+}
+
+.image-lightbox img {
     max-width: 95vw;
     max-height: 95vh;
-}
-
-.citation-modal.zoomed .modal-body {
-    height: auto;
-    max-height: 80vh;
-}
-
-.citation-modal.zoomed .modal-body img {
-    max-height: 80vh;
-    cursor: zoom-out;
+    object-fit: contain;
+    border-radius: var(--radius);
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.4);
 }
 
 /* ─── Modal Tab Toggle ────────────────────────────────────── */

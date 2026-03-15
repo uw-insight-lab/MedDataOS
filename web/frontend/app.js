@@ -1360,9 +1360,6 @@ async function openCitationModal(citation, pin = null) {
 
     modalAgent.textContent = agentLabel;
 
-    // Remove zoom state from previous open
-    citationModal.classList.remove('zoomed');
-
     // Update modal pin button state
     if (activePatientId) {
         modalPin.style.display = '';
@@ -1647,7 +1644,6 @@ function buildProvenanceHTML(citation) {
 function closeCitationModal() {
     citationBackdrop.classList.remove('open');
     citationModal.classList.remove('open');
-    citationModal.classList.remove('zoomed');
     citationModal.classList.remove('flipped');
     citationModal.style.height = '';
     // Reset tabs to data
@@ -1710,10 +1706,12 @@ modalTabToggle.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lightboxEl) {
+        closeLightbox();
+        return;
+    }
     if (e.key === 'Escape' && citationModal.classList.contains('open')) {
-        if (citationModal.classList.contains('zoomed')) {
-            citationModal.classList.remove('zoomed');
-        } else if (citationModal.classList.contains('flipped')) {
+        if (citationModal.classList.contains('flipped')) {
             citationModal.classList.remove('flipped');
             citationModal.style.height = '';
             modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'data'));
@@ -1723,10 +1721,25 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Image zoom toggle
+// Image lightbox
+let lightboxEl = null;
+function openLightbox(src) {
+    if (lightboxEl) lightboxEl.remove();
+    lightboxEl = document.createElement('div');
+    lightboxEl.className = 'image-lightbox';
+    lightboxEl.innerHTML = `<img src="${src}" alt="">`;
+    lightboxEl.addEventListener('click', closeLightbox);
+    document.body.appendChild(lightboxEl);
+    requestAnimationFrame(() => lightboxEl.classList.add('open'));
+}
+function closeLightbox() {
+    if (!lightboxEl) return;
+    lightboxEl.classList.remove('open');
+    lightboxEl.addEventListener('transitionend', () => { lightboxEl.remove(); lightboxEl = null; }, { once: true });
+}
 modalBody.addEventListener('click', (e) => {
     if (e.target.tagName === 'IMG') {
-        citationModal.classList.toggle('zoomed');
+        openLightbox(e.target.src);
     }
 });
 
