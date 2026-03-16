@@ -157,6 +157,75 @@ def _c2_meds(cid):
                  "Albuterol PRN, Amoxicillin 875mg + Azithromycin 500mg for pneumonia, Acetaminophen PRN")
 
 
+# Reusable P0003 citation builders
+def _c3_notes(cid):
+    return _cite(cid, "clinical_notes", "P0003.txt", "/multimodal-data/clinical-notes/P0003.txt",
+                 "45-year-old male presenting for annual wellness exam. No acute complaints. "
+                 "Mild exercise intolerance attributed to deconditioning. GAD well-controlled on Sertraline 50mg. "
+                 "Family history of hypertension (father) and colorectal cancer (maternal uncle). "
+                 "Sulfa drug allergy documented. Vitals normal, exam unremarkable.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "ecg", "finding": "Normal sinus rhythm", "reason": "no cardiac etiology for exercise intolerance"},
+                     {"agent": "lab_results", "finding": "Borderline LDL and fasting glucose", "reason": "metabolic risk factors consistent with deconditioning"},
+                 ], "contradicted_by": []})
+
+def _c3_xray(cid):
+    return _cite(cid, "chest_xray", "P0003.png", "/multimodal-data/chest-xray/P0003.png",
+                 "No acute cardiopulmonary abnormality. Normal cardiac silhouette. "
+                 "Clear lung fields bilaterally with no consolidation, effusion, or mass. "
+                 "Mediastinal contours and bony thorax are unremarkable.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "clinical_notes", "finding": "Lungs clear to auscultation", "reason": "exam and imaging concordant"},
+                 ], "contradicted_by": []})
+
+def _c3_ecg(cid):
+    return _cite(cid, "ecg", "P0003.svg", "/multimodal-data/ecg/P0003.svg",
+                 "Normal sinus rhythm at 74 bpm. Normal PR, QRS, and QTc intervals. "
+                 "No ST-segment or T-wave abnormalities. No axis deviation. "
+                 "No evidence of chamber enlargement or conduction delay.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "heart_sounds", "finding": "Normal S1/S2, no murmurs", "reason": "electrically and acoustically normal"},
+                 ], "contradicted_by": []})
+
+def _c3_heart(cid):
+    return _cite(cid, "heart_sounds", "P0003.wav", "/multimodal-data/heart-sounds/P0003.wav",
+                 "Normal S1 and S2 heart sounds with regular rate and rhythm. "
+                 "No murmurs, gallops, or rubs detected. No extra heart sounds. "
+                 "Findings consistent with a structurally and functionally normal heart.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "echo", "finding": "Normal LVEF and valves", "reason": "structural confirmation"},
+                 ], "contradicted_by": []})
+
+def _c3_echo(cid):
+    return _cite(cid, "echo", "P0003.mp4", "/multimodal-data/echo/P0003.mp4",
+                 "Normal left ventricular ejection fraction estimated at 60\u201365%. "
+                 "No regional wall motion abnormalities. Normal valve morphology and function. "
+                 "No pericardial effusion. Normal right ventricular size and function.",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "ecg", "finding": "No chamber enlargement on ECG", "reason": "electrical and structural concordance"},
+                     {"agent": "heart_sounds", "finding": "No murmurs or gallops", "reason": "acoustic confirmation"},
+                 ], "contradicted_by": []})
+
+def _c3_labs(cid):
+    return _cite(cid, "lab_results", "P0003.png", "/multimodal-data/lab-results/P0003.png",
+                 "CBC within normal limits. Fasting glucose 108 mg/dL (borderline, pre-diabetic range). "
+                 "LDL cholesterol 142 mg/dL (borderline high). HDL 44 mg/dL (low normal). "
+                 "Triglycerides 168 mg/dL (mildly elevated). Renal and hepatic panels normal. "
+                 "TSH 2.1 mIU/L (normal). HbA1c 5.8% (upper normal).",
+                 knowledge_bus={"supported_by": [],
+                 "contradicted_by": [
+                     {"agent": "clinical_notes", "finding": "Patient reports feeling well", "reason": "subclinical metabolic risk not yet symptomatic"},
+                 ]})
+
+def _c3_meds(cid):
+    return _cite(cid, "medication", "P0003.csv", "/multimodal-data/medications/P0003.csv",
+                 "Sertraline 50mg daily for GAD (uptitrated from 25mg in July 2021). "
+                 "Ibuprofen 200mg PRN for occasional headaches. "
+                 "Melatonin 3mg PRN at bedtime for insomnia. "
+                 "Sulfa drug allergy documented (causes rash).",
+                 knowledge_bus={"supported_by": [], "contradicted_by": []})
+
+
 def _msg(role, content, citations=None, ts=None):
     """Build a history message. For assistant with citations, encodes as JSON."""
     if role == "assistant" and citations:
@@ -165,7 +234,7 @@ def _msg(role, content, citations=None, ts=None):
 
 
 def _seed_demo_sessions():
-    """Pre-populate three demo conversations for patient P0001 (James Carter)."""
+    """Pre-populate demo conversations for P0001, P0002, and P0003."""
 
     # ── Conversation 1: Initial Clinical Assessment (3:3) ──────────
     sessions["demo-1"] = {
@@ -447,6 +516,231 @@ def _seed_demo_sessions():
         "processing": False,
         "uploaded_file": None,
         "patient_id": "P0002",
+    }
+
+    # ── Conversation 6: Treatment Response & Discharge — P0002 (2:2)
+    sessions["demo-6"] = {
+        "history": [
+            _msg("user",
+                 "Maria Lopez is on day 3 of antibiotics. Can you pull up her latest labs "
+                 "and vitals \u2014 is she improving enough to consider discharge?",
+                 ts="2026-03-09T09:30:00"),
+            _msg("assistant",
+                 "Lab results [cite:1] show WBC and CRP are trending down from admission, "
+                 "indicating the infection is responding to the Amoxicillin + Azithromycin "
+                 "regimen [cite:2]. Renal and hepatic panels remain normal.\n\n"
+                 "Clinical notes [cite:3] document progressive improvement: temperature has been "
+                 "below 37.5\u00b0C for the past 24 hours, respiratory rate has normalized to 16/min, "
+                 "and SpO2 has improved to 97% on room air. She reports reduced cough frequency "
+                 "and improved oral intake.\n\n"
+                 "Heart sounds [cite:4] remain normal with no new findings. Heart rate has come "
+                 "down from 112 to 82 bpm, consistent with defervescence.\n\n"
+                 "**Discharge assessment:** She meets standard criteria for transition to oral-only "
+                 "outpatient therapy \u2014 afebrile >24h, tolerating PO, and trending toward "
+                 "resolution. She should complete the full antibiotic course at home.",
+                 [_c2_labs(1), _c2_meds(2), _c2_notes(3), _c2_heart(4)], ts="2026-03-09T09:30:52"),
+
+            _msg("user",
+                 "What follow-up plan should I set for her? And any concerns about "
+                 "the asthma going forward?",
+                 ts="2026-03-09T09:32:30"),
+            _msg("assistant",
+                 "The chest X-ray [cite:1] at admission showed RLL consolidation. A follow-up "
+                 "radiograph in 4\u20136 weeks is recommended to confirm complete resolution, "
+                 "especially given her age \u2014 persistent opacities would warrant further workup.\n\n"
+                 "Regarding asthma [cite:2]: her baseline is mild and intermittent, well-controlled "
+                 "on Albuterol PRN. The pneumonia did not trigger a significant exacerbation, which "
+                 "is reassuring. However, post-infectious airway hyperreactivity can persist for "
+                 "several weeks.\n\n"
+                 "The ECG [cite:3] and echocardiogram [cite:4] were both normal on admission, "
+                 "so no cardiac follow-up is needed.\n\n"
+                 "**Discharge plan:**\n"
+                 "- Complete Amoxicillin + Azithromycin course (total 7 days)\n"
+                 "- If Montelukast was restarted, continue for 2\u20134 weeks then reassess\n"
+                 "- Albuterol PRN for any post-infectious cough or wheeze\n"
+                 "- Follow-up chest X-ray in 4\u20136 weeks\n"
+                 "- Return precautions: worsening dyspnea, recurrent fever, hemoptysis",
+                 [_c2_xray(1), _c2_notes(2), _c2_ecg(3), _c2_echo(4)], ts="2026-03-09T09:33:18"),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0002",
+    }
+
+    # ── Conversation 7: Annual Wellness Review — P0003 (3:3) ──────
+    sessions["demo-7"] = {
+        "history": [
+            _msg("user",
+                 "Robert Chen is here for his annual wellness visit. "
+                 "Pull up his clinical notes and give me the overview.",
+                 ts="2026-03-10T10:00:00"),
+            _msg("assistant",
+                 "Based on the clinical notes [cite:1], Robert Chen is a 45-year-old male with "
+                 "no acute complaints. He reports generally feeling well but acknowledges decreased "
+                 "physical activity over the past year due to a demanding work schedule. He describes "
+                 "mild exercise intolerance when climbing more than two flights of stairs, which he "
+                 "attributes to deconditioning.\n\n"
+                 "He denies chest pain, palpitations, syncope, dyspnea at rest, or edema. His GAD "
+                 "is well-controlled on Sertraline 50mg daily [cite:2]. He is a non-smoker with "
+                 "moderate alcohol use (2\u20133 drinks/week).\n\n"
+                 "Notable family history: father with hypertension (age 68), maternal uncle with "
+                 "colorectal cancer (age 62). Sulfa drug allergy is documented.\n\n"
+                 "Vitals are normal: HR 74, BP 122/78, SpO2 99%, BMI 26.1.",
+                 [_c3_notes(1), _c3_meds(2)], ts="2026-03-10T10:00:38"),
+
+            _msg("user",
+                 "Let\u2019s check his cardiac workup \u2014 ECG, echo, and chest X-ray. "
+                 "I want to make sure the exercise intolerance is really just deconditioning.",
+                 ts="2026-03-10T10:02:00"),
+            _msg("assistant",
+                 "The ECG [cite:1] is completely normal \u2014 sinus rhythm at 74 bpm with normal "
+                 "intervals, no ST changes, no axis deviation, and no evidence of chamber "
+                 "enlargement. This effectively rules out a cardiac conduction or ischemic cause "
+                 "for his exercise intolerance.\n\n"
+                 "The echocardiogram [cite:2] confirms a normal ejection fraction of 60\u201365% with "
+                 "no wall motion abnormalities and normal valve function. The heart is structurally "
+                 "and functionally normal.\n\n"
+                 "The chest X-ray [cite:3] shows clear lung fields with a normal cardiac silhouette "
+                 "\u2014 no cardiopulmonary pathology.\n\n"
+                 "Heart sounds [cite:4] are normal with no murmurs, gallops, or rubs.\n\n"
+                 "**Assessment:** The cardiac workup is entirely reassuring. His exercise intolerance "
+                 "is consistent with physical deconditioning rather than an underlying cardiac "
+                 "or pulmonary process.",
+                 [_c3_ecg(1), _c3_echo(2), _c3_xray(3), _c3_heart(4)], ts="2026-03-10T10:02:45"),
+
+            _msg("user",
+                 "What about his labs? Anything to flag for a 45-year-old with his family history?",
+                 ts="2026-03-10T10:04:10"),
+            _msg("assistant",
+                 "The lab results [cite:1] reveal several findings that deserve attention in the "
+                 "context of his family history and lifestyle:\n\n"
+                 "**Metabolic flags:**\n"
+                 "- Fasting glucose 108 mg/dL with HbA1c 5.8% \u2014 this places him in the "
+                 "pre-diabetic range. Not yet actionable with medication, but lifestyle "
+                 "modification is critical.\n"
+                 "- LDL 142 mg/dL (borderline high), HDL 44 mg/dL (low normal), triglycerides "
+                 "168 mg/dL (mildly elevated) \u2014 a lipid profile trending toward metabolic "
+                 "syndrome in the setting of his sedentary year and BMI of 26.1.\n\n"
+                 "His current medications [cite:2] (Sertraline, PRN Ibuprofen, PRN Melatonin) "
+                 "do not include any lipid or glucose management.\n\n"
+                 "Clinical notes [cite:3] document a family history of hypertension \u2014 with his "
+                 "current BP at 122/78 and these metabolic trends, he is at risk for developing "
+                 "hypertension within the next 5\u201310 years if not addressed.\n\n"
+                 "**Recommendation:** This is the window for aggressive lifestyle intervention "
+                 "before pharmacotherapy becomes necessary. A structured exercise program and "
+                 "dietary counseling should be the primary prescription at this visit.",
+                 [_c3_labs(1), _c3_meds(2), _c3_notes(3)], ts="2026-03-10T10:04:55"),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0003",
+    }
+
+    # ── Conversation 8: Cardiovascular Risk & Exercise Plan — P0003 (2:2)
+    sessions["demo-8"] = {
+        "history": [
+            _msg("user",
+                 "I want to calculate Robert Chen\u2019s cardiovascular risk and put together "
+                 "an exercise prescription. What data do we have to work with?",
+                 ts="2026-03-11T14:00:00"),
+            _msg("assistant",
+                 "Here\u2019s the risk factor profile from his data:\n\n"
+                 "Labs [cite:1] show LDL 142, HDL 44, triglycerides 168, fasting glucose 108, "
+                 "HbA1c 5.8%. These place him in a borderline metabolic risk category.\n\n"
+                 "Clinical notes [cite:2] confirm a 45-year-old male, BMI 26.1, BP 122/78, non-smoker, "
+                 "2\u20133 drinks/week. Family history positive for hypertension.\n\n"
+                 "The ECG [cite:3] is normal with no ischemic changes. The "
+                 "echocardiogram [cite:4] shows normal EF at 60\u201365% with no structural "
+                 "abnormalities.\n\n"
+                 "Using the pooled cohort equations \u2014 his age, "
+                 "sex, BP, lipids, and absence of diabetes or smoking place him at approximately "
+                 "4\u20136% (low-to-borderline). This does not yet meet the threshold for statin "
+                 "therapy, but the trajectory is concerning given his sedentary trend.\n\n"
+                 "His cardiac workup confirms he is safe for a graded exercise program with no "
+                 "restrictions.",
+                 [_c3_labs(1), _c3_notes(2), _c3_ecg(3), _c3_echo(4)], ts="2026-03-11T14:00:48"),
+
+            _msg("user",
+                 "Good. Draft an exercise and lifestyle plan I can give him. "
+                 "Also, should we start a statin or wait?",
+                 ts="2026-03-11T14:02:30"),
+            _msg("assistant",
+                 "Given his ASCVD risk is below 7.5% and he has no diabetes, current guidelines "
+                 "favor lifestyle modification before initiating statin therapy. However, if his "
+                 "lipid profile does not improve after 3\u20136 months of sustained lifestyle changes, "
+                 "a moderate-intensity statin would be appropriate.\n\n"
+                 "His medications [cite:1] are minimal \u2014 Sertraline 50mg, PRN Ibuprofen, PRN "
+                 "Melatonin. The Ibuprofen should be used sparingly given his borderline BP, as "
+                 "chronic NSAID use can elevate blood pressure.\n\n"
+                 "Labs [cite:2] confirm no contraindications to exercise (normal renal function, "
+                 "no anemia, normal TSH). The chest X-ray [cite:3] and heart sounds [cite:4] are "
+                 "both normal.\n\n"
+                 "**Lifestyle prescription:**\n"
+                 "- **Exercise:** 150 min/week moderate aerobic activity (brisk walking, cycling). "
+                 "Start with 20 min \u00d7 3 days/week, increase by 10% weekly. Add resistance "
+                 "training 2 days/week.\n"
+                 "- **Diet:** Mediterranean-style pattern \u2014 reduce refined carbohydrates and "
+                 "processed foods, increase fiber, omega-3 fatty acids, and plant-based proteins.\n"
+                 "- **Weight goal:** Target BMI <25 (approximately 5\u20137 kg loss over 6 months).\n"
+                 "- **Alcohol:** Current intake (2\u20133/week) is acceptable but should not increase.\n"
+                 "- **Recheck:** Fasting lipid panel and glucose in 3 months to assess response.\n"
+                 "- **Statin decision point:** If LDL remains >130 after 3\u20136 months of adherence, "
+                 "initiate atorvastatin 10\u201320mg.",
+                 [_c3_meds(1), _c3_labs(2), _c3_xray(3), _c3_heart(4)], ts="2026-03-11T14:03:22"),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0003",
+    }
+
+    # ── Conversation 9: Anxiety & Medication Review — P0003 (2:2) ─
+    sessions["demo-9"] = {
+        "history": [
+            _msg("user",
+                 "Robert Chen mentioned his sleep has been worse lately and he\u2019s been "
+                 "using Melatonin more often. Can you review his medications and see if "
+                 "anything needs adjusting?",
+                 ts="2026-03-12T11:15:00"),
+            _msg("assistant",
+                 "Current medication list [cite:1]:\n"
+                 "- **Sertraline 50mg daily** \u2014 GAD, well-controlled per clinical notes\n"
+                 "- **Ibuprofen 200mg PRN** \u2014 occasional headaches\n"
+                 "- **Melatonin 3mg PRN** \u2014 insomnia, reportedly increased use\n\n"
+                 "Clinical notes [cite:2] describe his GAD as well-controlled, but the increased "
+                 "insomnia and demanding work schedule suggest his anxiety may be subtly worsening "
+                 "even if he does not report overt symptoms. Poor sleep and work stress are common "
+                 "triggers for GAD relapse.\n\n"
+                 "The Melatonin at 3mg is a reasonable first-line sleep aid, but escalating use "
+                 "warrants evaluation of the underlying cause rather than simply increasing the dose.\n\n"
+                 "His labs [cite:3] show a normal TSH (2.1 mIU/L), which rules out thyroid "
+                 "dysfunction as a contributor to insomnia or fatigue.",
+                 [_c3_meds(1), _c3_notes(2), _c3_labs(3)], ts="2026-03-12T11:15:42"),
+
+            _msg("user",
+                 "Should we uptitrate the Sertraline? And is the Ibuprofen use a concern "
+                 "given his labs?",
+                 ts="2026-03-12T11:17:15"),
+            _msg("assistant",
+                 "On Sertraline: the current 50mg dose was uptitrated from 25mg in 2021 [cite:1] "
+                 "and has maintained good control. Before uptitrating to 75\u2013100mg, I would "
+                 "recommend first addressing the modifiable factors \u2014 specifically his exercise "
+                 "deficit and sleep hygiene. Physical activity has strong evidence for reducing "
+                 "anxiety symptoms and improving sleep quality, and his cardiac workup [cite:2] "
+                 "confirms he is safe to exercise.\n\n"
+                 "If sleep does not improve after 4\u20136 weeks of regular exercise and sleep hygiene "
+                 "optimization, then uptitrating Sertraline is reasonable as the next step.\n\n"
+                 "On Ibuprofen: his labs [cite:3] show borderline BP (122/78) and normal renal "
+                 "function. Occasional PRN use at 200mg is low-risk, but he should avoid daily or "
+                 "near-daily use \u2014 chronic NSAIDs can raise blood pressure by 3\u20135 mmHg and "
+                 "impair renal function over time. If headaches are frequent, Acetaminophen is a "
+                 "safer alternative given his cardiovascular risk profile.\n\n"
+                 "His clinical notes [cite:4] document the sulfa drug allergy, which is relevant "
+                 "if we ever consider thiazide diuretics for blood pressure management down the line.",
+                 [_c3_meds(1), _c3_ecg(2), _c3_labs(3), _c3_notes(4)], ts="2026-03-12T11:18:05"),
+        ],
+        "processing": False,
+        "uploaded_file": None,
+        "patient_id": "P0003",
     }
 
 
@@ -821,11 +1115,13 @@ async def health_check():
 def check_port_available(host: str, port: int) -> bool:
     """Check if a port is available."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.bind((host, port))
         sock.close()
         return True
     except OSError:
+        sock.close()
         return False
 
 
@@ -888,12 +1184,11 @@ def start_server(host: str = None, port: int = None):
 
     _server = uvicorn.Server(config)
 
-    # Handle graceful shutdown
+    # Handle graceful shutdown — let uvicorn close the socket properly
     def signal_handler(sig, frame):
         print("\n\n🛑 Shutting down MedDataOS Monitor...")
         if _server:
             _server.should_exit = True
-        sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
