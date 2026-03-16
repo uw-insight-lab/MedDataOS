@@ -1512,6 +1512,13 @@ async function openCitationModal(citation, pin = null) {
         modalSummary.textContent = citation.summary;
     }
 
+    // Mark Provenance tab if citation has conflicts
+    const provTab = modalTabToggle.querySelector('.modal-tab[data-tab="provenance"]');
+    if (provTab) {
+        const conflict = getCitationConflict(citation);
+        provTab.classList.toggle('tab-has-conflict', !!conflict);
+    }
+
     // Show modal
     citationBackdrop.classList.add('open');
     citationModal.classList.add('open');

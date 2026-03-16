@@ -2394,6 +2394,14 @@ main {
     border-bottom-color: var(--accent);
 }
 
+.modal-tab.tab-has-conflict::after {
+    content: '\26A0';
+    color: var(--critical);
+    font-size: 14px;
+    margin-left: 5px;
+    vertical-align: -1px;
+}
+
 /* ─── Modal Flip State ────────────────────────────────────── */
 .citation-modal.flipped .modal-body,
 .citation-modal.flipped .modal-summary,
