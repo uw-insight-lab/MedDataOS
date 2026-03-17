@@ -107,10 +107,12 @@ Each agent extends `BaseAgent`. The stub implementation loads a hardcoded respon
 | `LabResultsAgent` | `analyze_lab_results` | `lab_results` | `lab-results` | `.png` |
 | `MedicationAgent` | `analyze_medication` | `medication` | `medications` | `.csv` |
 
-Stub `analyze()` implementation (same for all 7):
+Stub `analyze()` implementation (same for all 7). Stub path is resolved relative to the project root using `Path(__file__)` to avoid CWD dependency:
 ```python
+STUBS_DIR = Path(__file__).resolve().parents[2] / "stubs"
+
 def analyze(self, patient_id: str, query: str) -> Finding:
-    with open(f"stubs/{patient_id}.json") as f:
+    with open(STUBS_DIR / f"{patient_id}.json") as f:
         stubs = json.load(f)
     data = stubs[self.modality]
     return Finding(
@@ -179,12 +181,23 @@ AGENT_REGISTRY = {
 
 ### 5. Tool Definitions (`src/tools/definitions.py`)
 
-Seven tool declarations replacing the old three. Each has identical parameters:
+Seven tool declarations replacing the old three. Each has identical parameters (`patient_id`, `query`) but a modality-specific description that guides Gemini's tool selection:
 
+| Tool Name | Description |
+|---|---|
+| `analyze_clinical_notes` | "Extract key findings from clinical notes including diagnoses, symptoms, history, and clinical relationships." |
+| `analyze_chest_xray` | "Analyze chest X-ray image for thoracic pathologies including cardiac silhouette, lung fields, mediastinum, and bony structures." |
+| `analyze_ecg` | "Analyze 12-lead ECG for rhythm, rate, intervals, axis, ST/T-wave changes, and conduction abnormalities." |
+| `analyze_echo` | "Analyze echocardiogram video for LV function, wall motion, valvular assessment, and pericardial evaluation." |
+| `analyze_heart_sounds` | "Analyze heart auscultation audio for S1/S2 quality, murmurs, gallops, rubs, and extra heart sounds." |
+| `analyze_lab_results` | "Analyze laboratory results for abnormal values, clinically significant trends, and critical findings." |
+| `analyze_medication` | "Analyze medication regimen for drug list, interactions, contraindications, and therapeutic adequacy." |
+
+Parameter schema (identical for all 7):
 ```python
 {
-    "name": "analyze_ecg",
-    "description": "Analyze 12-lead ECG for a patient. Returns rhythm, rate, intervals, axis, ST/T changes, and abnormalities.",
+    "name": "analyze_ecg",  # varies per tool
+    "description": "...",   # from table above
     "parameters": {
         "type": "object",
         "properties": {
@@ -201,8 +214,6 @@ Seven tool declarations replacing the old three. Each has identical parameters:
     }
 }
 ```
-
-Each tool has a modality-specific `description` explaining what it analyzes and returns.
 
 ### 6. Knowledge Bus (`src/agents/knowledge_bus.py`)
 
@@ -221,27 +232,174 @@ Each entry in `supported_by` / `contradicted_by`:
 }
 ```
 
-Only called when 2+ findings exist. Uses structured JSON output (response_mime_type) since this is a standalone call without function calling.
+Only called when 2+ findings exist. Uses structured JSON output (`response_mime_type: "application/json"`) since this is a standalone call without function calling.
+
+**Prompt template:**
+```
+You are a medical knowledge cross-referencing system. Given findings from multiple
+diagnostic modalities for the same patient, identify clinical correlations.
+
+Patient: {patient_name} ({patient_id}), {age}{sex}, Conditions: {conditions}
+
+Findings:
+{numbered_findings_list}
+
+For each finding, identify which other findings support or contradict it with
+brief clinical reasoning. Return JSON matching this exact schema.
+```
+
+**Response schema:**
+```python
+response_schema = {
+    "type": "object",
+    "properties": {
+        "<agent_name>": {
+            "type": "object",
+            "properties": {
+                "supported_by": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "agent": {"type": "string"},
+                            "finding": {"type": "string"},
+                            "reason": {"type": "string"}
+                        },
+                        "required": ["agent", "finding", "reason"]
+                    }
+                },
+                "contradicted_by": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "agent": {"type": "string"},
+                            "finding": {"type": "string"},
+                            "reason": {"type": "string"}
+                        },
+                        "required": ["agent", "finding", "reason"]
+                    }
+                }
+            }
+        }
+    }
+}
+```
 
 ### 7. Orchestrator (`src/core/orchestrator.py`)
 
-Rewritten `run_pipeline()` with:
+Rewritten `run_pipeline()`.
 
-**Parallel tool call handling:**
-- Iterates all `parts` in Gemini's response to find function calls
-- Executes each agent, collects findings
-- Sends all function responses back in a single Content message
+**System prompt:**
+```
+ACTIVE PATIENT: {name} ({patient_id})
+Age: {age}  Sex: {sex}  Blood Type: {blood_type}
+Allergies: {allergies}
+Conditions: {conditions}
+Available data:
+  clinical_notes: {date}
+  chest_xray: {date}
+  ecg: {date}
+  echo: {date}
+  heart_sounds: {date}
+  lab_results: {date}
+  medication: {date}
 
-**System prompt construction:**
-- Patient context block (demographics + available data modalities with dates)
-- Role & tools description
-- Citation format instructions (use `[cite:N]`, don't output JSON)
+You are a medical data analysis orchestrator.
+
+TOOLS (use only when a patient is active and the question requires data analysis):
+- analyze_clinical_notes: Extract findings from clinical notes
+- analyze_chest_xray: Analyze chest X-ray image
+- analyze_ecg: Analyze 12-lead ECG
+- analyze_echo: Analyze echocardiogram video
+- analyze_heart_sounds: Analyze heart auscultation audio
+- analyze_lab_results: Analyze laboratory results
+- analyze_medication: Analyze medication regimen
+
+Call the tools relevant to the user's question. You may call multiple tools in
+a single response when the question spans multiple modalities.
+
+Only call tools for modalities listed in "Available data" above.
+
+CITATION FORMAT:
+After receiving tool results, write a clinical narrative referencing each finding
+using [cite:N] where N matches the order tools were called (first tool result =
+[cite:1], second = [cite:2], etc.). Every finding must be cited at least once.
+Do NOT output JSON — write natural text with [cite:N] tokens only.
+
+When no patient is active or the question is general, respond directly without tools.
+```
+
+**Parallel tool call handling — pipeline pseudocode:**
+```python
+def run_pipeline(query, history, patient_id, patient_info):
+    client = create_client()
+    system_prompt = build_system_prompt(patient_id, patient_info)
+    contents = build_contents(history, query)
+    config = create_config(tools, system_prompt)
+    findings = []
+
+    response = client.models.generate_content(
+        model="gemini-3.1-pro", contents=contents, config=config)
+
+    # Tool loop — handles both parallel and sequential calls
+    while has_function_calls(response):
+        # Extract ALL function calls from this response
+        tool_calls = [
+            part.function_call
+            for part in response.candidates[-1].content.parts
+            if part.function_call
+        ]
+
+        # Execute each and collect findings
+        function_responses = []
+        for tc in tool_calls:
+            agent = AGENT_REGISTRY[tc.name]
+            log_tool_call(tc.name, tc.args)
+
+            finding = agent.analyze(
+                patient_id=tc.args["patient_id"],
+                query=tc.args["query"]
+            )
+            findings.append(finding)
+            log_tool_result(finding.summary)
+
+            function_responses.append(
+                Part.from_function_response(
+                    name=tc.name,
+                    response={"summary": finding.summary}
+                )
+            )
+
+        # Append model's response, then ALL function responses in one message
+        contents.append(response.candidates[-1].content)
+        contents.append(Content(role="user", parts=function_responses))
+
+        response = client.models.generate_content(
+            model="gemini-3.1-pro", contents=contents, config=config)
+
+    # Final text
+    gemini_text = response.candidates[-1].content.parts[-1].text
+    log_assistant(gemini_text)
+
+    # Knowledge bus (if 2+ findings)
+    if len(findings) >= 2:
+        knowledge_bus = build_knowledge_bus(findings, patient_info)
+    else:
+        knowledge_bus = {}
+
+    # Assemble JSON or return plain text
+    if findings:
+        return assemble_response(gemini_text, findings, knowledge_bus)
+    else:
+        return gemini_text
+```
 
 **Post-loop processing:**
 - Extracts Gemini's narrative text
 - Runs knowledge bus if 2+ findings
 - Calls `assemble_response()` to build final JSON
-- Falls back to plain text if no tools were called
+- Falls back to plain text if no tools were called (general questions)
 
 ### 8. Response Assembly
 
@@ -297,6 +455,14 @@ def assemble_response(gemini_text, findings, knowledge_bus):
 | File | Reason |
 |---|---|
 | `src/agents/executors.py` | Code generation agents replaced by modality agents |
+
+### Dead Code Removal
+| Item | Location | Reason |
+|---|---|---|
+| `write_agent_summary()` | `src/utils/logging.py` | No agents generate code or write summaries anymore |
+| `read_agent_summary()` | `src/utils/logging.py` | Same as above |
+| `read_all_summaries()` | `src/utils/logging.py` | Same as above |
+| `shared_knowledge.xml` | Project root | XML persistence no longer used |
 
 ## Edge Cases
 
