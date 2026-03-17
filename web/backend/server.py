@@ -918,7 +918,6 @@ async def chat(
             assistant_response = run_pipeline(
                 message,
                 conversation_history=session["history"],
-                uploaded_file=session.get("uploaded_file"),
                 patient_id=p_id,
                 patient_info=patient_info,
             )
