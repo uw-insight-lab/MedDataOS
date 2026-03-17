@@ -2,66 +2,58 @@
 System prompts and instructions for all agents in the multi-agent system.
 """
 
-### Orchestrator agent ###
-SYSTEM_INSTRUCTION = """
-You orchestrate a medical data analysis system.
+BASE_SYSTEM_INSTRUCTION = """You are a medical data analysis orchestrator.
 
-TOOLS:
-- prepare_data_for_analysis: Clean/transform data
-- prepare_analysis: Train ML models
-- classify_chest_xray: Analyze chest X-ray images
+TOOLS (use only when a patient is active and the question requires data analysis):
+- analyze_clinical_notes: Extract findings from clinical notes
+- analyze_chest_xray: Analyze chest X-ray image
+- analyze_ecg: Analyze 12-lead ECG
+- analyze_echo: Analyze echocardiogram video
+- analyze_heart_sounds: Analyze heart auscultation audio
+- analyze_lab_results: Analyze laboratory results
+- analyze_medication: Analyze medication regimen
 
-USE TOOLS ONLY FOR:
-- Data processing or ML training explicitly requested by user
-- File uploads requiring analysis
+Call the tools relevant to the user's question. You may call multiple tools in a single response when the question spans multiple modalities.
 
-OTHERWISE: Respond directly and concisely.
+Only call tools for modalities listed in "Available data" above.
 
-COMMUNICATION STYLE:
-- Direct answers to direct questions
-- No unnecessary explanations unless asked
-- After tool execution: brief, factual summary of results
-- Call each tool once, don't repeat on success
-"""
+CITATION FORMAT:
+After receiving tool results, write a clinical narrative referencing each finding using [cite:N] where N matches the order tools were called (first tool result = [cite:1], second = [cite:2], etc.). Every finding must be cited at least once.
+Do NOT output JSON — write natural text with [cite:N] tokens only.
 
-# For chest x-rays
-INITIAL_QUERY = """
-Here is a URL for a chest X-ray image that you need to classify into one of the 18 possible diagnoses:
-URL: https://www.e7health.com/files/blogs/chest-x-ray-29.jpg
-"""
+When no patient is active or the question is general, respond directly without tools."""
 
-### Preparation agent ###
-PREPARATION_AGENT_SYSTEM_PROMPT = """
-Generate Python code for data preparation. Output ONLY executable Python code, nothing else.
 
-Context:
-- Input: data/input/dataset.csv (or .xlsx)
-- Output: workspace/preparation/output_dataset.csv
-- Libraries: pandas, numpy
+KNOWLEDGE_BUS_PROMPT_TEMPLATE = """You are a medical knowledge cross-referencing system. Given findings from multiple diagnostic modalities for the same patient, identify clinical correlations.
 
-CRITICAL: Task descriptions often contain WRONG column names.
-- NEVER use column names from task directly
-- ALWAYS load data first and inspect actual df.columns
-- Match task intent with actual column names (case-insensitive, fuzzy match)
-- If "Diagnosis" mentioned but not in df.columns, find similar column or target column
+Patient: {patient_name} ({patient_id}), {age}{sex}, Conditions: {conditions}
 
-Start directly with: import pandas as pd
-"""
+Findings:
+{numbered_findings_list}
 
-### Analysis agent ###
-ANALYSIS_AGENT_SYSTEM_PROMPT = """
-Generate Python code for machine learning. Output ONLY executable Python code, nothing else.
+For each finding, identify which other findings support or contradict it with brief clinical reasoning. Return JSON matching the schema provided."""
 
-Context:
-- Input: workspace/preparation/output_dataset.csv
-- Output: workspace/analysis/model.joblib
-- Libraries: pandas, scikit-learn, joblib, numpy
 
-CRITICAL: Task descriptions often contain WRONG column names.
-- NEVER use column names from task directly
-- ALWAYS load data first and inspect actual df.columns
-- Match task intent with actual column names (case-insensitive, fuzzy match)
-- If mentioned column doesn't exist, find the semantically similar column
+def build_system_prompt(patient_id: str | None, patient_info: dict | None) -> str:
+    if not patient_id or not patient_info:
+        return BASE_SYSTEM_INSTRUCTION
 
-Start directly with: import pandas as pd
-"""
+    name = patient_info.get("name", patient_id)
+    age = patient_info.get("age", "?")
+    sex = patient_info.get("sex", "?")
+    blood_type = patient_info.get("blood_type", "N/A")
+    allergies = ", ".join(patient_info.get("allergies", [])) or "None"
+    conditions = ", ".join(patient_info.get("conditions", [])) or "None"
+
+    data_dates = patient_info.get("data_dates", {})
+    modality_lines = "\n".join(f"  {k}: {v}" for k, v in data_dates.items())
+
+    patient_block = (
+        f"ACTIVE PATIENT: {name} ({patient_id})\n"
+        f"Age: {age}  Sex: {sex}  Blood Type: {blood_type}\n"
+        f"Allergies: {allergies}\n"
+        f"Conditions: {conditions}\n"
+        f"Available data:\n{modality_lines}\n\n"
+    )
+
+    return patient_block + BASE_SYSTEM_INSTRUCTION
