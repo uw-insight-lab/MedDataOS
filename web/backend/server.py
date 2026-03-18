@@ -21,7 +21,7 @@ import asyncio
 import threading
 from uuid import uuid4
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import shutil
 
 from src.utils.logging import WebSocketManager, set_websocket_manager
@@ -459,13 +459,13 @@ def _seed_demo_sessions():
     # ── Demo pins for P0001 ─────────────────────────────────────
     patient_pins["P0001"] = [
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1), "source": "demo-1",
-         "created_at": datetime.utcnow().isoformat(), "query": "",
+         "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
          "annotations": {"text": "", "tags": []}, "checklist_state": {}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2), "source": "demo-2",
-         "created_at": datetime.utcnow().isoformat(), "query": "",
+         "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
          "annotations": {"text": "", "tags": []}, "checklist_state": {}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_meds(3), "source": "demo-1",
-         "created_at": datetime.utcnow().isoformat(), "query": "",
+         "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
          "annotations": {"text": "", "tags": []}, "checklist_state": {}},
     ]
 
@@ -899,7 +899,7 @@ async def chat(
     user_message = message
     if file:
         user_message += f"\n[Uploaded file: {file.filename}]"
-    session["history"].append({"role": "user", "content": user_message, "timestamp": datetime.utcnow().isoformat()})
+    session["history"].append({"role": "user", "content": user_message, "timestamp": datetime.now(timezone.utc).isoformat()})
 
     # Load patient info if patient_id is set
     p_id = session.get("patient_id")
@@ -923,7 +923,7 @@ async def chat(
             )
             # Add assistant response to history
             if assistant_response:
-                session["history"].append({"role": "assistant", "content": assistant_response, "timestamp": datetime.utcnow().isoformat()})
+                session["history"].append({"role": "assistant", "content": assistant_response, "timestamp": datetime.now(timezone.utc).isoformat()})
         finally:
             # Mark session as no longer processing
             session["processing"] = False
@@ -1054,7 +1054,7 @@ async def add_patient_pin(patient_id: str, request: dict):
         pin_id = str(uuid4())
         pins.append({"pin_id": pin_id, "type": "citation", "citation": citation,
                       "source": request.get("source", ""),
-                      "created_at": datetime.utcnow().isoformat(),
+                      "created_at": datetime.now(timezone.utc).isoformat(),
                       "query": request.get("query", ""),
                       "annotations": {"text": "", "tags": []},
                       "checklist_state": {}})

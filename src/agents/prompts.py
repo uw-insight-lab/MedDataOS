@@ -18,7 +18,7 @@ Call the tools relevant to the user's question. You may call multiple tools in a
 Only call tools for modalities listed in "Available data" above.
 
 CITATION FORMAT:
-After receiving tool results, write a clinical narrative referencing each finding using [cite:N] where N matches the order tools were called (first tool result = [cite:1], second = [cite:2], etc.). Every finding must be cited at least once.
+After receiving tool results, write a clinical narrative referencing each finding using [cite:N] where N matches the order tools were called (first tool result = [cite:1], second = [cite:2], etc.). Cite each finding once when you first mention it. Do not repeat the same [cite:N] tag again unless you are making a distinctly new point about that modality.
 Do NOT output JSON — write natural text with [cite:N] tokens only.
 
 RESPONSE STYLE:

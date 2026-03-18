@@ -116,10 +116,10 @@ def run_pipeline(
 
     # Extract final text
     gemini_text = response.candidates[-1].content.parts[-1].text
-    log_assistant(gemini_text)
 
     # If no tools were called, return plain text
     if not findings:
+        log_assistant(gemini_text)
         return gemini_text
 
     # Knowledge bus cross-referencing
@@ -127,4 +127,7 @@ def run_pipeline(
     if len(findings) >= 2 and patient_id and patient_info:
         knowledge_bus = build_knowledge_bus(findings, patient_id, patient_info)
 
-    return assemble_response(gemini_text, findings, knowledge_bus)
+    # Assemble final JSON and broadcast it (so WebSocket and session history match)
+    final_response = assemble_response(gemini_text, findings, knowledge_bus)
+    log_assistant(final_response)
+    return final_response

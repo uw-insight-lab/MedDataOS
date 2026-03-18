@@ -647,6 +647,7 @@ function handleWebSocketMessage(data) {
         isProcessing = false;
         updateSendButton();
         addChatMessage('assistant', data.message, data.timestamp || new Date().toISOString());
+        updateCitationBadgeStates();
         // Refresh sidebar to update conversation preview
         refreshSidebarConversations();
         return;
