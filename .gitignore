@@ -65,3 +65,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Test/tool caches
+.pytest_cache/
+.superpowers/
