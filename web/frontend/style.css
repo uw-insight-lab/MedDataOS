@@ -1190,6 +1190,12 @@ main {
 }
 
 /* ─── Citation Badge ────────────────────────────────────────── */
+.citation-group,
+.warning-group {
+    display: inline;
+    white-space: nowrap;
+}
+
 .citation {
     display: inline-flex;
     align-items: center;

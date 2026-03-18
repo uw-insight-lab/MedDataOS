@@ -901,7 +901,7 @@ function renderWithCitations(html, citations) {
         const data = encodeURIComponent(JSON.stringify(citation));
         const label = agentBadgeLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
         const dateStr = getCitationDate(citation);
-        return `<sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>${dateStr ? `<span class="citation-date">${dateStr}</span>` : ''}`;
+        return `<span class="citation-group"><sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>${dateStr ? `<span class="citation-date">${dateStr}</span>` : ''}</span>`;
     });
 }
 
@@ -1077,7 +1077,8 @@ function addChatMessage(role, content, timestamp) {
 
         const rawHtml = marked.parse(responseText);
         const safeHtml = DOMPurify.sanitize(rawHtml);
-        messageContent = citations.length > 0 ? renderWithCitations(safeHtml, citations) : safeHtml;
+        const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
+        messageContent = citations.length > 0 ? renderWithCitations(withWarnings, citations) : withWarnings;
     } else {
         // User messages stay as plain text
         messageContent = escapeHtml(content);

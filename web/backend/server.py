@@ -277,14 +277,14 @@ def _seed_demo_sessions():
                  "Auscultation [cite:1] reveals an S4 gallop and a grade 2/6 systolic murmur. The S4 is "
                  "consistent with impaired ventricular compliance, which aligns with the echocardiographic "
                  "findings of reduced ejection fraction and wall motion abnormality.\n\n"
-                 "\u26a0\ufe0f **Critical flag \u2014 Electrolytes:** The lab results [cite:2] show potassium has "
-                 "exceeded 5.5 mmol/L on three separate occasions over the past 4 months, with a peak of "
-                 "6.2 mmol/L in late December. This is a significant safety concern.\n\n"
-                 "Cross-referencing with his medications [cite:3], the likely driver is Lisinopril 20mg \u2014 "
-                 "an ACE inhibitor known to elevate potassium. Immediate review of ACE inhibitor dosing or "
-                 "switching to an alternative is strongly recommended.\n\n"
-                 "Additionally, the clinical notes [cite:4] document a Penicillin allergy, which is important "
-                 "to flag for any future antibiotic prescriptions or procedural prophylaxis.",
+                 "\u26a0\ufe0f **Potassium:** The lab results [cite:2] show potassium has exceeded 5.5 mmol/L "
+                 "on three separate occasions over the past 4 months, with a peak of 6.2 mmol/L in late "
+                 "December. This is a significant safety concern. Cross-referencing with his medications "
+                 "[cite:3], the likely driver is Lisinopril 20mg \u2014 an ACE inhibitor known to elevate "
+                 "potassium. Immediate review of ACE inhibitor dosing or switching to an alternative is "
+                 "strongly recommended.\n\n"
+                 "The clinical notes [cite:4] also document a Penicillin allergy, important to flag for any "
+                 "future antibiotic prescriptions or procedural prophylaxis.",
                  [_c_heart(1), _c_labs(2), _c_meds(3), _c_notes(4)], ts="2026-03-03T09:20:05"),
         ],
         "processing": False,
@@ -300,21 +300,14 @@ def _seed_demo_sessions():
                  "His potassium has been running high \u2014 can you cross-reference and flag any concerns?",
                  ts="2026-03-04T10:30:00"),
             _msg("assistant",
-                 "**Current medication list** [cite:1]:\n"
-                 "- Lisinopril 20mg daily (ACE inhibitor)\n"
-                 "- Amlodipine 5mg daily\n"
-                 "- Atorvastatin 20mg daily\n"
-                 "- Aspirin 81mg daily\n"
-                 "- Metformin 1000mg twice daily\n"
-                 "- Semaglutide 0.5mg weekly\n"
-                 "- Albuterol inhaler PRN\n\n"
-                 "**Lab correlation** [cite:2]: Potassium levels have been persistently elevated \u2014 "
-                 "5.9, 6.2, and 5.8 mmol/L across October to January. This is a clear pattern of ACE "
-                 "inhibitor\u2013induced hyperkalemia, with Lisinopril as the primary suspect.\n\n"
-                 "The clinical notes [cite:3] confirm a documented Penicillin allergy \u2014 important "
-                 "context for any medication changes.\n\n"
-                 "Auscultation [cite:4] shows an S4 gallop suggesting diastolic dysfunction, so whatever "
-                 "replacement we select must maintain adequate cardioprotection.",
+                 "His medication list [cite:1] includes Lisinopril 20mg, Amlodipine 5mg, Atorvastatin 20mg, "
+                 "Aspirin 81mg, Metformin 1000mg twice daily, Semaglutide 0.5mg weekly, and Albuterol PRN.\n\n"
+                 "Cross-referencing with labs [cite:2], potassium has been persistently elevated \u2014 5.9, "
+                 "6.2, and 5.8 mmol/L across October to January. This is a clear pattern of ACE inhibitor\u2013"
+                 "induced hyperkalemia, with Lisinopril as the primary suspect.\n\n"
+                 "The clinical notes [cite:3] confirm a documented Penicillin allergy \u2014 important context "
+                 "for any medication changes. Auscultation [cite:4] shows an S4 gallop suggesting diastolic "
+                 "dysfunction, so whatever replacement we select must maintain adequate cardioprotection.",
                  [_c_meds(1), _c_labs(2), _c_notes(3), _c_heart(4)], ts="2026-03-04T10:30:45"),
 
             _msg("user",
@@ -328,14 +321,12 @@ def _seed_demo_sessions():
                  "underlying coronary artery disease.\n\n"
                  "The chest X-ray [cite:3] is reassuringly normal \u2014 no cardiomegaly or pulmonary "
                  "congestion \u2014 so there\u2019s no evidence of overt heart failure at this stage.\n\n"
-                 "**Recommendation:** Switching from Lisinopril to an ARB such as losartan would maintain "
-                 "RAAS blockade, which is critical for:\n"
-                 "- Blood pressure control (hypertension)\n"
-                 "- Cardiac remodeling protection (given the wall motion abnormality)\n"
-                 "- Renal protection (important with his Type 2 Diabetes)\n\n"
-                 "This switch should reduce the hyperkalemia risk. Labs [cite:4] should be rechecked "
-                 "1\u20132 weeks after the transition. His diabetes medications [cite:5] (Metformin + "
-                 "Semaglutide) do not contribute to hyperkalemia and can continue unchanged.",
+                 "Switching from Lisinopril to an ARB such as losartan would maintain RAAS blockade, which "
+                 "is critical for blood pressure control, cardiac remodeling protection given the wall motion "
+                 "abnormality, and renal protection with his Type 2 Diabetes. This switch should reduce the "
+                 "hyperkalemia risk. Labs [cite:4] should be rechecked 1\u20132 weeks after the transition. "
+                 "His diabetes medications [cite:5] (Metformin + Semaglutide) do not contribute to "
+                 "hyperkalemia and can continue unchanged.",
                  [_c_ecg(1), _c_echo(2), _c_xray(3), _c_labs(4), _c_meds(5)], ts="2026-03-04T10:33:02"),
         ],
         "processing": False,
@@ -351,43 +342,34 @@ def _seed_demo_sessions():
                  "I need a cardiac risk assessment \u2014 walk me through his cardiac studies.",
                  ts="2026-03-05T14:00:00"),
             _msg("assistant",
-                 "**Cardiac risk assessment for surgical clearance:**\n\n"
                  "The echocardiogram [cite:1] is the most significant finding \u2014 mildly reduced LVEF "
-                 "with a regional wall motion abnormality in the lateral wall. This indicates structural "
-                 "cardiac compromise.\n\n"
-                 "The ECG [cite:2] corroborates with ST changes in V4\u2013V6 (lateral territory), "
-                 "suggesting ischemia in the same distribution as the echo abnormality.\n\n"
+                 "with a regional wall motion abnormality in the lateral wall, indicating structural cardiac "
+                 "compromise. The ECG [cite:2] corroborates with ST changes in V4\u2013V6, suggesting "
+                 "ischemia in the same distribution as the echo abnormality.\n\n"
                  "Auscultation [cite:3] reveals an S4 gallop and grade 2/6 systolic murmur, consistent "
-                 "with impaired ventricular compliance.\n\n"
-                 "The chest X-ray [cite:4] is clear with a normal cardiac silhouette \u2014 no pulmonary "
-                 "congestion, which is reassuring.\n\n"
-                 "Clinical notes [cite:5] describe exertional symptoms that resolve at rest within "
-                 "5 minutes, with no rest pain or syncope. This pattern is consistent with stable demand "
-                 "ischemia rather than acute coronary syndrome.\n\n"
-                 "**Overall risk classification:** Intermediate cardiac risk. The lateral wall abnormality "
-                 "and functional limitation warrant cardiology clearance before proceeding with the procedure.",
+                 "with impaired ventricular compliance. The chest X-ray [cite:4] is clear with a normal "
+                 "cardiac silhouette \u2014 no pulmonary congestion, which is reassuring.\n\n"
+                 "Clinical notes [cite:5] describe exertional symptoms that resolve at rest within 5 minutes, "
+                 "with no rest pain or syncope. This pattern is consistent with stable demand ischemia rather "
+                 "than acute coronary syndrome. Overall, this places him at intermediate cardiac risk \u2014 "
+                 "the lateral wall abnormality and functional limitation warrant cardiology clearance before "
+                 "proceeding with the procedure.",
                  [_c_echo(1), _c_ecg(2), _c_heart(3), _c_xray(4), _c_notes(5)], ts="2026-03-05T14:00:52"),
 
             _msg("user",
                  "What about his labs and medications \u2014 anything to adjust before surgery?",
                  ts="2026-03-05T14:02:30"),
             _msg("assistant",
-                 "**Pre-operative medication and lab review:**\n\n"
-                 "\u26a0\ufe0f **Potassium** [cite:1]: Recurrent hyperkalemia with a peak of 6.2 mmol/L. "
+                 "\u26a0\ufe0f **Potassium:** Recurrent hyperkalemia [cite:1] with a peak of 6.2 mmol/L. "
                  "This must be normalized before surgery \u2014 hyperkalemia significantly increases the "
                  "risk of intraoperative arrhythmias, especially under general anesthesia.\n\n"
-                 "**Medication adjustments** [cite:2]:\n"
-                 "- **Lisinopril 20mg** \u2014 Hold the morning of surgery. This also helps address the "
-                 "potassium elevation.\n"
-                 "- **Aspirin 81mg** \u2014 Discuss hold timing with the surgical team (typically 7 days "
-                 "prior for major procedures).\n"
-                 "- **Metformin 1000mg** \u2014 Hold the day of and day after surgery to avoid lactic "
-                 "acidosis risk with contrast or reduced renal perfusion.\n"
-                 "- **Semaglutide 0.5mg** \u2014 Consider holding the week of surgery due to gastroparesis "
-                 "risk affecting anesthesia.\n"
-                 "- **Amlodipine, Atorvastatin** \u2014 May continue as usual.\n"
-                 "- **Albuterol PRN** \u2014 Must be available peri-operatively for asthma management.\n\n"
-                 "\u26a0\ufe0f **Allergy alert** [cite:3]: Penicillin allergy is documented. This directly "
+                 "For medication adjustments [cite:2]: hold Lisinopril 20mg the morning of surgery (also "
+                 "helps with potassium), discuss Aspirin 81mg hold timing with the surgical team (typically "
+                 "7 days prior for major procedures), hold Metformin the day of and day after to avoid lactic "
+                 "acidosis risk, and consider holding Semaglutide the week of surgery due to gastroparesis "
+                 "risk affecting anesthesia. Amlodipine and Atorvastatin may continue as usual. Albuterol "
+                 "PRN must be available peri-operatively for asthma management.\n\n"
+                 "\u26a0\ufe0f **Allergy alert:** Penicillin allergy is documented [cite:3]. This directly "
                  "impacts surgical antibiotic prophylaxis \u2014 standard cefazolin may pose cross-reactivity "
                  "risk. Use clindamycin or vancomycin as alternatives.",
                  [_c_labs(1), _c_meds(2), _c_notes(3)], ts="2026-03-05T14:03:18"),
@@ -446,9 +428,9 @@ def _seed_demo_sessions():
                  "which is important for antibiotic dosing.\n\n"
                  "The clinical notes [cite:3] document no drug allergies, so her current antibiotic regimen "
                  "(amoxicillin + azithromycin) [cite:4] is appropriate for community-acquired pneumonia.\n\n"
-                 "**Assessment:** This is a straightforward community-acquired pneumonia in an otherwise "
-                 "healthy 34-year-old. Key monitoring points: repeat SpO2 trending, fever curve, and ensure "
-                 "adequate hydration given her reduced oral intake over the past 2 days.",
+                 "Overall, this is a straightforward community-acquired pneumonia in an otherwise healthy "
+                 "34-year-old. Key monitoring points: repeat SpO2 trending, fever curve, and ensure adequate "
+                 "hydration given her reduced oral intake over the past 2 days.",
                  [_c2_heart(1), _c2_labs(2), _c2_notes(3), _c2_meds(4)], ts="2026-03-06T08:50:12"),
         ],
         "processing": False,
@@ -505,12 +487,10 @@ def _seed_demo_sessions():
                  "The echocardiogram [cite:3] shows normal biventricular function and no pericardial "
                  "effusion \u2014 no cardiac complications from the infection.\n\n"
                  "Labs [cite:4] support a purely infectious process with no end-organ involvement.\n\n"
-                 "**Recommended plan:**\n"
-                 "- Continue Amoxicillin + Azithromycin as prescribed\n"
-                 "- Increase Albuterol to scheduled q4\u20136h (not just PRN)\n"
-                 "- Restart Montelukast 10mg daily\n"
-                 "- Monitor SpO2 closely \u2014 supplement O2 if she drops below 92%\n"
-                 "- Reassess in 48\u201372 hours for clinical improvement",
+                 "I\u2019d recommend continuing the Amoxicillin + Azithromycin as prescribed, increasing "
+                 "Albuterol to scheduled q4\u20136h rather than just PRN, and restarting Montelukast 10mg "
+                 "daily. Monitor SpO2 closely and supplement O2 if she drops below 92%. Reassess in "
+                 "48\u201372 hours for clinical improvement.",
                  [_c2_meds(1), _c2_ecg(2), _c2_echo(3), _c2_labs(4)], ts="2026-03-07T11:03:05"),
         ],
         "processing": False,
@@ -535,9 +515,9 @@ def _seed_demo_sessions():
                  "and improved oral intake.\n\n"
                  "Heart sounds [cite:4] remain normal with no new findings. Heart rate has come "
                  "down from 112 to 82 bpm, consistent with defervescence.\n\n"
-                 "**Discharge assessment:** She meets standard criteria for transition to oral-only "
-                 "outpatient therapy \u2014 afebrile >24h, tolerating PO, and trending toward "
-                 "resolution. She should complete the full antibiotic course at home.",
+                 "She meets standard criteria for transition to oral-only outpatient therapy \u2014 "
+                 "afebrile >24h, tolerating PO, and trending toward resolution. She should complete the "
+                 "full antibiotic course at home.",
                  [_c2_labs(1), _c2_meds(2), _c2_notes(3), _c2_heart(4)], ts="2026-03-09T09:30:52"),
 
             _msg("user",
@@ -554,12 +534,10 @@ def _seed_demo_sessions():
                  "several weeks.\n\n"
                  "The ECG [cite:3] and echocardiogram [cite:4] were both normal on admission, "
                  "so no cardiac follow-up is needed.\n\n"
-                 "**Discharge plan:**\n"
-                 "- Complete Amoxicillin + Azithromycin course (total 7 days)\n"
-                 "- If Montelukast was restarted, continue for 2\u20134 weeks then reassess\n"
-                 "- Albuterol PRN for any post-infectious cough or wheeze\n"
-                 "- Follow-up chest X-ray in 4\u20136 weeks\n"
-                 "- Return precautions: worsening dyspnea, recurrent fever, hemoptysis",
+                 "For discharge: complete the Amoxicillin + Azithromycin course (total 7 days), continue "
+                 "Montelukast for 2\u20134 weeks if it was restarted then reassess, and keep Albuterol PRN "
+                 "for any post-infectious cough or wheeze. Schedule a follow-up chest X-ray in 4\u20136 "
+                 "weeks. Return precautions include worsening dyspnea, recurrent fever, or hemoptysis.",
                  [_c2_xray(1), _c2_notes(2), _c2_ecg(3), _c2_echo(4)], ts="2026-03-09T09:33:18"),
         ],
         "processing": False,
@@ -613,22 +591,20 @@ def _seed_demo_sessions():
                  ts="2026-03-10T10:04:10"),
             _msg("assistant",
                  "The lab results [cite:1] reveal several findings that deserve attention in the "
-                 "context of his family history and lifestyle:\n\n"
-                 "**Metabolic flags:**\n"
-                 "- Fasting glucose 108 mg/dL with HbA1c 5.8% \u2014 this places him in the "
-                 "pre-diabetic range. Not yet actionable with medication, but lifestyle "
-                 "modification is critical.\n"
-                 "- LDL 142 mg/dL (borderline high), HDL 44 mg/dL (low normal), triglycerides "
-                 "168 mg/dL (mildly elevated) \u2014 a lipid profile trending toward metabolic "
-                 "syndrome in the setting of his sedentary year and BMI of 26.1.\n\n"
-                 "His current medications [cite:2] (Sertraline, PRN Ibuprofen, PRN Melatonin) "
-                 "do not include any lipid or glucose management.\n\n"
+                 "context of his family history and lifestyle. Fasting glucose is 108 mg/dL with "
+                 "HbA1c 5.8%, placing him in the pre-diabetic range \u2014 not yet actionable with "
+                 "medication, but lifestyle modification is critical. His lipid profile shows LDL "
+                 "142 mg/dL (borderline high), HDL 44 mg/dL (low normal), and triglycerides 168 mg/dL "
+                 "(mildly elevated), trending toward metabolic syndrome in the setting of his sedentary "
+                 "year and BMI of 26.1.\n\n"
+                 "His current medications [cite:2] (Sertraline, PRN Ibuprofen, PRN Melatonin) do not "
+                 "include any lipid or glucose management.\n\n"
                  "Clinical notes [cite:3] document a family history of hypertension \u2014 with his "
                  "current BP at 122/78 and these metabolic trends, he is at risk for developing "
-                 "hypertension within the next 5\u201310 years if not addressed.\n\n"
-                 "**Recommendation:** This is the window for aggressive lifestyle intervention "
-                 "before pharmacotherapy becomes necessary. A structured exercise program and "
-                 "dietary counseling should be the primary prescription at this visit.",
+                 "hypertension within the next 5\u201310 years if not addressed. This is the window for "
+                 "aggressive lifestyle intervention before pharmacotherapy becomes necessary \u2014 a "
+                 "structured exercise program and dietary counseling should be the primary prescription "
+                 "at this visit.",
                  [_c3_labs(1), _c3_meds(2), _c3_notes(3)], ts="2026-03-10T10:04:55"),
         ],
         "processing": False,
@@ -644,20 +620,17 @@ def _seed_demo_sessions():
                  "an exercise prescription. What data do we have to work with?",
                  ts="2026-03-11T14:00:00"),
             _msg("assistant",
-                 "Here\u2019s the risk factor profile from his data:\n\n"
-                 "Labs [cite:1] show LDL 142, HDL 44, triglycerides 168, fasting glucose 108, "
-                 "HbA1c 5.8%. These place him in a borderline metabolic risk category.\n\n"
-                 "Clinical notes [cite:2] confirm a 45-year-old male, BMI 26.1, BP 122/78, non-smoker, "
-                 "2\u20133 drinks/week. Family history positive for hypertension.\n\n"
-                 "The ECG [cite:3] is normal with no ischemic changes. The "
-                 "echocardiogram [cite:4] shows normal EF at 60\u201365% with no structural "
-                 "abnormalities.\n\n"
-                 "Using the pooled cohort equations \u2014 his age, "
-                 "sex, BP, lipids, and absence of diabetes or smoking place him at approximately "
-                 "4\u20136% (low-to-borderline). This does not yet meet the threshold for statin "
-                 "therapy, but the trajectory is concerning given his sedentary trend.\n\n"
-                 "His cardiac workup confirms he is safe for a graded exercise program with no "
-                 "restrictions.",
+                 "Labs [cite:1] show LDL 142, HDL 44, triglycerides 168, fasting glucose 108, and "
+                 "HbA1c 5.8% \u2014 placing him in a borderline metabolic risk category. Clinical "
+                 "notes [cite:2] confirm a 45-year-old male, BMI 26.1, BP 122/78, non-smoker with "
+                 "2\u20133 drinks/week and a family history positive for hypertension.\n\n"
+                 "The ECG [cite:3] is normal with no ischemic changes, and the echocardiogram [cite:4] "
+                 "shows normal EF at 60\u201365% with no structural abnormalities.\n\n"
+                 "Using the pooled cohort equations, his age, sex, BP, lipids, and absence of diabetes "
+                 "or smoking place his 10-year ASCVD risk at approximately 4\u20136% (low-to-borderline). "
+                 "This does not yet meet the threshold for statin therapy, but the trajectory is "
+                 "concerning given his sedentary trend. His cardiac workup confirms he is safe for a "
+                 "graded exercise program with no restrictions.",
                  [_c3_labs(1), _c3_notes(2), _c3_ecg(3), _c3_echo(4)], ts="2026-03-11T14:00:48"),
 
             _msg("user",
@@ -675,17 +648,13 @@ def _seed_demo_sessions():
                  "Labs [cite:2] confirm no contraindications to exercise (normal renal function, "
                  "no anemia, normal TSH). The chest X-ray [cite:3] and heart sounds [cite:4] are "
                  "both normal.\n\n"
-                 "**Lifestyle prescription:**\n"
-                 "- **Exercise:** 150 min/week moderate aerobic activity (brisk walking, cycling). "
-                 "Start with 20 min \u00d7 3 days/week, increase by 10% weekly. Add resistance "
-                 "training 2 days/week.\n"
-                 "- **Diet:** Mediterranean-style pattern \u2014 reduce refined carbohydrates and "
-                 "processed foods, increase fiber, omega-3 fatty acids, and plant-based proteins.\n"
-                 "- **Weight goal:** Target BMI <25 (approximately 5\u20137 kg loss over 6 months).\n"
-                 "- **Alcohol:** Current intake (2\u20133/week) is acceptable but should not increase.\n"
-                 "- **Recheck:** Fasting lipid panel and glucose in 3 months to assess response.\n"
-                 "- **Statin decision point:** If LDL remains >130 after 3\u20136 months of adherence, "
-                 "initiate atorvastatin 10\u201320mg.",
+                 "For exercise, aim for 150 min/week of moderate aerobic activity (brisk walking, cycling) "
+                 "\u2014 start with 20 min \u00d7 3 days/week, increase by 10% weekly, and add resistance "
+                 "training 2 days/week. Diet should shift toward a Mediterranean-style pattern with less "
+                 "refined carbohydrates and more fiber, omega-3s, and plant-based proteins. Target BMI <25, "
+                 "roughly 5\u20137 kg over 6 months. Current alcohol intake (2\u20133/week) is acceptable.\n\n"
+                 "Recheck fasting lipid panel and glucose in 3 months to assess response. If LDL remains "
+                 ">130 after 3\u20136 months of adherence, initiate atorvastatin 10\u201320mg.",
                  [_c3_meds(1), _c3_labs(2), _c3_xray(3), _c3_heart(4)], ts="2026-03-11T14:03:22"),
         ],
         "processing": False,
@@ -702,16 +671,15 @@ def _seed_demo_sessions():
                  "anything needs adjusting?",
                  ts="2026-03-12T11:15:00"),
             _msg("assistant",
-                 "Current medication list [cite:1]:\n"
-                 "- **Sertraline 50mg daily** \u2014 GAD, well-controlled per clinical notes\n"
-                 "- **Ibuprofen 200mg PRN** \u2014 occasional headaches\n"
-                 "- **Melatonin 3mg PRN** \u2014 insomnia, reportedly increased use\n\n"
+                 "His medication list [cite:1] is straightforward: Sertraline 50mg daily for GAD, "
+                 "Ibuprofen 200mg PRN for occasional headaches, and Melatonin 3mg PRN for insomnia "
+                 "with reportedly increased use.\n\n"
                  "Clinical notes [cite:2] describe his GAD as well-controlled, but the increased "
                  "insomnia and demanding work schedule suggest his anxiety may be subtly worsening "
                  "even if he does not report overt symptoms. Poor sleep and work stress are common "
-                 "triggers for GAD relapse.\n\n"
-                 "The Melatonin at 3mg is a reasonable first-line sleep aid, but escalating use "
-                 "warrants evaluation of the underlying cause rather than simply increasing the dose.\n\n"
+                 "triggers for GAD relapse. The Melatonin at 3mg is a reasonable first-line sleep aid, "
+                 "but escalating use warrants evaluation of the underlying cause rather than simply "
+                 "increasing the dose.\n\n"
                  "His labs [cite:3] show a normal TSH (2.1 mIU/L), which rules out thyroid "
                  "dysfunction as a contributor to insomnia or fatigue.",
                  [_c3_meds(1), _c3_notes(2), _c3_labs(3)], ts="2026-03-12T11:15:42"),
