@@ -37,7 +37,7 @@ Patient: {patient_name} ({patient_id}), {age}{sex}, Conditions: {conditions}
 Findings:
 {numbered_findings_list}
 
-For each finding, identify which other findings support or contradict it with brief clinical reasoning. Return JSON matching the schema provided."""
+For each finding, decide whether other findings primarily support or contradict it — pick the dominant relationship. A finding should have contradictions only when there is a genuine clinical discrepancy, not just a different modality showing complementary information. Most findings from the same patient will be supportive of each other. Use the agent name as the key for each entry."""
 
 
 def build_system_prompt(patient_id: str | None, patient_info: dict | None) -> str:

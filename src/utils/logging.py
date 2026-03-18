@@ -95,6 +95,20 @@ def log_assistant(msg):
     _broadcast_log("assistant", msg, header="System Response")
 
 
+def broadcast_knowledge_bus_update(findings, knowledge_bus: dict, on_complete: callable = None):
+    """Broadcast knowledge bus results to update citation badges asynchronously."""
+    # Build per-agent knowledge bus mapping
+    kb_by_agent = {}
+    for f in findings:
+        kb_by_agent[f.agent] = knowledge_bus.get(f.agent, {"supported_by": [], "contradicted_by": []})
+
+    _broadcast_log("knowledge_bus_update", "", metadata={"knowledge_bus": kb_by_agent})
+
+    # Callback to patch session history
+    if on_complete:
+        on_complete(kb_by_agent)
+
+
 def log_tool_call(name, input_data):
     """Log a tool call to console and broadcast to web UI."""
     message = f"{input_data}"

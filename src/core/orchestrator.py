@@ -2,10 +2,11 @@
 Main orchestrator for the multimodal medical agent system.
 Coordinates between specialized agents using Gemini's function calling.
 """
+import threading
 from google.genai import types
 
 from src.tools.definitions import tools
-from src.utils.logging import log_user, log_assistant, log_tool_call, log_tool_result
+from src.utils.logging import log_user, log_assistant, log_tool_call, log_tool_result, broadcast_knowledge_bus_update
 from src.agents.prompts import build_system_prompt
 from src.agents.knowledge_bus import build_knowledge_bus
 from src.core.gemini_client import create_client, create_config
@@ -46,6 +47,7 @@ def run_pipeline(
     conversation_history: list = None,
     patient_id: str = None,
     patient_info: dict = None,
+    on_knowledge_bus_complete: callable = None,
 ):
     client = create_client()
     system_prompt = build_system_prompt(patient_id, patient_info)
@@ -122,12 +124,18 @@ def run_pipeline(
         log_assistant(gemini_text)
         return gemini_text
 
-    # Knowledge bus cross-referencing
-    knowledge_bus = {}
-    if len(findings) >= 2 and patient_id and patient_info:
-        knowledge_bus = build_knowledge_bus(findings, patient_id, patient_info)
-
-    # Assemble final JSON and broadcast it (so WebSocket and session history match)
-    final_response = assemble_response(gemini_text, findings, knowledge_bus)
+    # Assemble response immediately with empty knowledge bus
+    final_response = assemble_response(gemini_text, findings, {})
     log_assistant(final_response)
+
+    # Fire knowledge bus async — will patch citations via WebSocket when done
+    if len(findings) >= 2 and patient_id and patient_info:
+        def _run_knowledge_bus():
+            try:
+                kb = build_knowledge_bus(findings, patient_id, patient_info)
+                broadcast_knowledge_bus_update(findings, kb, on_complete=on_knowledge_bus_complete)
+            except Exception as e:
+                print(f"Knowledge bus error: {e}")
+        threading.Thread(target=_run_knowledge_bus, daemon=True).start()
+
     return final_response

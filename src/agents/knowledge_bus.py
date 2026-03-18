@@ -25,9 +25,37 @@ def _empty_bus(findings: list[Finding]) -> dict:
     return {f.agent: {"supported_by": [], "contradicted_by": []} for f in findings}
 
 
+def _build_response_schema(findings: list[Finding]) -> dict:
+    cross_ref_item = {
+        "type": "object",
+        "properties": {
+            "agent": {"type": "string"},
+            "finding": {"type": "string"},
+            "reason": {"type": "string"},
+        },
+        "required": ["agent", "finding", "reason"],
+    }
+    agent_entry = {
+        "type": "object",
+        "properties": {
+            "supported_by": {"type": "array", "items": cross_ref_item},
+            "contradicted_by": {"type": "array", "items": cross_ref_item},
+        },
+        "required": ["supported_by", "contradicted_by"],
+    }
+    return {
+        "type": "object",
+        "properties": {f.agent: agent_entry for f in findings},
+        "required": [f.agent for f in findings],
+    }
+
+
 def build_knowledge_bus(findings: list[Finding], patient_id: str, patient_info: dict) -> dict:
     prompt = _build_knowledge_bus_prompt(findings, patient_id, patient_info)
-    config = types.GenerateContentConfig(response_mime_type="application/json")
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=_build_response_schema(findings),
+    )
     try:
         client = create_client()
         response = client.models.generate_content(

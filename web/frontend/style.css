@@ -1277,7 +1277,7 @@ main {
 #citation-popup {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 3000;
     width: 340px;
     background: var(--bg-surface);
     border: 1px solid var(--accent-mid);
@@ -2490,6 +2490,7 @@ main {
     letter-spacing: 0.04em;
     margin-left: auto;
     text-transform: none;
+    white-space: nowrap;
 }
 
 .prov-step-desc {
@@ -2561,7 +2562,8 @@ main {
 .prov-bus-entry {
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 4px 6px;
     padding: 3px 0 3px 12px;
     position: relative;
 }
@@ -2626,6 +2628,30 @@ main {
     opacity: 0.5;
     letter-spacing: 0.04em;
     padding: 4px 0;
+}
+
+.prov-bus-loading {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.prov-bus-spinner {
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid var(--border-warm);
+    border-top-color: var(--text-secondary);
+    border-radius: 50%;
+    animation: prov-spin 0.8s linear infinite;
+}
+
+@keyframes prov-spin {
+    to { transform: rotate(360deg); }
 }
 
 /* ─── Citation Generated Node ─────────────────────────────── */

@@ -883,11 +883,27 @@ async def chat(
     # Run pipeline in background with conversation history and file
     def run_in_thread():
         try:
+            def _patch_session_kb(kb_by_agent):
+                """Patch the last assistant message in session history with knowledge bus data."""
+                for msg in reversed(session["history"]):
+                    if msg["role"] == "assistant":
+                        try:
+                            parsed = json.loads(msg["content"])
+                            if "citations" in parsed:
+                                for c in parsed["citations"]:
+                                    if c["agent"] in kb_by_agent:
+                                        c["knowledge_bus"] = kb_by_agent[c["agent"]]
+                                msg["content"] = json.dumps(parsed, ensure_ascii=False)
+                        except (json.JSONDecodeError, KeyError):
+                            pass
+                        break
+
             assistant_response = run_pipeline(
                 message,
                 conversation_history=session["history"],
                 patient_id=p_id,
                 patient_info=patient_info,
+                on_knowledge_bus_complete=_patch_session_kb,
             )
             # Add assistant response to history
             if assistant_response:

@@ -658,6 +658,38 @@ function handleWebSocketMessage(data) {
         return;
     }
 
+    // Handle knowledge bus update — patch citation badges with cross-reference data
+    if (data.type === 'knowledge_bus_update') {
+        const kbByAgent = data.metadata?.knowledge_bus || {};
+        chatContainer.querySelectorAll('.citation').forEach(badge => {
+            try {
+                const citation = JSON.parse(decodeURIComponent(badge.dataset.citation));
+                if (citation.agent in kbByAgent) {
+                    citation.knowledge_bus = kbByAgent[citation.agent];
+                    citation._kb_loaded = true;
+                    badge.dataset.citation = encodeURIComponent(JSON.stringify(citation));
+                }
+            } catch (e) { /* skip malformed */ }
+        });
+        updateCitationBadgeStates();
+        // Re-render provenance panel if modal is open and flipped to provenance
+        if (modalCitation && citationModal.classList.contains('open') && citationModal.classList.contains('flipped')) {
+            // Refresh modalCitation with updated knowledge bus
+            if (modalCitation.agent in kbByAgent) {
+                modalCitation.knowledge_bus = kbByAgent[modalCitation.agent];
+                modalCitation._kb_loaded = true;
+                modalProvenancePanel.innerHTML = buildProvenanceHTML(modalCitation);
+                // Update conflict indicator on provenance tab
+                const provTab = modalTabToggle.querySelector('.modal-tab[data-tab="provenance"]');
+                if (provTab) {
+                    const conflict = getCitationConflict(modalCitation);
+                    provTab.classList.toggle('tab-has-conflict', !!conflict);
+                }
+            }
+        }
+        return;
+    }
+
     // tool_call / tool_result are silently consumed — the loading indicator
     // already tells the user something is happening.
 }
@@ -903,6 +935,26 @@ function renderWithCitations(html, citations) {
         const dateStr = getCitationDate(citation);
         return `<span class="citation-group"><sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>${dateStr ? `<span class="citation-date">${dateStr}</span>` : ''}</span>`;
     });
+}
+
+// Build a minimal citation object for a given agent + active patient (for KB hover cards)
+const agentDirMap = {
+    'clinical_notes': { dir: 'clinical-notes', ext: 'txt' },
+    'chest_xray':     { dir: 'chest-xray',     ext: 'png' },
+    'ecg':            { dir: 'ecg',             ext: 'svg' },
+    'heart_sounds':   { dir: 'heart-sounds',    ext: 'wav' },
+    'echo':           { dir: 'echo',            ext: 'mp4' },
+    'lab_results':    { dir: 'lab-results',     ext: 'png' },
+    'medication':     { dir: 'medications',     ext: 'csv' },
+};
+
+function buildCitationForAgent(agent) {
+    if (!activePatientId) return null;
+    const mapping = agentDirMap[agent];
+    if (!mapping) return null;
+    const file = `${activePatientId}.${mapping.ext}`;
+    const web_path = `/multimodal-data/${mapping.dir}/${file}`;
+    return { id: '0', agent, file, web_path, summary: '' };
 }
 
 // Derive modality type from file extension
@@ -1348,6 +1400,18 @@ chatContainer.addEventListener('mouseout', (e) => {
     hideTimeout = setTimeout(() => { citationPopup.style.display = 'none'; }, 150);
 });
 
+// Citation hover on provenance panel (knowledge bus badges)
+modalProvenancePanel.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('.citation');
+    if (!target) return;
+    const citation = JSON.parse(decodeURIComponent(target.dataset.citation));
+    showCitationPopup(target, citation);
+});
+modalProvenancePanel.addEventListener('mouseout', (e) => {
+    if (!e.target.closest('.citation')) return;
+    hideTimeout = setTimeout(() => { citationPopup.style.display = 'none'; }, 150);
+});
+
 // Keep card open when mouse moves onto it (needed for audio/video interaction)
 citationPopup.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
 citationPopup.addEventListener('mouseleave', () => { citationPopup.style.display = 'none'; });
@@ -1651,20 +1715,29 @@ function buildProvenanceHTML(citation) {
     html += '<div class="prov-bus">';
     html += '<div class="prov-bus-label">Knowledge Bus</div>';
 
+    // Helper: build a mini citation badge for a KB entry agent
+    const buildKBBadge = (entry) => {
+        const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
+        const entryDate = getAgentDate(entry.agent);
+        // Try to build a citation object for hover
+        const citObj = buildCitationForAgent(entry.agent);
+        if (citObj) {
+            const data = encodeURIComponent(JSON.stringify(citObj));
+            return `<span class="citation-group"><sup class="citation prov-bus-badge" data-citation="${data}">${escapeHtml(entryAgent)}</sup>${entryDate ? `<span class="citation-date">${entryDate}</span>` : ''}</span>`;
+        }
+        return `<span class="prov-bus-agent">${escapeHtml(entryAgent)}</span>${entryDate ? `<span class="prov-step-time">${entryDate}</span>` : ''}`;
+    };
+
     if (hasBus) {
         if (bus.supported_by && bus.supported_by.length) {
             html += '<div class="prov-bus-group">';
             html += '<div class="prov-bus-group-label supported">\u2713 Supported by</div>';
             for (const entry of bus.supported_by) {
-                const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
-                const entryDate = getAgentDate(entry.agent);
-                const entryDateHTML = entryDate ? `<span class="prov-step-time">${entryDate}</span>` : '';
                 html += `<div class="prov-bus-entry">
                     <span class="prov-bus-icon supported">\u2713</span>
-                    <span class="prov-bus-agent">${escapeHtml(entryAgent)}:</span>
+                    ${buildKBBadge(entry)}
                     <span class="prov-bus-finding">${escapeHtml(entry.finding)}</span>
                     <span class="prov-bus-reason">\u2014 ${escapeHtml(entry.reason)}</span>
-                    ${entryDateHTML}
                 </div>`;
             }
             html += '</div>';
@@ -1673,21 +1746,19 @@ function buildProvenanceHTML(citation) {
             html += '<div class="prov-bus-group">';
             html += '<div class="prov-bus-group-label contradicted">\u2717 Contradicted by</div>';
             for (const entry of bus.contradicted_by) {
-                const entryAgent = agentBadgeLabels[entry.agent] || entry.agent.replace(/_/g, ' ');
-                const entryDate = getAgentDate(entry.agent);
-                const entryDateHTML = entryDate ? `<span class="prov-step-time">${entryDate}</span>` : '';
                 html += `<div class="prov-bus-entry">
                     <span class="prov-bus-icon contradicted">\u2717</span>
-                    <span class="prov-bus-agent">${escapeHtml(entryAgent)}:</span>
+                    ${buildKBBadge(entry)}
                     <span class="prov-bus-finding">${escapeHtml(entry.finding)}</span>
                     <span class="prov-bus-reason">\u2014 ${escapeHtml(entry.reason)}</span>
-                    ${entryDateHTML}
                 </div>`;
             }
             html += '</div>';
         }
+    } else if (citation._kb_loaded) {
+        html += '<div class="prov-bus-empty">No cross-modal correlations found</div>';
     } else {
-        html += '<div class="prov-bus-empty">No cross-modal data yet</div>';
+        html += '<div class="prov-bus-loading"><span class="prov-bus-spinner"></span>Analyzing cross-modal correlations\u2026</div>';
     }
     html += '</div>';
 
