@@ -4,7 +4,7 @@ from src.agents.base_agent import Finding
 from src.agents.prompts import KNOWLEDGE_BUS_PROMPT_TEMPLATE
 from src.core.gemini_client import create_client
 
-GEMINI_MODEL = "gemini-3.1-pro"
+GEMINI_MODEL = "gemini-3.1-pro-preview"
 
 
 def _build_knowledge_bus_prompt(findings: list[Finding], patient_id: str, patient_info: dict) -> str:

@@ -643,6 +643,7 @@ function handleWebSocketMessage(data) {
 
     // Handle assistant messages - show as chat bubble only
     if (data.type === 'assistant') {
+        removeTypingIndicator();
         isProcessing = false;
         updateSendButton();
         addChatMessage('assistant', data.message, data.timestamp || new Date().toISOString());
@@ -656,11 +657,8 @@ function handleWebSocketMessage(data) {
         return;
     }
 
-    // Show only tool execution logs (tool_call, tool_result)
-    // This shows the pipeline execution details without duplicating chat messages
-    if (data.type === 'tool_call' || data.type === 'tool_result') {
-        addLogEntry(data);
-    }
+    // tool_call / tool_result are silently consumed — the loading indicator
+    // already tells the user something is happening.
 }
 
 // Update connection status UI
@@ -1034,6 +1032,28 @@ async function showCitationPopup(anchor, citation) {
 }
 
 // Add chat message to UI
+function showTypingIndicator() {
+    removeTypingIndicator();
+    const indicator = document.createElement('div');
+    indicator.className = 'chat-message assistant typing-indicator';
+    indicator.id = 'typing-indicator';
+    indicator.innerHTML = `
+        <div class="message-header">MedDataOS</div>
+        <div class="message-bubble">
+            <div class="message-content typing-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    `;
+    chatContainer.appendChild(indicator);
+    scrollToBottom();
+}
+
+function removeTypingIndicator() {
+    const indicator = document.getElementById('typing-indicator');
+    if (indicator) indicator.remove();
+}
+
 function addChatMessage(role, content, timestamp) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${role}`;
@@ -1256,6 +1276,9 @@ async function sendMessage() {
     // Add user message to chat immediately
     addChatMessage('user', displayMessage, new Date().toISOString());
 
+    // Show loading indicator
+    showTypingIndicator();
+
     // Clear input
     messageInput.value = '';
 
@@ -1293,11 +1316,13 @@ async function sendMessage() {
             refreshSidebarConversations();
             // Response will come via WebSocket
         } else if (result.status === 'error') {
+            removeTypingIndicator();
             alert(result.message || 'Failed to send message');
             isProcessing = false;
             updateSendButton();
         }
     } catch (error) {
+        removeTypingIndicator();
         console.error('Error sending message:', error);
         alert('Failed to communicate with server');
         isProcessing = false;

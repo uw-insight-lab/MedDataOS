@@ -20,7 +20,7 @@ from src.agents.heart_sounds_agent import HeartSoundsAgent
 from src.agents.lab_results_agent import LabResultsAgent
 from src.agents.medication_agent import MedicationAgent
 
-GEMINI_MODEL = "gemini-3.1-pro"
+GEMINI_MODEL = "gemini-3.1-pro-preview"
 
 AGENT_REGISTRY = {
     "analyze_clinical_notes": ClinicalNotesAgent(),
