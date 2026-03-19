@@ -1591,6 +1591,9 @@ function csvToModalHTML(csv, maxRows = 200) {
 async function openCitationModal(citation, pin = null) {
     modalCitation = citation;
 
+    // C1: no citation modal
+    if (studyCondition === 1) return;
+
     // Look up pin if not provided
     if (!pin && activePatientId) {
         const pins = patientPins[activePatientId] || [];
@@ -1606,8 +1609,8 @@ async function openCitationModal(citation, pin = null) {
 
     modalAgent.textContent = agentLabel;
 
-    // Update modal pin button state
-    if (activePatientId) {
+    // Pin button: only in C3
+    if (studyCondition === 3 && activePatientId) {
         modalPin.style.display = '';
         modalPin.classList.toggle('pinned', isPinned(activePatientId, citation));
     } else {
@@ -1616,7 +1619,7 @@ async function openCitationModal(citation, pin = null) {
 
     // ── Agent info panel ──────────────────────────────────
     const info = agentInfo[citation.agent];
-    if (info) {
+    if (info && studyCondition === 3) {
         const paperHTML = info.paper
             ? `<a href="${escapeHtml(info.paper)}" target="_blank" rel="noopener" class="agent-model-link">${info.paper.includes('arxiv') ? 'arXiv' : 'Paper'} &#x2197;</a>`
             : 'N/A';
@@ -1664,6 +1667,17 @@ async function openCitationModal(citation, pin = null) {
         modalAgentTab.style.display = '';
     } else {
         modalAgentTab.style.display = 'none';
+    }
+
+    // C2: hide Provenance and Agent tabs
+    if (studyCondition === 2) {
+        document.querySelector('.modal-tab[data-tab="provenance"]').style.display = 'none';
+        document.querySelector('.modal-tab[data-tab="agent"]').style.display = 'none';
+        modalAnnotationTags.parentElement.style.display = 'none'; // hide annotations section
+    } else {
+        document.querySelector('.modal-tab[data-tab="provenance"]').style.display = '';
+        document.querySelector('.modal-tab[data-tab="agent"]').style.display = '';
+        modalAnnotationTags.parentElement.style.display = '';
     }
 
     // ── Footer provenance ──────────────────────────────────
