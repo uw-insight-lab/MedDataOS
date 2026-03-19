@@ -294,19 +294,26 @@ function updateCitationBadgeStates() {
         try {
             const citation = JSON.parse(decodeURIComponent(badge.dataset.citation));
             const key = citation.agent + '|' + citation.web_path;
-            const progress = progressMap[key];
-            if (progress) {
-                // Pinned citation — use actual progress
-                if (progress.checked === 0) {
+            // Determine review state: pin checklist > citation review > default red
+            const pinProgress = progressMap[key];
+            const items = parseSummaryToChecklist(citation.summary);
+            let checked = 0, total = items ? items.length : 0;
+
+            if (pinProgress) {
+                checked = pinProgress.checked;
+                total = pinProgress.total;
+            } else if (citation.review && items) {
+                checked = items.filter((_, i) => citation.review[String(i)]).length;
+            }
+
+            if (total > 0) {
+                if (checked === 0) {
                     badge.classList.add('citation-review-none');
-                } else if (progress.complete) {
+                } else if (checked >= total) {
                     badge.classList.add('citation-review-complete');
                 } else {
                     badge.classList.add('citation-review-partial');
                 }
-            } else if (citation.summary && parseSummaryToChecklist(citation.summary)) {
-                // Not pinned but has findings — default to red
-                badge.classList.add('citation-review-none');
             }
             // Conflict indicator (independent of review state)
             const conflict = getCitationConflict(citation);
@@ -341,8 +348,7 @@ function buildPinSummaryHTML(summary) {
 }
 
 function renderInsightsPanel() {
-    const allPins = (activePatientId && patientPins[activePatientId]) || [];
-    const pins = allPins.filter(p => !p.hidden);
+    const pins = (activePatientId && patientPins[activePatientId]) || [];
     if (pins.length === 0) {
         insightsContent.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CC;</div><div class="empty-state-text">No pinned citations</div></div>';
         return;
@@ -1572,7 +1578,7 @@ async function openCitationModal(citation, pin = null) {
     // ── Summary or Checklist ─────────────────────────────────
     const checklistItems = parseSummaryToChecklist(citation.summary);
     if (checklistItems) {
-        const checklist_state = pin ? (pin.checklist_state || {}) : {};
+        const checklist_state = pin ? (pin.checklist_state || {}) : (citation.review || {});
         modalSummary.innerHTML = '';
         modalSummary.style.padding = '0';
         // Section header
@@ -1583,18 +1589,16 @@ async function openCitationModal(citation, pin = null) {
         modalSummary.appendChild(header);
         const ul = renderModalChecklist(checklistItems, checklist_state);
         modalSummary.appendChild(ul);
-        // Checkbox change handlers
+        // Checkbox change handlers — persist to pin if pinned, visual-only otherwise
         ul.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => {
             cb.addEventListener('change', async () => {
                 const li = cb.closest('li');
                 li.classList.toggle('checked', cb.checked);
-                if (!activePatientId) return;
-                if (!currentModalPin && !(await ensurePinned())) return;
+                if (!activePatientId || !currentModalPin) return;
                 currentModalPin.checklist_state = currentModalPin.checklist_state || {};
                 currentModalPin.checklist_state[String(i)] = cb.checked;
                 debouncedPatchChecklist(activePatientId, currentModalPin.pin_id,
                     { ...currentModalPin.checklist_state });
-                // Refresh progress indicators
                 renderInsightsPanel();
                 updateCitationBadgeStates();
             });

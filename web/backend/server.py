@@ -43,13 +43,19 @@ sessions = {}  # session_id -> {"history": [...], "processing": bool}
 patient_pins = {}
 
 
-def _cite(cid, agent, file, web_path, summary, knowledge_bus=None):
+def _cite(cid, agent, file, web_path, summary, knowledge_bus=None, review=None):
     """Helper to build a citation dict."""
     c = {"id": str(cid), "agent": agent, "file": file, "web_path": web_path, "summary": summary}
     if knowledge_bus:
         c["knowledge_bus"] = knowledge_bus
+    if review:
+        c["review"] = review
     return c
 
+
+# Review state helpers
+_reviewed = {"0": True, "1": True, "2": True, "3": True}
+_partial = {"0": True, "1": True, "2": False, "3": False}
 
 # Reusable P0001 citation builders (call with sequential id)
 def _c_notes(cid):
@@ -61,7 +67,8 @@ def _c_notes(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "ecg", "finding": "Lateral ST changes in V4\u2013V6", "reason": "cardiac origin confirmed"},
                      {"agent": "echo", "finding": "Wall motion abnormality", "reason": "structural basis for symptoms"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c_xray(cid):
     return _cite(cid, "chest_xray", "P0001.png", "/multimodal-data/chest-xray/P0001.png",
@@ -71,7 +78,8 @@ def _c_xray(cid):
                  "Mediastinal contours and bony thorax appear unremarkable.",
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "No orthopnea or decompensation signs", "reason": "consistent with clear radiograph"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c_ecg(cid):
     return _cite(cid, "ecg", "P0001.svg", "/multimodal-data/ecg/P0001.svg",
@@ -82,7 +90,8 @@ def _c_ecg(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "echo", "finding": "Lateral wall motion abnormality", "reason": "same vascular territory"},
                      {"agent": "clinical_notes", "finding": "Exertional chest pressure", "reason": "symptom correlation"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c_heart(cid):
     return _cite(cid, "heart_sounds", "P0001.wav", "/multimodal-data/heart-sounds/P0001.wav",
@@ -92,7 +101,8 @@ def _c_heart(cid):
                  "No pericardial rub or diastolic murmur detected.",
                  knowledge_bus={"supported_by": [
                      {"agent": "echo", "finding": "LVEF 45\u201350%", "reason": "confirms ventricular dysfunction"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review={"0": True, "1": True, "2": True, "3": False})
 
 def _c_echo(cid):
     return _cite(cid, "echo", "P0001.mp4", "/multimodal-data/echo/P0001.mp4",
@@ -103,7 +113,8 @@ def _c_echo(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "ecg", "finding": "ST depression V4\u2013V6", "reason": "same vascular territory"},
                      {"agent": "heart_sounds", "finding": "S4 gallop", "reason": "confirms impaired compliance"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_partial)
 
 def _c_labs(cid):
     return _cite(cid, "lab_results", "P0001.png", "/multimodal-data/lab-results/P0001.png",
@@ -113,7 +124,8 @@ def _c_labs(cid):
                  "CBC and hepatic function panels are unremarkable.",
                  knowledge_bus={"supported_by": [
                      {"agent": "medication", "finding": "Lisinopril 20mg (ACE inhibitor)", "reason": "explains K+ retention"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_partial)
 
 def _c_meds(cid):
     return _cite(cid, "medication", "P0001.csv", "/multimodal-data/medications/P0001.csv",
@@ -137,7 +149,8 @@ def _c2_notes(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "chest_xray", "finding": "RLL consolidation", "reason": "imaging confirms clinical pneumonia diagnosis"},
                      {"agent": "lab_results", "finding": "Elevated WBC and CRP", "reason": "inflammatory markers support active infection"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c2_xray(cid):
     return _cite(cid, "chest_xray", "P0002.png", "/multimodal-data/chest-xray/P0002.png",
@@ -148,7 +161,8 @@ def _c2_xray(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "RLL crackles and dullness to percussion", "reason": "exam localizes to same region"},
                      {"agent": "lab_results", "finding": "Elevated WBC", "reason": "confirms infectious etiology"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c2_ecg(cid):
     return _cite(cid, "ecg", "P0002.svg", "/multimodal-data/ecg/P0002.svg",
@@ -159,7 +173,8 @@ def _c2_ecg(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "Fever 39.2\u00b0C", "reason": "tachycardia explained by febrile state"},
                      {"agent": "echo", "finding": "Normal biventricular function", "reason": "rules out cardiac cause of tachycardia"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c2_heart(cid):
     return _cite(cid, "heart_sounds", "P0002.wav", "/multimodal-data/heart-sounds/P0002.wav",
@@ -169,7 +184,8 @@ def _c2_heart(cid):
                  "Findings consistent with a non-cardiac cause for symptoms.",
                  knowledge_bus={"supported_by": [
                      {"agent": "echo", "finding": "Normal valves, no effusion", "reason": "structural confirmation of normal auscultation"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c2_echo(cid):
     return _cite(cid, "echo", "P0002.mp4", "/multimodal-data/echo/P0002.mp4",
@@ -180,7 +196,8 @@ def _c2_echo(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "heart_sounds", "finding": "No murmurs or gallops", "reason": "acoustic confirms structural normality"},
                      {"agent": "ecg", "finding": "No ST changes or strain", "reason": "electrically normal heart"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c2_labs(cid):
     return _cite(cid, "lab_results", "P0002.png", "/multimodal-data/lab-results/P0002.png",
@@ -191,7 +208,8 @@ def _c2_labs(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "chest_xray", "finding": "RLL consolidation", "reason": "imaging correlates with lab infection markers"},
                      {"agent": "clinical_notes", "finding": "Fever and productive cough", "reason": "clinical presentation matches lab picture"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_partial)
 
 def _c2_meds(cid):
     return _cite(cid, "medication", "P0002.csv", "/multimodal-data/medications/P0002.csv",
@@ -201,7 +219,8 @@ def _c2_meds(cid):
                  "No known drug allergies documented.",
                  knowledge_bus={"supported_by": [
                      {"agent": "lab_results", "finding": "Normal renal and hepatic panels", "reason": "safe for current antibiotic dosing"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review={"0": True, "1": True, "2": True, "3": False})
 
 
 # Reusable P0003 citation builders
@@ -214,7 +233,8 @@ def _c3_notes(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "ecg", "finding": "Normal sinus rhythm", "reason": "no cardiac etiology for exercise intolerance"},
                      {"agent": "lab_results", "finding": "Borderline LDL and fasting glucose", "reason": "metabolic risk factors consistent with deconditioning"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c3_xray(cid):
     return _cite(cid, "chest_xray", "P0003.png", "/multimodal-data/chest-xray/P0003.png",
@@ -224,7 +244,8 @@ def _c3_xray(cid):
                  "Mediastinal contours and bony thorax appear unremarkable.",
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "Lungs clear to auscultation", "reason": "exam and imaging concordant"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c3_ecg(cid):
     return _cite(cid, "ecg", "P0003.svg", "/multimodal-data/ecg/P0003.svg",
@@ -234,7 +255,8 @@ def _c3_ecg(cid):
                  "No conduction delay or arrhythmia detected.",
                  knowledge_bus={"supported_by": [
                      {"agent": "heart_sounds", "finding": "Normal S1/S2, no murmurs", "reason": "electrically and acoustically normal"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c3_heart(cid):
     return _cite(cid, "heart_sounds", "P0003.wav", "/multimodal-data/heart-sounds/P0003.wav",
@@ -244,7 +266,8 @@ def _c3_heart(cid):
                  "Findings consistent with a structurally and functionally normal heart.",
                  knowledge_bus={"supported_by": [
                      {"agent": "echo", "finding": "Normal LVEF and valves", "reason": "structural confirmation"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c3_echo(cid):
     return _cite(cid, "echo", "P0003.mp4", "/multimodal-data/echo/P0003.mp4",
@@ -255,7 +278,8 @@ def _c3_echo(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "ecg", "finding": "No chamber enlargement on ECG", "reason": "electrical and structural concordance"},
                      {"agent": "heart_sounds", "finding": "No murmurs or gallops", "reason": "acoustic confirmation"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_reviewed)
 
 def _c3_labs(cid):
     return _cite(cid, "lab_results", "P0003.png", "/multimodal-data/lab-results/P0003.png",
@@ -277,7 +301,8 @@ def _c3_meds(cid):
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "GAD well-controlled", "reason": "current Sertraline dose is effective"},
                      {"agent": "lab_results", "finding": "Normal TSH", "reason": "no thyroid contribution to anxiety or insomnia"},
-                 ], "contradicted_by": []})
+                 ], "contradicted_by": []},
+                 review=_partial)
 
 
 def _msg(role, content, citations=None, ts=None):
@@ -493,7 +518,6 @@ def _seed_demo_sessions():
     }
 
     # ── Demo pins for P0001 ─────────────────────────────────────
-    # Visible pins (shown on pinned panel)
     patient_pins["P0001"] = [
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1), "source": "demo-1",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
@@ -506,23 +530,6 @@ def _seed_demo_sessions():
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_meds(3), "source": "demo-1",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
          "annotations": {"text": "", "tags": []}, "checklist_state": {}},
-        # Hidden pins (badge color only)
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_notes(4), "source": "demo-1",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_heart(5), "source": "demo-1",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": False}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_xray(6), "source": "demo-1",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c_echo(7), "source": "demo-2",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": False, "3": False}},
     ]
 
     # ── Demo pins for P0002 ─────────────────────────────────────
@@ -539,23 +546,6 @@ def _seed_demo_sessions():
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
          "annotations": {"text": "", "tags": []},
          "checklist_state": {"0": True, "1": True, "2": True, "3": False}},
-        # Hidden pins (badge color only)
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_notes(4), "source": "demo-4",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True, "4": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_ecg(5), "source": "demo-4",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_heart(6), "source": "demo-4",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_echo(7), "source": "demo-4",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
     ]
 
     # ── Demo pins for P0003 ─────────────────────────────────────
@@ -571,23 +561,6 @@ def _seed_demo_sessions():
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
          "annotations": {"text": "", "tags": []},
          "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        # Hidden pins (badge color only)
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_notes(4), "source": "demo-7",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_ecg(5), "source": "demo-7",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_heart(6), "source": "demo-7",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
-        {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_xray(7), "source": "demo-7",
-         "created_at": datetime.now(timezone.utc).isoformat(), "query": "", "hidden": True,
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": False}},
     ]
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
