@@ -523,47 +523,57 @@ def _seed_demo_sessions():
     patient_pins["P0001"] = [
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_ecg(1), "source": "demo-1",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
+         "annotations": {"text": "", "tags": []}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_labs(2), "source": "demo-2",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": False, "3": False}},
+         "annotations": {"text": "", "tags": []}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c_meds(3), "source": "demo-1",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []}, "checklist_state": {}},
+         "annotations": {"text": "", "tags": []}},
     ]
 
     # ── Demo pins for P0002 ─────────────────────────────────────
     patient_pins["P0002"] = [
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_xray(1), "source": "demo-4",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
+         "annotations": {"text": "", "tags": []}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_labs(2), "source": "demo-4",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": False, "3": False}},
+         "annotations": {"text": "", "tags": []}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c2_meds(3), "source": "demo-5",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": False}},
+         "annotations": {"text": "", "tags": []}},
     ]
 
     # ── Demo pins for P0003 ─────────────────────────────────────
     patient_pins["P0003"] = [
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_labs(1), "source": "demo-7",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []}, "checklist_state": {}},
+         "annotations": {"text": "", "tags": []}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_meds(2), "source": "demo-9",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": False, "3": False}},
+         "annotations": {"text": "", "tags": []}},
         {"pin_id": str(uuid4()), "type": "citation", "citation": _c3_echo(3), "source": "demo-7",
          "created_at": datetime.now(timezone.utc).isoformat(), "query": "",
-         "annotations": {"text": "", "tags": []},
-         "checklist_state": {"0": True, "1": True, "2": True, "3": True}},
+         "annotations": {"text": "", "tags": []}},
     ]
+
+    # ── Demo review states (decoupled from pins) ────────────────
+    patient_reviews["P0001"] = {
+        f"{c['agent']}|{c['web_path']}": c["review"]
+        for c in [_c_notes(0), _c_xray(0), _c_ecg(0), _c_heart(0), _c_echo(0), _c_labs(0), _c_meds(0)]
+        if c.get("review")
+    }
+    patient_reviews["P0002"] = {
+        f"{c['agent']}|{c['web_path']}": c["review"]
+        for c in [_c2_notes(0), _c2_xray(0), _c2_ecg(0), _c2_heart(0), _c2_echo(0), _c2_labs(0), _c2_meds(0)]
+        if c.get("review")
+    }
+    patient_reviews["P0003"] = {
+        f"{c['agent']}|{c['web_path']}": c["review"]
+        for c in [_c3_notes(0), _c3_xray(0), _c3_ecg(0), _c3_heart(0), _c3_echo(0), _c3_labs(0), _c3_meds(0)]
+        if c.get("review")
+    }
 
     # ── Conversation 5: Asthma + Pneumonia Management — P0002 (2:2)
     sessions["demo-5"] = {
