@@ -1256,15 +1256,15 @@ main {
 }
 
 .citation-has-conflict::before {
-    content: '';
+    content: '\26A0\FE0F';
     position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 6px;
-    height: 6px;
-    background: var(--critical);
+    top: -7px;
+    right: -7px;
+    font-size: 13px;
+    line-height: 1;
+    background: var(--bg-surface);
     border-radius: 50%;
-    border: 1px solid var(--bg-surface);
+    padding: 1px;
 }
 
 .citation:hover {
