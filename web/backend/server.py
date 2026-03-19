@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import uvicorn
 import asyncio
 import threading
@@ -41,6 +41,8 @@ sessions = {}  # session_id -> {"history": [...], "processing": bool}
 
 # Per-patient pinned citations (patient_id -> list of {pin_id, citation})
 patient_pins = {}
+
+patient_reviews = {}   # {patient_id: {"agent|web_path": {"0": True, ...}}}
 
 
 def _cite(cid, agent, file, web_path, summary, knowledge_bus=None, review=None):
@@ -1195,6 +1197,23 @@ async def patch_patient_pin(patient_id: str, pin_id: str, request: dict):
                 p["checklist_state"] = request["checklist_state"]
             return p
     return {"status": "error", "message": "Pin not found"}
+
+
+@app.get("/api/patients/{patient_id}/reviews")
+async def get_patient_reviews(patient_id: str):
+    """Return review checklist states for a patient."""
+    return patient_reviews.get(patient_id, {})
+
+
+@app.patch("/api/patients/{patient_id}/reviews")
+async def patch_patient_review(patient_id: str, request: dict):
+    """Upsert review checklist state for a citation."""
+    key = request.get("key", "").strip()
+    if not key:
+        return JSONResponse(status_code=422, content={"error": "key is required"})
+    checklist_state = request.get("checklist_state", {})
+    patient_reviews.setdefault(patient_id, {})[key] = checklist_state
+    return {"key": key, "checklist_state": checklist_state}
 
 
 @app.get("/api/health")
