@@ -383,8 +383,8 @@ function buildPinSummaryHTML(summary) {
 }
 
 function renderInsightsPanel() {
-    const pins = (activePatientId && patientPins[activePatientId]) || [];
     if (studyCondition !== 3) return;
+    const pins = (activePatientId && patientPins[activePatientId]) || [];
     if (pins.length === 0) {
         insightsContent.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CC;</div><div class="empty-state-text">No pinned citations</div></div>';
         return;
@@ -1158,6 +1158,29 @@ function removeTypingIndicator() {
     if (indicator) indicator.remove();
 }
 
+function renderAssistantContent(rawContent) {
+    let responseText = rawContent;
+    let citations = [];
+    try {
+        const parsed = JSON.parse(rawContent);
+        if (parsed.response && parsed.citations) {
+            responseText = parsed.response;
+            citations = parsed.citations;
+        }
+    } catch (e) { /* plain text, use as-is */ }
+
+    // C1: strip citation markers from text
+    if (studyCondition === 1) {
+        responseText = responseText.replace(/\s*\[cite:\w+\]/g, '');
+        citations = [];
+    }
+
+    const rawHtml = marked.parse(responseText);
+    const safeHtml = DOMPurify.sanitize(rawHtml);
+    const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
+    return (studyCondition !== 1 && citations.length > 0) ? renderWithCitations(withWarnings, citations) : withWarnings;
+}
+
 function addChatMessage(role, content, timestamp) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${role}`;
@@ -1170,27 +1193,7 @@ function addChatMessage(role, content, timestamp) {
     // Render markdown for assistant messages, plain text for user messages
     let messageContent;
     if (role === 'assistant') {
-        // Detect citation JSON format {response, citations}
-        let responseText = content;
-        let citations = [];
-        try {
-            const parsed = JSON.parse(content);
-            if (parsed.response && parsed.citations) {
-                responseText = parsed.response;
-                citations = parsed.citations;
-            }
-        } catch (e) { /* plain text, use as-is */ }
-
-        // C1: strip citation markers from text
-        if (studyCondition === 1) {
-            responseText = responseText.replace(/\s*\[cite:\w+\]/g, '');
-            citations = [];
-        }
-
-        const rawHtml = marked.parse(responseText);
-        const safeHtml = DOMPurify.sanitize(rawHtml);
-        const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
-        messageContent = citations.length > 0 ? renderWithCitations(withWarnings, citations) : withWarnings;
+        messageContent = renderAssistantContent(content);
     } else {
         // User messages stay as plain text
         messageContent = escapeHtml(content);
@@ -1220,30 +1223,7 @@ function reRenderChat() {
         // Re-render message content with current condition
         let messageContent;
         if (role === 'assistant') {
-            let responseText = raw;
-            let citations = [];
-            try {
-                const parsed = JSON.parse(raw);
-                if (parsed.response && parsed.citations) {
-                    responseText = parsed.response;
-                    citations = parsed.citations;
-                }
-            } catch (e) { /* plain text */ }
-
-            // C1: strip citation markers
-            if (studyCondition === 1) {
-                responseText = responseText.replace(/\s*\[cite:\w+\]/g, '');
-            }
-
-            const rawHtml = marked.parse(responseText);
-            const safeHtml = DOMPurify.sanitize(rawHtml);
-            const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
-
-            if (studyCondition === 1 || citations.length === 0) {
-                messageContent = withWarnings;
-            } else {
-                messageContent = renderWithCitations(withWarnings, citations);
-            }
+            messageContent = renderAssistantContent(raw);
         } else {
             messageContent = escapeHtml(raw);
         }
