@@ -43,8 +43,8 @@ const modalPin = document.getElementById('modal-pin');
 const modalTabToggle = document.getElementById('modal-tab-toggle');
 const modalAnnotationText = document.getElementById('modal-annotation-text');
 const modalAnnotationTags = document.getElementById('modal-annotation-tags');
-const modalInfoBtn = document.getElementById('modal-info-btn');
-const modalAgentInfo = document.getElementById('modal-agent-info');
+const modalAgentTab = document.getElementById('modal-agent-tab');
+const modalAgentPanel = document.getElementById('modal-agent-panel');
 const modalProvenance = document.getElementById('modal-provenance');
 const modalProvenancePanel = document.getElementById('modal-provenance-panel');
 
@@ -1492,13 +1492,13 @@ async function openCitationModal(citation, pin = null) {
         modalPin.style.display = 'none';
     }
 
-    // ── Agent info tooltip ──────────────────────────────────
+    // ── Agent info panel ──────────────────────────────────
     const info = agentInfo[citation.agent];
     if (info) {
         const paperHTML = info.paper
             ? `<a href="${escapeHtml(info.paper)}" target="_blank" rel="noopener" class="agent-model-link">${info.paper.includes('arxiv') ? 'arXiv' : 'Paper'} &#x2197;</a>`
             : 'N/A';
-        modalAgentInfo.innerHTML = `
+        modalAgentPanel.innerHTML = `
             <div class="agent-info-tooltip-body">
                 <div class="agent-info-tooltip-row">
                     <span class="agent-info-tooltip-label">Model</span>
@@ -1539,9 +1539,9 @@ async function openCitationModal(citation, pin = null) {
             </div>
             <div class="agent-info-tooltip-disclaimer">Advisory only — verify clinically</div>
         `;
-        modalInfoBtn.style.display = '';
+        modalAgentTab.style.display = '';
     } else {
-        modalInfoBtn.style.display = 'none';
+        modalAgentTab.style.display = 'none';
     }
 
     // ── Footer provenance ──────────────────────────────────
@@ -1782,6 +1782,7 @@ function closeCitationModal() {
     citationBackdrop.classList.remove('open');
     citationModal.classList.remove('open');
     citationModal.classList.remove('flipped');
+    citationModal.classList.remove('agent-view');
     citationModal.style.height = '';
     // Reset tabs to data
     modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'data'));
@@ -1789,6 +1790,7 @@ function closeCitationModal() {
     modalBody.querySelectorAll('video, audio').forEach(el => { el.pause(); el.src = ''; });
     modalBody.innerHTML = '';
     modalProvenancePanel.innerHTML = '';
+    modalAgentPanel.innerHTML = '';
     currentModalPin = null;
 }
 
@@ -1820,24 +1822,24 @@ modalPin.addEventListener('click', async () => {
     }
 });
 
-// Tab toggle — switch between data and provenance views
+// Tab toggle — switch between data, provenance, and agent views
 modalTabToggle.addEventListener('click', (e) => {
     const tab = e.target.closest('.modal-tab');
     if (!tab || !modalCitation) return;
     const target = tab.dataset.tab;
-    const isFlipped = target === 'provenance';
     // Lock height before toggling to prevent jump
-    if (!citationModal.style.height) {
+    if (target !== 'data' && !citationModal.style.height) {
         citationModal.style.height = citationModal.offsetHeight + 'px';
     }
-    citationModal.classList.toggle('flipped', isFlipped);
+    citationModal.classList.toggle('flipped', target === 'provenance');
+    citationModal.classList.toggle('agent-view', target === 'agent');
     // Update active tab
     modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
     // Build provenance content on first flip
-    if (isFlipped && !modalProvenancePanel.innerHTML) {
+    if (target === 'provenance' && !modalProvenancePanel.innerHTML) {
         modalProvenancePanel.innerHTML = buildProvenanceHTML(modalCitation);
     }
-    if (!isFlipped) {
+    if (target === 'data') {
         citationModal.style.height = '';
     }
 });
@@ -1848,8 +1850,9 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     if (e.key === 'Escape' && citationModal.classList.contains('open')) {
-        if (citationModal.classList.contains('flipped')) {
+        if (citationModal.classList.contains('flipped') || citationModal.classList.contains('agent-view')) {
             citationModal.classList.remove('flipped');
+            citationModal.classList.remove('agent-view');
             citationModal.style.height = '';
             modalTabToggle.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'data'));
         } else {
@@ -1880,17 +1883,6 @@ modalBody.addEventListener('click', (e) => {
     }
 });
 
-// Agent info tooltip hover (button + tooltip both keep it visible)
-let tooltipHideTimeout = null;
-modalInfoBtn.addEventListener('mouseenter', () => {
-    clearTimeout(tooltipHideTimeout);
-    modalAgentInfo.classList.add('visible');
-});
-modalInfoBtn.addEventListener('mouseleave', () => {
-    tooltipHideTimeout = setTimeout(() => modalAgentInfo.classList.remove('visible'), 100);
-});
-modalAgentInfo.addEventListener('mouseenter', () => clearTimeout(tooltipHideTimeout));
-modalAgentInfo.addEventListener('mouseleave', () => modalAgentInfo.classList.remove('visible'));
 
 // Annotation textarea: auto-grow + debounced save (auto-pins if needed)
 modalAnnotationText.addEventListener('input', async () => {
