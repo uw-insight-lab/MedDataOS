@@ -1571,8 +1571,8 @@ main {
 }
 
 .modal-body {
-    flex: none;
-    height: 320px;
+    flex: 1 1 320px;
+    min-height: 120px;
     overflow: auto;
     display: flex;
     align-items: center;
