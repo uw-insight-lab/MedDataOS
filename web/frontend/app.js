@@ -1178,6 +1178,12 @@ function addChatMessage(role, content, timestamp) {
             }
         } catch (e) { /* plain text, use as-is */ }
 
+        // C1: strip citation markers from text
+        if (studyCondition === 1) {
+            responseText = responseText.replace(/\s*\[cite:\w+\]/g, '');
+            citations = [];
+        }
+
         const rawHtml = marked.parse(responseText);
         const safeHtml = DOMPurify.sanitize(rawHtml);
         const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
