@@ -289,34 +289,16 @@ function getPinProgress(pin) {
 // Update citation badges in chat to reflect review status
 function updateCitationBadgeStates() {
     if (!activePatientId) return;
-    const pins = patientPins[activePatientId] || [];
-    // Build lookup: "agent|web_path" -> progress
-    const progressMap = {};
-    pins.forEach(p => {
-        if (p.type === 'text' || !p.citation) return;
-        const progress = getPinProgress(p);
-        if (progress) {
-            const key = p.citation.agent + '|' + p.citation.web_path;
-            progressMap[key] = progress;
-        }
-    });
-    // Scan all citation badges in chat
+    const reviews = patientReviews[activePatientId] || {};
     chatContainer.querySelectorAll('.citation').forEach(badge => {
         badge.classList.remove('citation-review-none', 'citation-review-partial', 'citation-review-complete', 'citation-has-conflict');
         try {
             const citation = JSON.parse(decodeURIComponent(badge.dataset.citation));
             const key = citation.agent + '|' + citation.web_path;
-            // Determine review state: pin checklist > citation review > default red
-            const pinProgress = progressMap[key];
             const items = parseSummaryToChecklist(citation.summary);
-            let checked = 0, total = items ? items.length : 0;
-
-            if (pinProgress) {
-                checked = pinProgress.checked;
-                total = pinProgress.total;
-            } else if (citation.review && items) {
-                checked = items.filter((_, i) => citation.review[String(i)]).length;
-            }
+            const total = items ? items.length : 0;
+            const state = reviews[key] || {};
+            const checked = items ? items.filter((_, i) => state[String(i)]).length : 0;
 
             if (total > 0) {
                 if (checked === 0) {
@@ -327,7 +309,6 @@ function updateCitationBadgeStates() {
                     badge.classList.add('citation-review-partial');
                 }
             }
-            // Conflict indicator (independent of review state)
             const conflict = getCitationConflict(citation);
             if (conflict) {
                 badge.classList.add('citation-has-conflict');
