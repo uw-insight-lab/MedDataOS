@@ -363,6 +363,21 @@ function renderInsightsPanel() {
             const previewHTML = buildPinPreview(p.citation);
             const annotationText = p.annotations && p.annotations.text ? p.annotations.text : '';
             const annotationTags = p.annotations && p.annotations.tags && p.annotations.tags.length > 0 ? p.annotations.tags : [];
+            const reviewKey = p.citation.agent + '|' + p.citation.web_path;
+            const reviews = patientReviews[activePatientId] || {};
+            const items = parseSummaryToChecklist(p.citation.summary);
+            let progressHTML = '';
+            if (items) {
+                const state = reviews[reviewKey] || {};
+                const checked = items.filter((_, i) => state[String(i)]).length;
+                const total = items.length;
+                const pct = Math.round((checked / total) * 100);
+                const cls = checked === 0 ? 'review-none' : checked >= total ? 'review-complete' : 'review-partial';
+                progressHTML = `<div class="pinned-card-progress ${cls}">
+                    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+                    <span class="progress-label">${checked}/${total}</span>
+                </div>`;
+            }
             const conflict = getCitationConflict(p.citation);
             const conflictHTML = conflict
                 ? `<div class="pinned-card-conflict">\u26A0 Contradicted by ${escapeHtml(conflict.firstAgent)}</div>`
@@ -373,6 +388,7 @@ function renderInsightsPanel() {
                 <div class="pinned-card-summary">${buildPinSummaryHTML(p.citation.summary)}</div>
                 ${annotationText ? `<div class="pinned-card-annotation">${escapeHtml(annotationText.slice(0, 60))}${annotationText.length > 60 ? '…' : ''}</div>` : ''}
                 ${annotationTags.length > 0 ? `<div class="pinned-card-tags">${annotationTags.map(t => `<span class="pinned-card-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+                ${progressHTML}
                 ${conflictHTML}
                 ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
@@ -1587,6 +1603,7 @@ async function openCitationModal(citation, pin = null) {
                 patientReviews[activePatientId][rKey] = current;
                 debouncedPatchReview(activePatientId, rKey, { ...current });
                 updateCitationBadgeStates();
+                renderInsightsPanel();
             });
         });
     } else {
