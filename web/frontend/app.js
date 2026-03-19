@@ -1061,6 +1061,9 @@ let hideTimeout = null;
 async function showCitationPopup(anchor, citation) {
     clearTimeout(hideTimeout);
 
+    // C1: no citation popups at all
+    if (studyCondition === 1) return;
+
     const type = getCitationType(citation.file);
     const agentLabel = agentCardLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
 
@@ -1077,7 +1080,7 @@ async function showCitationPopup(anchor, citation) {
         contentHTML = `<div class="card-loading">Loading…</div>`;
     }
 
-    const pinBtnHTML = activePatientId
+    const pinBtnHTML = (studyCondition === 3 && activePatientId)
         ? `<button class="btn-pin-card${isPinned(activePatientId, citation) ? ' pinned' : ''}" data-citation="${encodeURIComponent(JSON.stringify(citation))}" title="Pin citation">&#x1F4CC;</button>`
         : '';
 
@@ -1096,7 +1099,7 @@ async function showCitationPopup(anchor, citation) {
         summaryHTML = escapeHtml(citation.summary);
     }
 
-    const conflict = getCitationConflict(citation);
+    const conflict = studyCondition === 3 ? getCitationConflict(citation) : null;
     const conflictHTML = conflict
         ? `<div class="card-conflict">\u26A0 Contradicted by ${escapeHtml(conflict.firstAgent)}${conflict.count > 1 ? ` +${conflict.count - 1}` : ''}</div>`
         : '';
