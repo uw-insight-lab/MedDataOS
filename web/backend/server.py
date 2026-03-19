@@ -1164,8 +1164,7 @@ async def add_patient_pin(patient_id: str, request: dict):
                       "source": request.get("source", ""),
                       "created_at": datetime.now(timezone.utc).isoformat(),
                       "query": request.get("query", ""),
-                      "annotations": {"text": "", "tags": []},
-                      "checklist_state": {}})
+                      "annotations": {"text": "", "tags": []}})
     elif pin_type == "text":
         text = request.get("text", "").strip()
         if not text:
@@ -1197,14 +1196,12 @@ async def remove_patient_pin(patient_id: str, pin_id: str):
 
 @app.patch("/api/patients/{patient_id}/pins/{pin_id}")
 async def patch_patient_pin(patient_id: str, pin_id: str, request: dict):
-    """Update annotations or checklist_state for a pin."""
+    """Update annotations for a pin."""
     pins = patient_pins.get(patient_id, [])
     for p in pins:
         if p["pin_id"] == pin_id:
             if "annotations" in request:
                 p["annotations"] = request["annotations"]
-            if "checklist_state" in request:
-                p["checklist_state"] = request["checklist_state"]
             return p
     return {"status": "error", "message": "Pin not found"}
 
