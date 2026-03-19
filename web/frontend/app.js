@@ -330,6 +330,7 @@ function findTextPinId(patientId, text) {
 // Update citation badges in chat to reflect review status
 function updateCitationBadgeStates() {
     if (!activePatientId) return;
+    if (studyCondition !== 3) return;
     const reviews = patientReviews[activePatientId] || {};
     chatContainer.querySelectorAll('.citation').forEach(badge => {
         badge.classList.remove('citation-review-none', 'citation-review-partial', 'citation-review-complete', 'citation-has-conflict');
@@ -383,6 +384,7 @@ function buildPinSummaryHTML(summary) {
 
 function renderInsightsPanel() {
     const pins = (activePatientId && patientPins[activePatientId]) || [];
+    if (studyCondition !== 3) return;
     if (pins.length === 0) {
         insightsContent.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CC;</div><div class="empty-state-text">No pinned citations</div></div>';
         return;
@@ -2137,6 +2139,7 @@ chatContainer.addEventListener('mouseup', (e) => {
     // Ignore if clicking on citation badges or the pin button itself
     if (e.target.closest('.citation') || e.target.closest('.text-select-pin')) return;
     if (!activePatientId) return;
+    if (studyCondition !== 3) return;
 
     const sel = window.getSelection();
     const text = getCleanSelectionText(sel);
