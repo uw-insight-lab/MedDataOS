@@ -275,17 +275,6 @@ function findTextPinId(patientId, text) {
     return match ? match.pin_id : null;
 }
 
-// Compute review progress for a pin: { checked, total, complete }
-function getPinProgress(pin) {
-    if (!pin || pin.type === 'text' || !pin.citation) return null;
-    const items = parseSummaryToChecklist(pin.citation.summary);
-    if (!items) return null;
-    const total = items.length;
-    const state = pin.checklist_state || {};
-    const checked = items.filter((_, i) => state[String(i)]).length;
-    return { checked, total, complete: checked === total };
-}
-
 // Update citation badges in chat to reflect review status
 function updateCitationBadgeStates() {
     if (!activePatientId) return;
@@ -374,16 +363,6 @@ function renderInsightsPanel() {
             const previewHTML = buildPinPreview(p.citation);
             const annotationText = p.annotations && p.annotations.text ? p.annotations.text : '';
             const annotationTags = p.annotations && p.annotations.tags && p.annotations.tags.length > 0 ? p.annotations.tags : [];
-            const progress = getPinProgress(p);
-            let progressHTML = '';
-            if (progress) {
-                const pct = Math.round((progress.checked / progress.total) * 100);
-                const state = progress.checked === 0 ? 'review-none' : progress.complete ? 'review-complete' : 'review-partial';
-                progressHTML = `<div class="pinned-card-progress ${state}">
-                    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-                    <span class="progress-label">${progress.checked}/${progress.total}</span>
-                </div>`;
-            }
             const conflict = getCitationConflict(p.citation);
             const conflictHTML = conflict
                 ? `<div class="pinned-card-conflict">\u26A0 Contradicted by ${escapeHtml(conflict.firstAgent)}</div>`
@@ -394,7 +373,6 @@ function renderInsightsPanel() {
                 <div class="pinned-card-summary">${buildPinSummaryHTML(p.citation.summary)}</div>
                 ${annotationText ? `<div class="pinned-card-annotation">${escapeHtml(annotationText.slice(0, 60))}${annotationText.length > 60 ? '…' : ''}</div>` : ''}
                 ${annotationTags.length > 0 ? `<div class="pinned-card-tags">${annotationTags.map(t => `<span class="pinned-card-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-                ${progressHTML}
                 ${conflictHTML}
                 ${p.source ? `<span class="pinned-card-source" data-session-id="${escapeHtml(p.source)}" title="Go to source">View in chat &#x2192;</span>` : ''}
                 <button class="btn-unpin" title="Unpin">&times;</button>
@@ -1288,7 +1266,6 @@ async function patchPin(patientId, pinId, data) {
         const pin = pins.find(p => p.pin_id === pinId);
         if (pin) {
             if (data.annotations !== undefined) pin.annotations = data.annotations;
-            if (data.checklist_state !== undefined) pin.checklist_state = data.checklist_state;
         }
     } catch (e) {
         console.error('Failed to patch pin:', e);
@@ -1297,10 +1274,6 @@ async function patchPin(patientId, pinId, data) {
 
 const debouncedPatchAnnotations = debounce((patientId, pinId, annotations) => {
     patchPin(patientId, pinId, { annotations });
-}, 500);
-
-const debouncedPatchChecklist = debounce((patientId, pinId, checklist_state) => {
-    patchPin(patientId, pinId, { checklist_state });
 }, 500);
 
 // Clear chat
