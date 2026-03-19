@@ -341,7 +341,8 @@ function buildPinSummaryHTML(summary) {
 }
 
 function renderInsightsPanel() {
-    const pins = (activePatientId && patientPins[activePatientId]) || [];
+    const allPins = (activePatientId && patientPins[activePatientId]) || [];
+    const pins = allPins.filter(p => !p.hidden);
     if (pins.length === 0) {
         insightsContent.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CC;</div><div class="empty-state-text">No pinned citations</div></div>';
         return;
@@ -1069,7 +1070,7 @@ async function showCitationPopup(anchor, citation) {
     // Fetch and render text-based content
     if (type === 'csv' || type === 'text') {
         try {
-            const text = await fetch(citation.web_path).then(r => r.text());
+            const text = await fetch(citation.web_path + '?t=' + Date.now()).then(r => r.text());
             const inner = document.getElementById('card-content-inner');
             if (inner) {
                 inner.innerHTML = type === 'csv'
@@ -1617,7 +1618,7 @@ async function openCitationModal(citation, pin = null) {
     // Fetch text-based content
     if (type === 'csv' || type === 'text') {
         try {
-            const text = await fetch(citation.web_path).then(r => r.text());
+            const text = await fetch(citation.web_path + '?t=' + Date.now()).then(r => r.text());
             modalBody.innerHTML = type === 'csv'
                 ? csvToModalHTML(text)
                 : `<div class="modal-text">${plainTextToHTML(text)}</div>`;
