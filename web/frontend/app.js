@@ -549,7 +549,7 @@ async function switchConversation(patientId, sid) {
     // within the same patient the local cache is authoritative and
     // a fresh fetch would race with any in-flight PATCH requests.
     if (changingPatient) {
-        await fetchPins(patientId);
+        await Promise.all([fetchPins(patientId), fetchReviews(patientId)]);
     }
     renderInsightsPanel();
 
