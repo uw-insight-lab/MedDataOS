@@ -1158,6 +1158,9 @@ function removeTypingIndicator() {
 function addChatMessage(role, content, timestamp) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${role}`;
+    messageDiv.dataset.rawContent = content;
+    messageDiv.dataset.rawRole = role;
+    messageDiv.dataset.rawTimestamp = timestamp || '';
 
     const label = role === 'user' ? 'You' : 'MedDataOS';
 
@@ -1195,6 +1198,62 @@ function addChatMessage(role, content, timestamp) {
 
     chatContainer.appendChild(messageDiv);
     scrollToBottom();
+}
+
+function reRenderChat() {
+    const messages = chatContainer.querySelectorAll('.chat-message');
+    messages.forEach(msg => {
+        const raw = msg.dataset.rawContent;
+        const role = msg.dataset.rawRole;
+        const ts = msg.dataset.rawTimestamp;
+        if (!raw || !role) return; // skip log entries, typing indicator, etc.
+
+        // Re-render message content with current condition
+        let messageContent;
+        if (role === 'assistant') {
+            let responseText = raw;
+            let citations = [];
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed.response && parsed.citations) {
+                    responseText = parsed.response;
+                    citations = parsed.citations;
+                }
+            } catch (e) { /* plain text */ }
+
+            // C1: strip citation markers
+            if (studyCondition === 1) {
+                responseText = responseText.replace(/\s*\[cite:\w+\]/g, '');
+            }
+
+            const rawHtml = marked.parse(responseText);
+            const safeHtml = DOMPurify.sanitize(rawHtml);
+            const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
+
+            if (studyCondition === 1 || citations.length === 0) {
+                messageContent = withWarnings;
+            } else {
+                messageContent = renderWithCitations(withWarnings, citations);
+            }
+        } else {
+            messageContent = escapeHtml(raw);
+        }
+
+        const timeStr = ts ? formatMessageTime(ts) : '';
+        const label = role === 'user' ? 'You' : 'MedDataOS';
+        msg.innerHTML = `
+            <div class="message-header">${escapeHtml(label)}</div>
+            <div class="message-bubble">
+                <div class="message-content">${messageContent}</div>
+            </div>
+            ${timeStr ? `<span class="message-time">${timeStr}</span>` : ''}
+        `;
+    });
+
+    // Re-apply badge states for C3 only
+    if (studyCondition === 3) {
+        updateCitationBadgeStates();
+    }
 }
 
 // Map tool names to friendly agent names
