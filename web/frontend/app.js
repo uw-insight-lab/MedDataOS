@@ -5,6 +5,7 @@ let ws = null;
 let sessionId = localStorage.getItem('meddata_session_id') || null;
 let isProcessing = false;
 let attachedFile = null;
+let studyCondition = 3; // 1=plain text, 2=basic citations, 3=full system
 
 // Sidebar state
 let activePatientId = null;
@@ -19,6 +20,57 @@ let patientReviews = {};  // patient_id -> {"agent|web_path": {"0": true, ...}}
 let modalCitation = null; // citation currently shown in modal
 let currentModalPin = null; // full pin object for modal (or null if not pinned)
 let lastUserQuery = '';     // last query text for pin provenance
+
+// ─── Study Condition System ────────────────────────────────
+function initCondition() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlCondition = parseInt(urlParams.get('condition'));
+    const storedCondition = parseInt(localStorage.getItem('studyCondition'));
+
+    if ([1, 2, 3].includes(urlCondition)) {
+        studyCondition = urlCondition;
+    } else if ([1, 2, 3].includes(storedCondition)) {
+        studyCondition = storedCondition;
+    } else {
+        studyCondition = 3;
+    }
+
+    document.body.dataset.condition = studyCondition;
+    window.studyCondition = studyCondition; // expose for researcher console access
+    localStorage.setItem('studyCondition', studyCondition);
+    syncConditionURL();
+}
+
+function syncConditionURL() {
+    const url = new URL(window.location);
+    url.searchParams.set('condition', studyCondition);
+    history.replaceState(null, '', url);
+}
+
+function cycleCondition() {
+    studyCondition = studyCondition >= 3 ? 1 : studyCondition + 1;
+    document.body.dataset.condition = studyCondition;
+    window.studyCondition = studyCondition;
+    localStorage.setItem('studyCondition', studyCondition);
+    syncConditionURL();
+    showConditionPill();
+    reRenderChat();
+}
+
+function showConditionPill() {
+    const pill = document.getElementById('condition-pill');
+    if (!pill) return;
+    pill.textContent = 'C' + studyCondition;
+    pill.classList.remove('fading');
+    pill.classList.add('visible');
+    clearTimeout(pill._hideTimer);
+    pill._hideTimer = setTimeout(() => {
+        pill.classList.add('fading');
+        setTimeout(() => {
+            pill.classList.remove('visible', 'fading');
+        }, 300);
+    }, 3000);
+}
 
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
@@ -2149,5 +2201,15 @@ messageInput.addEventListener('keydown', (e) => {
 });
 
 // Initialize
+initCondition();
 connectWebSocket();
 loadPatients();
+
+// Study condition keyboard shortcut
+// Ctrl+Shift+K chosen over Ctrl+Shift+C to avoid Chrome DevTools element picker conflict
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        e.preventDefault();
+        cycleCondition();
+    }
+});
