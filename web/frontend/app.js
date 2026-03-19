@@ -1589,7 +1589,8 @@ async function openCitationModal(citation, pin = null) {
     // ── Summary or Checklist ─────────────────────────────────
     const checklistItems = parseSummaryToChecklist(citation.summary);
     if (checklistItems) {
-        const checklist_state = pin ? (pin.checklist_state || {}) : (citation.review || {});
+        const reviewKey = citation.agent + '|' + citation.web_path;
+        const checklist_state = (patientReviews[activePatientId] || {})[reviewKey] || {};
         modalSummary.innerHTML = '';
         modalSummary.style.padding = '0';
         // Section header
@@ -1605,12 +1606,13 @@ async function openCitationModal(citation, pin = null) {
             cb.addEventListener('change', async () => {
                 const li = cb.closest('li');
                 li.classList.toggle('checked', cb.checked);
-                if (!activePatientId || !currentModalPin) return;
-                currentModalPin.checklist_state = currentModalPin.checklist_state || {};
-                currentModalPin.checklist_state[String(i)] = cb.checked;
-                debouncedPatchChecklist(activePatientId, currentModalPin.pin_id,
-                    { ...currentModalPin.checklist_state });
-                renderInsightsPanel();
+                if (!activePatientId) return;
+                const rKey = citation.agent + '|' + citation.web_path;
+                const current = (patientReviews[activePatientId] || {})[rKey] || {};
+                current[String(i)] = cb.checked;
+                patientReviews[activePatientId] = patientReviews[activePatientId] || {};
+                patientReviews[activePatientId][rKey] = current;
+                debouncedPatchReview(activePatientId, rKey, { ...current });
                 updateCitationBadgeStates();
             });
         });
