@@ -130,31 +130,57 @@ def _c_meds(cid):
 # Reusable P0002 citation builders
 def _c2_notes(cid):
     return _cite(cid, "clinical_notes", "P0002.txt", "/multimodal-data/clinical-notes/P0002.txt",
-                 "34-year-old female with 5-day fever, productive cough, right-sided pleuritic chest pain, SpO2 94%")
+                 "34-year-old female with 5-day fever, productive cough, right-sided pleuritic chest pain, SpO2 94%",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "chest_xray", "finding": "RLL consolidation", "reason": "imaging confirms clinical pneumonia diagnosis"},
+                     {"agent": "lab_results", "finding": "Elevated WBC and CRP", "reason": "inflammatory markers support active infection"},
+                 ], "contradicted_by": []})
 
 def _c2_xray(cid):
     return _cite(cid, "chest_xray", "P0002.png", "/multimodal-data/chest-xray/P0002.png",
-                 "Right lower lobe consolidation consistent with community-acquired pneumonia")
+                 "Right lower lobe consolidation consistent with community-acquired pneumonia",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "clinical_notes", "finding": "RLL crackles and dullness to percussion", "reason": "exam localizes to same region"},
+                     {"agent": "lab_results", "finding": "Elevated WBC", "reason": "confirms infectious etiology"},
+                 ], "contradicted_by": []})
 
 def _c2_ecg(cid):
     return _cite(cid, "ecg", "P0002.svg", "/multimodal-data/ecg/P0002.svg",
-                 "Sinus tachycardia at 112 bpm, no ST changes, no right heart strain pattern")
+                 "Sinus tachycardia at 112 bpm, no ST changes, no right heart strain pattern",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "clinical_notes", "finding": "Fever 39.2\u00b0C", "reason": "tachycardia explained by febrile state"},
+                     {"agent": "echo", "finding": "Normal biventricular function", "reason": "rules out cardiac cause of tachycardia"},
+                 ], "contradicted_by": []})
 
 def _c2_heart(cid):
     return _cite(cid, "heart_sounds", "P0002.wav", "/multimodal-data/heart-sounds/P0002.wav",
-                 "Normal heart sounds, no murmurs, gallops, or rubs")
+                 "Normal heart sounds, no murmurs, gallops, or rubs",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "echo", "finding": "Normal valves, no effusion", "reason": "structural confirmation of normal auscultation"},
+                 ], "contradicted_by": []})
 
 def _c2_echo(cid):
     return _cite(cid, "echo", "P0002.mp4", "/multimodal-data/echo/P0002.mp4",
-                 "Normal LV function, no valvular abnormality, no pericardial effusion")
+                 "Normal LV function, no valvular abnormality, no pericardial effusion",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "heart_sounds", "finding": "No murmurs or gallops", "reason": "acoustic confirms structural normality"},
+                     {"agent": "ecg", "finding": "No ST changes or strain", "reason": "electrically normal heart"},
+                 ], "contradicted_by": []})
 
 def _c2_labs(cid):
     return _cite(cid, "lab_results", "P0002.png", "/multimodal-data/lab-results/P0002.png",
-                 "Elevated WBC and CRP consistent with acute bacterial infection, normal renal and hepatic panels")
+                 "Elevated WBC and CRP consistent with acute bacterial infection, normal renal and hepatic panels",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "chest_xray", "finding": "RLL consolidation", "reason": "imaging correlates with lab infection markers"},
+                     {"agent": "clinical_notes", "finding": "Fever and productive cough", "reason": "clinical presentation matches lab picture"},
+                 ], "contradicted_by": []})
 
 def _c2_meds(cid):
     return _cite(cid, "medication", "P0002.csv", "/multimodal-data/medications/P0002.csv",
-                 "Albuterol PRN, Amoxicillin 875mg + Azithromycin 500mg for pneumonia, Acetaminophen PRN")
+                 "Albuterol PRN, Amoxicillin 875mg + Azithromycin 500mg for pneumonia, Acetaminophen PRN",
+                 knowledge_bus={"supported_by": [
+                     {"agent": "lab_results", "finding": "Normal renal and hepatic panels", "reason": "safe for current antibiotic dosing"},
+                 ], "contradicted_by": []})
 
 
 # Reusable P0003 citation builders
@@ -223,7 +249,10 @@ def _c3_meds(cid):
                  "Ibuprofen 200mg PRN for occasional headaches. "
                  "Melatonin 3mg PRN at bedtime for insomnia. "
                  "Sulfa drug allergy documented (causes rash).",
-                 knowledge_bus={"supported_by": [], "contradicted_by": []})
+                 knowledge_bus={"supported_by": [
+                     {"agent": "clinical_notes", "finding": "GAD well-controlled", "reason": "current Sertraline dose is effective"},
+                     {"agent": "lab_results", "finding": "Normal TSH", "reason": "no thyroid contribution to anxiety or insomnia"},
+                 ], "contradicted_by": []})
 
 
 def _msg(role, content, citations=None, ts=None):

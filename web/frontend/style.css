@@ -2431,6 +2431,14 @@ main {
 }
 
 /* ─── Provenance Pipeline ─────────────────────────────────── */
+.prov-description {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
 .prov-pipeline {
     display: flex;
     flex-direction: column;
@@ -2561,11 +2569,19 @@ main {
 
 .prov-bus-entry {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
     gap: 4px 6px;
     padding: 3px 0 3px 12px;
     position: relative;
+}
+
+.prov-bus-entry .citation {
+    vertical-align: middle;
+}
+
+.prov-bus-entry .citation-date {
+    vertical-align: middle;
 }
 
 /* Tree branch lines */
@@ -2614,6 +2630,8 @@ main {
 }
 
 .prov-bus-reason {
+    width: 100%;
+    padding-left: 17px;
     font-family: var(--serif);
     font-size: 11px;
     font-style: italic;

@@ -1694,7 +1694,8 @@ function buildProvenanceHTML(citation) {
         return raw ? formatShortDate(raw) : '';
     };
 
-    let html = '<div class="prov-pipeline">';
+    let html = '<div class="prov-description">How this citation was produced \u2014 from raw patient data through agent analysis to cross-modal verification.</div>';
+    html += '<div class="prov-pipeline">';
 
     // Processing steps
     const todayDate = formatShortDate(new Date().toISOString().slice(0, 10));
@@ -1713,7 +1714,7 @@ function buildProvenanceHTML(citation) {
     // Knowledge bus node
     const hasBus = (bus.supported_by && bus.supported_by.length) || (bus.contradicted_by && bus.contradicted_by.length);
     html += '<div class="prov-bus">';
-    html += '<div class="prov-bus-label">Knowledge Bus</div>';
+    html += '<div class="prov-bus-label">Cross-Modal Verification</div>';
 
     // Helper: build a mini citation badge for a KB entry agent
     const buildKBBadge = (entry) => {
