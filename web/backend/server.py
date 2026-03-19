@@ -130,7 +130,10 @@ def _c_meds(cid):
 # Reusable P0002 citation builders
 def _c2_notes(cid):
     return _cite(cid, "clinical_notes", "P0002.txt", "/multimodal-data/clinical-notes/P0002.txt",
-                 "34-year-old female with 5-day fever, productive cough, right-sided pleuritic chest pain, SpO2 94%",
+                 "34-year-old female presenting with 5-day history of fever peaking at 39.2\u00b0C. "
+                 "Productive cough with yellowish-green sputum and right-sided pleuritic chest pain. "
+                 "Progressive dyspnea over 3 days, now with minimal exertion, SpO2 94% on room air. "
+                 "Known history of mild intermittent asthma, well-controlled. No drug allergies.",
                  knowledge_bus={"supported_by": [
                      {"agent": "chest_xray", "finding": "RLL consolidation", "reason": "imaging confirms clinical pneumonia diagnosis"},
                      {"agent": "lab_results", "finding": "Elevated WBC and CRP", "reason": "inflammatory markers support active infection"},
@@ -138,7 +141,10 @@ def _c2_notes(cid):
 
 def _c2_xray(cid):
     return _cite(cid, "chest_xray", "P0002.png", "/multimodal-data/chest-xray/P0002.png",
-                 "Right lower lobe consolidation consistent with community-acquired pneumonia",
+                 "Right lower lobe consolidation identified on PA and lateral views. "
+                 "Findings consistent with community-acquired pneumonia. "
+                 "No pleural effusion or pneumothorax. "
+                 "Cardiac silhouette is within normal limits.",
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "RLL crackles and dullness to percussion", "reason": "exam localizes to same region"},
                      {"agent": "lab_results", "finding": "Elevated WBC", "reason": "confirms infectious etiology"},
@@ -146,7 +152,10 @@ def _c2_xray(cid):
 
 def _c2_ecg(cid):
     return _cite(cid, "ecg", "P0002.svg", "/multimodal-data/ecg/P0002.svg",
-                 "Sinus tachycardia at 112 bpm, no ST changes, no right heart strain pattern",
+                 "Sinus tachycardia at 112 bpm with normal PR and QRS intervals. "
+                 "No ST-segment or T-wave abnormalities identified. "
+                 "No right heart strain pattern (no S1Q3T3, no right axis deviation). "
+                 "Tachycardia likely infectious or febrile in origin.",
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "Fever 39.2\u00b0C", "reason": "tachycardia explained by febrile state"},
                      {"agent": "echo", "finding": "Normal biventricular function", "reason": "rules out cardiac cause of tachycardia"},
@@ -154,14 +163,20 @@ def _c2_ecg(cid):
 
 def _c2_heart(cid):
     return _cite(cid, "heart_sounds", "P0002.wav", "/multimodal-data/heart-sounds/P0002.wav",
-                 "Normal heart sounds, no murmurs, gallops, or rubs",
+                 "Normal S1 and S2 heart sounds with regular rhythm. "
+                 "No murmurs, gallops, or rubs detected. "
+                 "No wheezing transmitted to the cardiac exam. "
+                 "Findings consistent with a non-cardiac cause for symptoms.",
                  knowledge_bus={"supported_by": [
                      {"agent": "echo", "finding": "Normal valves, no effusion", "reason": "structural confirmation of normal auscultation"},
                  ], "contradicted_by": []})
 
 def _c2_echo(cid):
     return _cite(cid, "echo", "P0002.mp4", "/multimodal-data/echo/P0002.mp4",
-                 "Normal LV function, no valvular abnormality, no pericardial effusion",
+                 "Normal left ventricular function with preserved ejection fraction. "
+                 "No valvular abnormality or regurgitation identified. "
+                 "No pericardial effusion. "
+                 "Right ventricular size and function appear normal.",
                  knowledge_bus={"supported_by": [
                      {"agent": "heart_sounds", "finding": "No murmurs or gallops", "reason": "acoustic confirms structural normality"},
                      {"agent": "ecg", "finding": "No ST changes or strain", "reason": "electrically normal heart"},
@@ -169,7 +184,10 @@ def _c2_echo(cid):
 
 def _c2_labs(cid):
     return _cite(cid, "lab_results", "P0002.png", "/multimodal-data/lab-results/P0002.png",
-                 "Elevated WBC and CRP consistent with acute bacterial infection, normal renal and hepatic panels",
+                 "Elevated WBC and CRP consistent with acute bacterial infection. "
+                 "Procalcitonin mildly elevated, supporting bacterial etiology. "
+                 "Renal and hepatic panels within normal limits. "
+                 "CBC otherwise unremarkable with no anemia or thrombocytopenia.",
                  knowledge_bus={"supported_by": [
                      {"agent": "chest_xray", "finding": "RLL consolidation", "reason": "imaging correlates with lab infection markers"},
                      {"agent": "clinical_notes", "finding": "Fever and productive cough", "reason": "clinical presentation matches lab picture"},
@@ -177,7 +195,10 @@ def _c2_labs(cid):
 
 def _c2_meds(cid):
     return _cite(cid, "medication", "P0002.csv", "/multimodal-data/medications/P0002.csv",
-                 "Albuterol PRN, Amoxicillin 875mg + Azithromycin 500mg for pneumonia, Acetaminophen PRN",
+                 "Albuterol inhaler PRN for mild intermittent asthma. "
+                 "Amoxicillin 875mg twice daily and Azithromycin 500mg for community-acquired pneumonia. "
+                 "Acetaminophen PRN for fever management. "
+                 "No known drug allergies documented.",
                  knowledge_bus={"supported_by": [
                      {"agent": "lab_results", "finding": "Normal renal and hepatic panels", "reason": "safe for current antibiotic dosing"},
                  ], "contradicted_by": []})
@@ -197,18 +218,20 @@ def _c3_notes(cid):
 
 def _c3_xray(cid):
     return _cite(cid, "chest_xray", "P0003.png", "/multimodal-data/chest-xray/P0003.png",
-                 "No acute cardiopulmonary abnormality. Normal cardiac silhouette. "
-                 "Clear lung fields bilaterally with no consolidation, effusion, or mass. "
-                 "Mediastinal contours and bony thorax are unremarkable.",
+                 "No acute cardiopulmonary abnormality identified on PA and lateral views. "
+                 "Cardiac silhouette is within normal limits with no cardiomegaly. "
+                 "Lung fields are clear bilaterally with no consolidation, effusion, or mass. "
+                 "Mediastinal contours and bony thorax appear unremarkable.",
                  knowledge_bus={"supported_by": [
                      {"agent": "clinical_notes", "finding": "Lungs clear to auscultation", "reason": "exam and imaging concordant"},
                  ], "contradicted_by": []})
 
 def _c3_ecg(cid):
     return _cite(cid, "ecg", "P0003.svg", "/multimodal-data/ecg/P0003.svg",
-                 "Normal sinus rhythm at 74 bpm. Normal PR, QRS, and QTc intervals. "
-                 "No ST-segment or T-wave abnormalities. No axis deviation. "
-                 "No evidence of chamber enlargement or conduction delay.",
+                 "Normal sinus rhythm at 74 bpm with normal PR, QRS, and QTc intervals. "
+                 "No ST-segment or T-wave abnormalities identified. "
+                 "No axis deviation or evidence of chamber enlargement. "
+                 "No conduction delay or arrhythmia detected.",
                  knowledge_bus={"supported_by": [
                      {"agent": "heart_sounds", "finding": "Normal S1/S2, no murmurs", "reason": "electrically and acoustically normal"},
                  ], "contradicted_by": []})
@@ -216,7 +239,8 @@ def _c3_ecg(cid):
 def _c3_heart(cid):
     return _cite(cid, "heart_sounds", "P0003.wav", "/multimodal-data/heart-sounds/P0003.wav",
                  "Normal S1 and S2 heart sounds with regular rate and rhythm. "
-                 "No murmurs, gallops, or rubs detected. No extra heart sounds. "
+                 "No murmurs, gallops, or rubs detected. "
+                 "No extra heart sounds or pericardial friction rub. "
                  "Findings consistent with a structurally and functionally normal heart.",
                  knowledge_bus={"supported_by": [
                      {"agent": "echo", "finding": "Normal LVEF and valves", "reason": "structural confirmation"},
@@ -225,8 +249,9 @@ def _c3_heart(cid):
 def _c3_echo(cid):
     return _cite(cid, "echo", "P0003.mp4", "/multimodal-data/echo/P0003.mp4",
                  "Normal left ventricular ejection fraction estimated at 60\u201365%. "
-                 "No regional wall motion abnormalities. Normal valve morphology and function. "
-                 "No pericardial effusion. Normal right ventricular size and function.",
+                 "No regional wall motion abnormalities identified. "
+                 "Normal valve morphology and function with no pericardial effusion. "
+                 "Right ventricular size and function appear preserved.",
                  knowledge_bus={"supported_by": [
                      {"agent": "ecg", "finding": "No chamber enlargement on ECG", "reason": "electrical and structural concordance"},
                      {"agent": "heart_sounds", "finding": "No murmurs or gallops", "reason": "acoustic confirmation"},
