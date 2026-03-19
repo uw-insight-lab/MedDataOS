@@ -15,6 +15,7 @@ let sidebarOpen = true;
 // Insights panel state
 let insightsOpen = false;
 let patientPins = {};    // patient_id -> [{pin_id, citation}]
+let patientReviews = {};  // patient_id -> {"agent|web_path": {"0": true, ...}}
 let modalCitation = null; // citation currently shown in modal
 let currentModalPin = null; // full pin object for modal (or null if not pinned)
 let lastUserQuery = '';     // last query text for pin provenance
@@ -209,6 +210,17 @@ async function fetchPins(patientId) {
     } catch (e) {
         console.error('Failed to fetch pins:', e);
         patientPins[patientId] = [];
+    }
+}
+
+async function fetchReviews(patientId) {
+    try {
+        const res = await fetch(`/api/patients/${patientId}/reviews`);
+        if (res.ok) patientReviews[patientId] = await res.json();
+        else patientReviews[patientId] = {};
+    } catch (e) {
+        console.error('Failed to fetch reviews:', e);
+        patientReviews[patientId] = {};
     }
 }
 
@@ -1237,6 +1249,24 @@ function debounce(fn, ms) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
+
+async function patchReview(patientId, key, checklist_state) {
+    try {
+        await fetch(`/api/patients/${patientId}/reviews`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, checklist_state }),
+        });
+        patientReviews[patientId] = patientReviews[patientId] || {};
+        patientReviews[patientId][key] = checklist_state;
+    } catch (e) {
+        console.error('Failed to patch review:', e);
+    }
+}
+
+const debouncedPatchReview = debounce((patientId, key, state) => {
+    patchReview(patientId, key, state);
+}, 500);
 
 // Split summary text into checklist items; returns null if < 2 items
 function parseSummaryToChecklist(text) {
