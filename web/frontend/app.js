@@ -108,12 +108,13 @@ async function loadPatients() {
         patients = await res.json();
         renderPatientList();
 
-        // Auto-expand P0001 and load first conversation
-        const firstPatient = document.querySelector('.sidebar-patient[data-patient-id="P0001"]');
-        if (firstPatient) {
-            await togglePatient(firstPatient);
-            // Select the first conversation if one exists
-            const firstConvo = firstPatient.querySelector('.conversation-item');
+        // Auto-expand patient from URL param (?patient=P0003), or default to P0001
+        const urlPatientId = new URLSearchParams(window.location.search).get('patient') || 'P0001';
+        const targetPatient = document.querySelector(`.sidebar-patient[data-patient-id="${urlPatientId}"]`)
+            || document.querySelector('.sidebar-patient[data-patient-id="P0001"]');
+        if (targetPatient) {
+            await togglePatient(targetPatient);
+            const firstConvo = targetPatient.querySelector('.conversation-item');
             if (firstConvo) {
                 await switchConversation(firstConvo.dataset.patientId, firstConvo.dataset.sessionId);
             }
