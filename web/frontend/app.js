@@ -150,6 +150,7 @@ function formatMessageTime(iso) {
 }
 
 function showPatientTooltip(headerEl, patient) {
+    if (studyCondition !== 3) return;
     clearTimeout(patientTooltipHideTimer);
     patientTooltipShowTimer = setTimeout(() => {
         // Build content
@@ -1084,19 +1085,21 @@ async function showCitationPopup(anchor, citation) {
         ? `<button class="btn-pin-card${isPinned(activePatientId, citation) ? ' pinned' : ''}" data-citation="${encodeURIComponent(JSON.stringify(citation))}" title="Pin citation">&#x1F4CC;</button>`
         : '';
 
-    // Build summary as bullet list or fallback to plain text
-    const summaryItems = parseSummaryToChecklist(citation.summary);
-    let summaryHTML;
-    if (summaryItems) {
-        const maxShow = 3;
-        const shown = summaryItems.slice(0, maxShow);
-        const remaining = summaryItems.length - maxShow;
-        summaryHTML = '<ul class="card-summary-list">'
-            + shown.map(s => `<li>${escapeHtml(s)}</li>`).join('')
-            + (remaining > 0 ? `<li class="card-summary-more">${remaining} more — click to review</li>` : '')
-            + '</ul>';
-    } else {
-        summaryHTML = escapeHtml(citation.summary);
+    // Build summary as bullet list or fallback to plain text (C3 only)
+    let summaryHTML = '';
+    if (studyCondition === 3) {
+        const summaryItems = parseSummaryToChecklist(citation.summary);
+        if (summaryItems) {
+            const maxShow = 3;
+            const shown = summaryItems.slice(0, maxShow);
+            const remaining = summaryItems.length - maxShow;
+            summaryHTML = '<ul class="card-summary-list">'
+                + shown.map(s => `<li>${escapeHtml(s)}</li>`).join('')
+                + (remaining > 0 ? `<li class="card-summary-more">${remaining} more — click to review</li>` : '')
+                + '</ul>';
+        } else {
+            summaryHTML = escapeHtml(citation.summary);
+        }
     }
 
     const conflict = studyCondition === 3 ? getCitationConflict(citation) : null;
@@ -1691,9 +1694,12 @@ async function openCitationModal(citation, pin = null) {
     }
     modalBody.innerHTML = contentHTML;
 
-    // ── Summary or Checklist ─────────────────────────────────
+    // ── Summary or Checklist (C3 only) ────────────────────────
     const checklistItems = parseSummaryToChecklist(citation.summary);
-    if (checklistItems) {
+    if (studyCondition === 2) {
+        modalSummary.innerHTML = '';
+        modalSummary.style.padding = '0';
+    } else if (checklistItems) {
         const reviewKey = citation.agent + '|' + citation.web_path;
         const checklist_state = (patientReviews[activePatientId] || {})[reviewKey] || {};
         modalSummary.innerHTML = '';
