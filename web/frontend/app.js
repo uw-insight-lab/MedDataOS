@@ -5,8 +5,6 @@ let ws = null;
 let sessionId = localStorage.getItem('meddata_session_id') || null;
 let isProcessing = false;
 let attachedFile = null;
-let studyCondition = 3; // 1=plain text, 2=basic citations, 3=full system
-
 // Sidebar state
 let activePatientId = null;
 let activeConversationId = null;
@@ -20,57 +18,6 @@ let patientReviews = {};  // patient_id -> {"agent|web_path": {"0": true, ...}}
 let modalCitation = null; // citation currently shown in modal
 let currentModalPin = null; // full pin object for modal (or null if not pinned)
 let lastUserQuery = '';     // last query text for pin provenance
-
-// ─── Study Condition System ────────────────────────────────
-function initCondition() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlCondition = parseInt(urlParams.get('condition'));
-    const storedCondition = parseInt(localStorage.getItem('studyCondition'));
-
-    if ([1, 2, 3].includes(urlCondition)) {
-        studyCondition = urlCondition;
-    } else if ([1, 2, 3].includes(storedCondition)) {
-        studyCondition = storedCondition;
-    } else {
-        studyCondition = 3;
-    }
-
-    document.body.dataset.condition = studyCondition;
-    window.studyCondition = studyCondition; // expose for researcher console access
-    localStorage.setItem('studyCondition', studyCondition);
-    syncConditionURL();
-}
-
-function syncConditionURL() {
-    const url = new URL(window.location);
-    url.searchParams.set('condition', studyCondition);
-    history.replaceState(null, '', url);
-}
-
-function cycleCondition() {
-    studyCondition = studyCondition >= 3 ? 1 : studyCondition + 1;
-    document.body.dataset.condition = studyCondition;
-    window.studyCondition = studyCondition;
-    localStorage.setItem('studyCondition', studyCondition);
-    syncConditionURL();
-    showConditionPill();
-    reRenderChat();
-}
-
-function showConditionPill() {
-    const pill = document.getElementById('condition-pill');
-    if (!pill) return;
-    pill.textContent = 'C' + studyCondition;
-    pill.classList.remove('fading');
-    pill.classList.add('visible');
-    clearTimeout(pill._hideTimer);
-    pill._hideTimer = setTimeout(() => {
-        pill.classList.add('fading');
-        setTimeout(() => {
-            pill.classList.remove('visible', 'fading');
-        }, 300);
-    }, 3000);
-}
 
 // DOM elements
 const chatContainer = document.getElementById('chat-container');
@@ -151,7 +98,6 @@ function formatMessageTime(iso) {
 }
 
 function showPatientTooltip(headerEl, patient) {
-    if (studyCondition !== 3) return;
     clearTimeout(patientTooltipHideTimer);
     patientTooltipShowTimer = setTimeout(() => {
         // Build content
@@ -332,7 +278,6 @@ function findTextPinId(patientId, text) {
 // Update citation badges in chat to reflect review status
 function updateCitationBadgeStates() {
     if (!activePatientId) return;
-    if (studyCondition !== 3) return;
     const reviews = patientReviews[activePatientId] || {};
     chatContainer.querySelectorAll('.citation').forEach(badge => {
         badge.classList.remove('citation-review-none', 'citation-review-partial', 'citation-review-complete', 'citation-has-conflict');
@@ -385,7 +330,6 @@ function buildPinSummaryHTML(summary) {
 }
 
 function renderInsightsPanel() {
-    if (studyCondition !== 3) return;
     const pins = (activePatientId && patientPins[activePatientId]) || [];
     if (pins.length === 0) {
         insightsContent.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CC;</div><div class="empty-state-text">No pinned citations</div></div>';
@@ -1063,9 +1007,6 @@ let hideTimeout = null;
 async function showCitationPopup(anchor, citation) {
     clearTimeout(hideTimeout);
 
-    // C1: no citation popups at all
-    if (studyCondition === 1) return;
-
     const type = getCitationType(citation.file);
     const agentLabel = agentCardLabels[citation.agent] || citation.agent.replace(/_/g, ' ');
 
@@ -1082,28 +1023,26 @@ async function showCitationPopup(anchor, citation) {
         contentHTML = `<div class="card-loading">Loading…</div>`;
     }
 
-    const pinBtnHTML = (studyCondition === 3 && activePatientId)
+    const pinBtnHTML = activePatientId
         ? `<button class="btn-pin-card${isPinned(activePatientId, citation) ? ' pinned' : ''}" data-citation="${encodeURIComponent(JSON.stringify(citation))}" title="Pin citation">&#x1F4CC;</button>`
         : '';
 
-    // Build summary as bullet list or fallback to plain text (C3 only)
+    // Build summary as bullet list or fallback to plain text
     let summaryHTML = '';
-    if (studyCondition === 3) {
-        const summaryItems = parseSummaryToChecklist(citation.summary);
-        if (summaryItems) {
-            const maxShow = 3;
-            const shown = summaryItems.slice(0, maxShow);
-            const remaining = summaryItems.length - maxShow;
-            summaryHTML = '<ul class="card-summary-list">'
-                + shown.map(s => `<li>${escapeHtml(s)}</li>`).join('')
-                + (remaining > 0 ? `<li class="card-summary-more">${remaining} more — click to review</li>` : '')
-                + '</ul>';
-        } else {
-            summaryHTML = escapeHtml(citation.summary);
-        }
+    const summaryItems = parseSummaryToChecklist(citation.summary);
+    if (summaryItems) {
+        const maxShow = 3;
+        const shown = summaryItems.slice(0, maxShow);
+        const remaining = summaryItems.length - maxShow;
+        summaryHTML = '<ul class="card-summary-list">'
+            + shown.map(s => `<li>${escapeHtml(s)}</li>`).join('')
+            + (remaining > 0 ? `<li class="card-summary-more">${remaining} more — click to review</li>` : '')
+            + '</ul>';
+    } else {
+        summaryHTML = escapeHtml(citation.summary);
     }
 
-    const conflict = studyCondition === 3 ? getCitationConflict(citation) : null;
+    const conflict = getCitationConflict(citation);
     const conflictHTML = conflict
         ? `<div class="card-conflict">\u26A0 Contradicted by ${escapeHtml(conflict.firstAgent)}${conflict.count > 1 ? ` +${conflict.count - 1}` : ''}</div>`
         : '';
@@ -1173,25 +1112,15 @@ function renderAssistantContent(rawContent) {
         }
     } catch (e) { /* plain text, use as-is */ }
 
-    // C1: strip citation markers from text
-    if (studyCondition === 1) {
-        responseText = responseText.replace(/\s*\[cite:\w+\]/g, '');
-        citations = [];
-    }
-
     const rawHtml = marked.parse(responseText);
     const safeHtml = DOMPurify.sanitize(rawHtml);
     const withWarnings = safeHtml.replace(/⚠️\s*(<strong>.*?<\/strong>)/g, '<span class="warning-group">⚠️\u00A0$1</span>');
-    return (studyCondition !== 1 && citations.length > 0) ? renderWithCitations(withWarnings, citations) : withWarnings;
+    return citations.length > 0 ? renderWithCitations(withWarnings, citations) : withWarnings;
 }
 
 function addChatMessage(role, content, timestamp) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${role}`;
-    messageDiv.dataset.rawContent = content;
-    messageDiv.dataset.rawRole = role;
-    messageDiv.dataset.rawTimestamp = timestamp || '';
-
     const label = role === 'user' ? 'You' : 'MedDataOS';
 
     // Render markdown for assistant messages, plain text for user messages
@@ -1214,39 +1143,6 @@ function addChatMessage(role, content, timestamp) {
 
     chatContainer.appendChild(messageDiv);
     scrollToBottom();
-}
-
-function reRenderChat() {
-    const messages = chatContainer.querySelectorAll('.chat-message');
-    messages.forEach(msg => {
-        const raw = msg.dataset.rawContent;
-        const role = msg.dataset.rawRole;
-        const ts = msg.dataset.rawTimestamp;
-        if (!raw || !role) return; // skip log entries, typing indicator, etc.
-
-        // Re-render message content with current condition
-        let messageContent;
-        if (role === 'assistant') {
-            messageContent = renderAssistantContent(raw);
-        } else {
-            messageContent = escapeHtml(raw);
-        }
-
-        const timeStr = ts ? formatMessageTime(ts) : '';
-        const label = role === 'user' ? 'You' : 'MedDataOS';
-        msg.innerHTML = `
-            <div class="message-header">${escapeHtml(label)}</div>
-            <div class="message-bubble">
-                <div class="message-content">${messageContent}</div>
-            </div>
-            ${timeStr ? `<span class="message-time">${timeStr}</span>` : ''}
-        `;
-    });
-
-    // Re-apply badge states for C3 only
-    if (studyCondition === 3) {
-        updateCitationBadgeStates();
-    }
 }
 
 // Map tool names to friendly agent names
@@ -1575,9 +1471,6 @@ function csvToModalHTML(csv, maxRows = 200) {
 async function openCitationModal(citation, pin = null) {
     modalCitation = citation;
 
-    // C1: no citation modal
-    if (studyCondition === 1) return;
-
     // Look up pin if not provided
     if (!pin && activePatientId) {
         const pins = patientPins[activePatientId] || [];
@@ -1593,8 +1486,7 @@ async function openCitationModal(citation, pin = null) {
 
     modalAgent.textContent = agentLabel;
 
-    // Pin button: only in C3
-    if (studyCondition === 3 && activePatientId) {
+    if (activePatientId) {
         modalPin.style.display = '';
         modalPin.classList.toggle('pinned', isPinned(activePatientId, citation));
     } else {
@@ -1603,7 +1495,7 @@ async function openCitationModal(citation, pin = null) {
 
     // ── Agent info panel ──────────────────────────────────
     const info = agentInfo[citation.agent];
-    if (info && studyCondition === 3) {
+    if (info) {
         const paperHTML = info.paper
             ? `<a href="${escapeHtml(info.paper)}" target="_blank" rel="noopener" class="agent-model-link">${info.paper.includes('arxiv') ? 'arXiv' : 'Paper'} &#x2197;</a>`
             : 'N/A';
@@ -1653,16 +1545,9 @@ async function openCitationModal(citation, pin = null) {
         modalAgentTab.style.display = 'none';
     }
 
-    // C2: hide Provenance and Agent tabs
-    if (studyCondition === 2) {
-        document.querySelector('.modal-tab[data-tab="provenance"]').style.display = 'none';
-        document.querySelector('.modal-tab[data-tab="agent"]').style.display = 'none';
-        modalAnnotationTags.parentElement.style.display = 'none'; // hide annotations section
-    } else {
-        document.querySelector('.modal-tab[data-tab="provenance"]').style.display = '';
-        document.querySelector('.modal-tab[data-tab="agent"]').style.display = '';
-        modalAnnotationTags.parentElement.style.display = '';
-    }
+    document.querySelector('.modal-tab[data-tab="provenance"]').style.display = '';
+    document.querySelector('.modal-tab[data-tab="agent"]').style.display = '';
+    modalAnnotationTags.parentElement.style.display = '';
 
     // ── Footer provenance ──────────────────────────────────
     let provenanceHTML = '';
@@ -1695,12 +1580,9 @@ async function openCitationModal(citation, pin = null) {
     }
     modalBody.innerHTML = contentHTML;
 
-    // ── Summary or Checklist (C3 only) ────────────────────────
+    // ── Summary or Checklist ────────────────────────
     const checklistItems = parseSummaryToChecklist(citation.summary);
-    if (studyCondition === 2) {
-        modalSummary.innerHTML = '';
-        modalSummary.style.padding = '0';
-    } else if (checklistItems) {
+    if (checklistItems) {
         const reviewKey = citation.agent + '|' + citation.web_path;
         const checklist_state = (patientReviews[activePatientId] || {})[reviewKey] || {};
         modalSummary.innerHTML = '';
@@ -2208,7 +2090,6 @@ chatContainer.addEventListener('mouseup', (e) => {
     // Ignore if clicking on citation badges or the pin button itself
     if (e.target.closest('.citation') || e.target.closest('.text-select-pin')) return;
     if (!activePatientId) return;
-    if (studyCondition !== 3) return;
 
     const sel = window.getSelection();
     const text = getCleanSelectionText(sel);
@@ -2273,15 +2154,6 @@ messageInput.addEventListener('keydown', (e) => {
 });
 
 // Initialize
-initCondition();
 connectWebSocket();
 loadPatients();
 
-// Study condition keyboard shortcut
-// Ctrl+Shift+K chosen over Ctrl+Shift+C to avoid Chrome DevTools element picker conflict
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'K') {
-        e.preventDefault();
-        cycleCondition();
-    }
-});
