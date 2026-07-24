@@ -246,6 +246,24 @@ MULTI = [
 QUERIES = SIMPLE + PROBES + CROSS + MULTI
 
 
+def apply_routing_principle(queries):
+    """V2 Rule A (pre-registered): clinical_notes is optional-by-default on every
+    query where it is not answer-bearing (in gold) and not a no_tool probe.
+    Universal and results-independent — the chart is legitimately consultable for
+    any clinical question, so reading it must not be penalized as a routing error."""
+    n = 0
+    for q in queries:
+        if (q["probe_type"] != "no_tool"
+                and "clinical_notes" not in q["gold_agents"]
+                and "clinical_notes" not in q["optional_agents"]):
+            q["optional_agents"] = q["optional_agents"] + ["clinical_notes"]
+            n += 1
+    return n
+
+
+_CN_ADDED = apply_routing_principle(QUERIES)
+
+
 # =========================================================================
 # KB SETS: 10 clean + 30 seeded
 # =========================================================================
@@ -416,6 +434,7 @@ def main():
     coverage_report()
     review_md()
     print(f"Wrote queries.jsonl ({len(QUERIES)}), kb_sets.jsonl ({len(KB_SETS)})")
+    print(f"V2 Rule A: added clinical_notes to optional on {_CN_ADDED} queries")
     print("Wrote coverage_report.md, REVIEW.md")
 
 

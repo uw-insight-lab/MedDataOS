@@ -5,94 +5,94 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
 ## simple (40)
 
 **S01** `P0001`: What is the QTc interval on this patient's ECG?
-  - gold=['ecg'] — QTc 420ms — ecg only.
+  - gold=['ecg'] opt=['clinical_notes'] — QTc 420ms — ecg only.
 
 **S02** `P0001`: What is this patient's LDL cholesterol level?
-  - gold=['lab_results'] — LDL 142 — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — LDL 142 — labs only.
 
 **S03** `P0001`: Which statin and dose is this patient currently taking?
-  - gold=['medication'] — Atorvastatin 40mg — medication only.
+  - gold=['medication'] opt=['clinical_notes'] — Atorvastatin 40mg — medication only.
 
 **S04** `P0002`: What does the chest X-ray show in the right lower lobe?
-  - gold=['chest_xray'] — RLL consolidation — CXR only.
+  - gold=['chest_xray'] opt=['clinical_notes'] — RLL consolidation — CXR only.
 
 **S05** `P0002`: What is this patient's white blood cell count?
-  - gold=['lab_results'] — WBC 15.2 — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — WBC 15.2 — labs only.
 
 **S06** `P0002`: What is the patient's fever history on presentation?
   - gold=['clinical_notes'] — 5-day fever 39.2C — notes only.
 
 **S07** `P0003`: What is this patient's left ventricular ejection fraction?
-  - gold=['echo'] — LVEF 60% — echo only.
+  - gold=['echo'] opt=['clinical_notes'] — LVEF 60% — echo only.
 
 **S08** `P0003`: Are any murmurs heard on auscultation?
-  - gold=['heart_sounds'] — No murmurs — heart_sounds only.
+  - gold=['heart_sounds'] opt=['clinical_notes'] — No murmurs — heart_sounds only.
 
 **S09** `P0003`: What medication is this patient taking for anxiety?
-  - gold=['medication'] — Sertraline 50mg — medication only.
+  - gold=['medication'] opt=['clinical_notes'] — Sertraline 50mg — medication only.
 
 **S10** `P0004`: What is this patient's current ejection fraction?
-  - gold=['echo'] — LVEF 25% — echo only.
+  - gold=['echo'] opt=['clinical_notes'] — LVEF 25% — echo only.
 
 **S11** `P0004`: What is the patient's BNP level?
-  - gold=['lab_results'] — BNP 1840 — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — BNP 1840 — labs only.
 
 **S12** `P0004`: What anticoagulant is this patient taking?
-  - gold=['medication'] — Apixaban — medication only.
+  - gold=['medication'] opt=['clinical_notes'] — Apixaban — medication only.
 
 **S13** `P0005`: What does the ECG show regarding premature beats?
-  - gold=['ecg'] — Isolated PACs — ecg only.
+  - gold=['ecg'] opt=['clinical_notes'] — Isolated PACs — ecg only.
 
 **S14** `P0005`: What is this patient's TSH level?
-  - gold=['lab_results'] — TSH 1.6 — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — TSH 1.6 — labs only.
 
 **S15** `P0005`: What triggers this patient's palpitations?
   - gold=['clinical_notes'] — Caffeine/stress — notes only.
 
 **S16** `P0006`: What do the arterial blood gas results show?
-  - gold=['lab_results'] — ABG type 2 resp failure — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — ABG type 2 resp failure — labs only.
 
 **S17** `P0006`: What does the chest X-ray show about lung volumes?
-  - gold=['chest_xray'] — Hyperinflation — CXR only.
+  - gold=['chest_xray'] opt=['clinical_notes'] — Hyperinflation — CXR only.
 
 **S18** `P0006`: What is the estimated pulmonary artery pressure (RVSP) on echo?
-  - gold=['echo'] — RVSP 42 — echo only.
+  - gold=['echo'] opt=['clinical_notes'] — RVSP 42 — echo only.
 
 **S19** `P0007`: What cardiac rhythm does the ECG show?
-  - gold=['ecg'] — Atrial fibrillation — ecg only.
+  - gold=['ecg'] opt=['clinical_notes'] — Atrial fibrillation — ecg only.
 
 **S20** `P0007`: What is this patient's TSH level?
-  - gold=['lab_results'] — TSH 2.1 normal — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — TSH 2.1 normal — labs only.
 
 **S21** `P0007`: What rate-control medication was started for the AFib?
-  - gold=['medication'] — Metoprolol succinate — medication only.
+  - gold=['medication'] opt=['clinical_notes'] — Metoprolol succinate — medication only.
 
 **S22** `P0008`: What is this patient's HbA1c?
-  - gold=['lab_results'] — HbA1c 10.2% — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — HbA1c 10.2% — labs only.
 
 **S23** `P0008`: Does the ECG meet voltage criteria for left ventricular hypertrophy?
-  - gold=['ecg'] — LVH by Sokolow-Lyon — ecg only.
+  - gold=['ecg'] opt=['clinical_notes'] — LVH by Sokolow-Lyon — ecg only.
 
 **S24** `P0008`: What extra heart sound is heard on auscultation?
-  - gold=['heart_sounds'] — S4 gallop — heart_sounds only.
+  - gold=['heart_sounds'] opt=['clinical_notes'] — S4 gallop — heart_sounds only.
 
 **S25** `P0009`: Describe the murmur heard on auscultation.
-  - gold=['heart_sounds'] — 4/6 systolic to carotids — heart_sounds only.
+  - gold=['heart_sounds'] opt=['clinical_notes'] — 4/6 systolic to carotids — heart_sounds only.
 
 **S26** `P0009`: What is the aortic valve area on the echocardiogram?
-  - gold=['echo'] — AVA 0.7 cm2 — echo only.
+  - gold=['echo'] opt=['clinical_notes'] — AVA 0.7 cm2 — echo only.
 
 **S27** `P0009`: What is this patient's BNP level?
-  - gold=['lab_results'] — BNP 480 — labs only.
+  - gold=['lab_results'] opt=['clinical_notes'] — BNP 480 — labs only.
 
 **S28** `P0010`: What do the Q waves on the ECG indicate?
-  - gold=['ecg'] — Prior anterior MI — ecg only.
+  - gold=['ecg'] opt=['clinical_notes'] — Prior anterior MI — ecg only.
 
 **S29** `P0010`: What is this patient's current ejection fraction?
-  - gold=['echo'] — LVEF 42% — echo only.
+  - gold=['echo'] opt=['clinical_notes'] — LVEF 42% — echo only.
 
 **S30** `P0010`: What is this patient's dual antiplatelet regimen?
-  - gold=['medication'] — Aspirin + clopidogrel — medication only.
+  - gold=['medication'] opt=['clinical_notes'] — Aspirin + clopidogrel — medication only.
 
 **P01** [no_tool] `P0002`: In general, what is procalcitonin used to indicate?
   - gold=[] — Definitional; no patient data needed.
@@ -110,19 +110,19 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=[] — Definitional; no tools.
 
 **P06** [unavailable_modality] `P0005` (strip ['echo']): What did this patient's echocardiogram show about LV function?
-  - gold=[] — Echo stripped; must not call echo.
+  - gold=[] opt=['clinical_notes'] — Echo stripped; must not call echo.
 
 **P07** [unavailable_modality] `P0003` (strip ['ecg']): What does this patient's ECG show?
-  - gold=[] — ECG stripped; must not call ecg.
+  - gold=[] opt=['clinical_notes'] — ECG stripped; must not call ecg.
 
 **P08** [unavailable_modality] `P0002` (strip ['heart_sounds']): What murmurs were heard on this patient's auscultation?
-  - gold=[] — Heart sounds stripped; must not call heart_sounds.
+  - gold=[] opt=['clinical_notes'] — Heart sounds stripped; must not call heart_sounds.
 
 **P09** [unavailable_modality] `P0008` (strip ['chest_xray']): What did this patient's chest X-ray reveal?
-  - gold=[] — CXR stripped; must not call chest_xray.
+  - gold=[] opt=['clinical_notes'] — CXR stripped; must not call chest_xray.
 
 **P10** [unavailable_modality] `P0010` (strip ['lab_results']): What are this patient's latest laboratory values?
-  - gold=[] — Labs stripped; must not call lab_results.
+  - gold=[] opt=['clinical_notes'] — Labs stripped; must not call lab_results.
 
 ## cross_modal (30)
 
@@ -133,7 +133,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['lab_results', 'medication'] opt=['clinical_notes'] — Labs (HbA1c/LDL) + medication regimen.
 
 **C03** `P0001`: Does the imaging support hypertensive heart disease?
-  - gold=['chest_xray', 'echo'] opt=['ecg'] — CXR cardiomegaly + echo diastolic dysfunction.
+  - gold=['chest_xray', 'echo'] opt=['ecg', 'clinical_notes'] — CXR cardiomegaly + echo diastolic dysfunction.
 
 **C04** `P0002`: Is there evidence of a pulmonary infection?
   - gold=['clinical_notes', 'chest_xray', 'lab_results'] opt=['ecg'] — Notes fever/cough, CXR consolidation, labs WBC/CRP.
@@ -142,7 +142,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['ecg', 'clinical_notes'] opt=['lab_results', 'heart_sounds'] — ECG sinus tach + notes fever context.
 
 **C06** `P0002`: Is there any evidence of cardiac involvement from this illness?
-  - gold=['echo', 'ecg', 'heart_sounds'] opt=['lab_results'] — Echo normal, ECG no ischemia, auscultation normal — rule out cardiac.
+  - gold=['echo', 'ecg', 'heart_sounds'] opt=['lab_results', 'clinical_notes'] — Echo normal, ECG no ischemia, auscultation normal — rule out cardiac.
 
 **C07** `P0003`: Is there any evidence of cardiac disease in this patient?
   - gold=['ecg', 'echo', 'heart_sounds'] opt=['chest_xray', 'clinical_notes'] — Wellness exam: ECG/echo/auscultation all normal.
@@ -151,7 +151,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['lab_results', 'clinical_notes'] opt=['medication'] — Labs normal + history.
 
 **C09** `P0003`: Is the cardiac auscultation consistent with the imaging?
-  - gold=['heart_sounds', 'echo'] opt=['ecg'] — Normal auscultation vs normal echo.
+  - gold=['heart_sounds', 'echo'] opt=['ecg', 'clinical_notes'] — Normal auscultation vs normal echo.
 
 **C10** `P0004`: Assess this patient's volume status and heart failure severity.
   - gold=['clinical_notes', 'chest_xray', 'echo', 'lab_results'] opt=['heart_sounds', 'ecg'] — Notes edema, CXR congestion, echo EF25, BNP 1840.
@@ -160,7 +160,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['ecg', 'heart_sounds'] opt=['clinical_notes'] — ECG AFib + irregularly irregular auscultation.
 
 **C12** `P0004`: Is there evidence of mitral regurgitation?
-  - gold=['echo', 'heart_sounds'] opt=['chest_xray'] — Echo moderate MR + holosystolic murmur.
+  - gold=['echo', 'heart_sounds'] opt=['chest_xray', 'clinical_notes'] — Echo moderate MR + holosystolic murmur.
 
 **C13** `P0005`: Are the palpitations caused by a dangerous arrhythmia?
   - gold=['ecg', 'echo'] opt=['clinical_notes', 'heart_sounds'] — ECG benign PACs + structurally normal echo.
@@ -169,16 +169,16 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['echo', 'lab_results'] opt=['clinical_notes'] — Echo normal + TSH normal.
 
 **C15** `P0005`: Do the auscultation and ECG agree about the rhythm?
-  - gold=['heart_sounds', 'ecg'] — Both show PACs/normal rhythm.
+  - gold=['heart_sounds', 'ecg'] opt=['clinical_notes'] — Both show PACs/normal rhythm.
 
 **C16** `P0006`: Is there evidence of right heart strain or pulmonary hypertension?
-  - gold=['ecg', 'echo'] opt=['chest_xray', 'heart_sounds'] — ECG RV strain/P pulmonale + echo RVSP42/D-sign.
+  - gold=['ecg', 'echo'] opt=['chest_xray', 'heart_sounds', 'clinical_notes'] — ECG RV strain/P pulmonale + echo RVSP42/D-sign.
 
 **C17** `P0006`: What evidence supports a COPD exacerbation?
   - gold=['clinical_notes', 'chest_xray', 'lab_results'] opt=['medication'] — Notes dyspnea/sputum, CXR hyperinflation, ABG.
 
 **C18** `P0006`: Do the ECG and echo agree about right-sided heart involvement?
-  - gold=['ecg', 'echo'] opt=['heart_sounds'] — ECG RAD/RV strain vs echo RV dilation.
+  - gold=['ecg', 'echo'] opt=['heart_sounds', 'clinical_notes'] — ECG RAD/RV strain vs echo RV dilation.
 
 **C19** `P0007`: What is the evidence for new-onset atrial fibrillation?
   - gold=['ecg', 'clinical_notes', 'heart_sounds'] opt=['chest_xray'] — ECG AFib, notes palpitations, irregular auscultation.
@@ -187,7 +187,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['lab_results', 'echo'] opt=['clinical_notes'] — TSH normal + echo LA size.
 
 **C21** `P0007`: Is there left atrial enlargement to support an AFib substrate?
-  - gold=['echo', 'chest_xray'] opt=['ecg'] — Echo LA 4.1cm + CXR LA enlargement.
+  - gold=['echo', 'chest_xray'] opt=['ecg', 'clinical_notes'] — Echo LA 4.1cm + CXR LA enlargement.
 
 **C22** `P0008`: Is there cardiac end-organ damage from hypertension and diabetes?
   - gold=['ecg', 'echo', 'heart_sounds'] opt=['chest_xray', 'clinical_notes'] — ECG LVH strain, echo concentric LVH, S4; CXR cardiomegaly optional (Q09 lesson).
@@ -196,16 +196,16 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - gold=['lab_results', 'clinical_notes'] opt=['medication'] — HbA1c 10.2, ACR 280 + history.
 
 **C24** `P0008`: Do the ECG and echo agree about left ventricular hypertrophy?
-  - gold=['ecg', 'echo'] opt=['heart_sounds'] — ECG LVH voltage vs echo concentric LVH.
+  - gold=['ecg', 'echo'] opt=['heart_sounds', 'clinical_notes'] — ECG LVH voltage vs echo concentric LVH.
 
 **C25** `P0009`: What is the severity of this patient's aortic stenosis?
   - gold=['echo', 'heart_sounds'] opt=['clinical_notes', 'chest_xray', 'ecg'] — Echo AVA/gradient + murmur; clinical/CXR/ECG supportive.
 
 **C26** `P0009`: Is there evidence of pressure overload on the heart?
-  - gold=['ecg', 'echo'] opt=['heart_sounds', 'chest_xray'] — ECG LVH strain + echo concentric LVH.
+  - gold=['ecg', 'echo'] opt=['heart_sounds', 'chest_xray', 'clinical_notes'] — ECG LVH strain + echo concentric LVH.
 
 **C27** `P0009`: Do the murmur and valve findings correlate?
-  - gold=['heart_sounds', 'echo'] — 4/6 murmur vs severe AS on echo.
+  - gold=['heart_sounds', 'echo'] opt=['clinical_notes'] — 4/6 murmur vs severe AS on echo.
 
 **C28** `P0010`: What does the evidence show about the prior myocardial infarction?
   - gold=['ecg', 'echo'] opt=['clinical_notes', 'chest_xray'] — ECG Q waves + echo anterior hypokinesis.
@@ -239,7 +239,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - composed_from: ['What does the ECG rhythm show? (ecg)', 'Is the heart structurally normal? (echo)', 'What is the fever/infection context? (notes)']
 
 **M06** `P0002`: Do the auscultation, echo, and ECG together exclude significant structural or ischemic heart disease in this acutely ill patient?
-  - gold=['heart_sounds', 'echo', 'ecg'] — Normal auscultation + LVEF 62% + no ischemic ECG changes exclude cardiac disease.
+  - gold=['heart_sounds', 'echo', 'ecg'] opt=['clinical_notes'] — Normal auscultation + LVEF 62% + no ischemic ECG changes exclude cardiac disease.
   - composed_from: ['What does auscultation reveal? (heart_sounds)', 'What does the echo show? (echo)', 'Does the ECG show ischemia? (ecg)']
 
 **M07** `P0003`: Across the ECG, echo, and auscultation, is there any objective evidence of cardiac disease to explain the exercise intolerance?
@@ -275,11 +275,11 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - composed_from: ['What triggers the palpitations? (notes)', 'What arrhythmia is on ECG? (ecg)', 'Is any medication indicated? (medication)']
 
 **M15** `P0005`: Is the rhythm seen on the ECG confirmed by auscultation, and is it structurally benign on echo?
-  - gold=['ecg', 'heart_sounds', 'echo'] — PACs on ECG + early beats on auscultation + normal echo.
+  - gold=['ecg', 'heart_sounds', 'echo'] opt=['clinical_notes'] — PACs on ECG + early beats on auscultation + normal echo.
   - composed_from: ['What does the ECG show? (ecg)', 'What does auscultation reveal? (heart_sounds)', 'Is the echo normal? (echo)']
 
 **M16** `P0006`: Does the evidence across ECG, echo, and chest X-ray establish cor pulmonale from this patient's COPD?
-  - gold=['ecg', 'echo', 'chest_xray'] opt=['heart_sounds'] — Cor pulmonale: P pulmonale/RV strain + RV dilation/RVSP42 + hyperinflation.
+  - gold=['ecg', 'echo', 'chest_xray'] opt=['heart_sounds', 'clinical_notes'] — Cor pulmonale: P pulmonale/RV strain + RV dilation/RVSP42 + hyperinflation.
   - composed_from: ['What right-heart signs on ECG? (ecg)', 'What does the echo show about the RV? (echo)', 'What does the CXR show? (cxr)']
 
 **M17** `P0006`: Do the blood gas, symptoms, and medications together support the diagnosis and treatment of an acute COPD exacerbation?
@@ -287,7 +287,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - composed_from: ['What does the ABG show? (labs)', 'What are the symptoms? (notes)', 'What treatment was started? (medication)']
 
 **M18** `P0006`: Does the elevated pulmonary pressure on echo correlate with the auscultation and ECG findings of right heart involvement?
-  - gold=['echo', 'heart_sounds', 'ecg'] — RVSP42 + loud P2 + RV strain/P pulmonale all correlate.
+  - gold=['echo', 'heart_sounds', 'ecg'] opt=['clinical_notes'] — RVSP42 + loud P2 + RV strain/P pulmonale all correlate.
   - composed_from: ['What is the RVSP on echo? (echo)', 'What does auscultation reveal? (heart_sounds)', 'What ECG signs of RH strain? (ecg)']
 
 **M19** `P0007`: Do the ECG, auscultation, and history together establish new-onset atrial fibrillation, and has a reversible cause been excluded?
@@ -299,7 +299,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - composed_from: ['What rhythm on ECG? (ecg)', 'What AFib medications were started? (medication)', 'What are the stroke risk factors? (notes)']
 
 **M21** `P0007`: Do the echo, chest X-ray, and ECG together support a left atrial substrate for the arrhythmia?
-  - gold=['echo', 'chest_xray', 'ecg'] — Echo LA 4.1cm + CXR LA enlargement + AFib on ECG.
+  - gold=['echo', 'chest_xray', 'ecg'] opt=['clinical_notes'] — Echo LA 4.1cm + CXR LA enlargement + AFib on ECG.
   - composed_from: ['What is the LA size on echo? (echo)', 'What does the CXR show about the LA? (cxr)', 'What rhythm/atrial activity is on the ECG? (ecg)']
 
 **M22** `P0008`: Do the ECG, echo, and auscultation together demonstrate hypertensive cardiac end-organ damage in this diabetic patient?
@@ -319,7 +319,7 @@ Row-by-row gold-label approval. On sign-off these files are frozen and run once.
   - composed_from: ['What is the syncope history? (notes)', 'Describe the murmur. (heart_sounds)', 'What is the valve area/gradient? (echo)', 'Any medication concern? (medication)']
 
 **M26** `P0009`: Do the ECG, echo, and auscultation together demonstrate the pressure overload expected from severe aortic stenosis?
-  - gold=['ecg', 'echo', 'heart_sounds'] opt=['chest_xray'] — ECG LVH strain + echo concentric LVH/severe AS + 4/6 murmur with diminished S2.
+  - gold=['ecg', 'echo', 'heart_sounds'] opt=['chest_xray', 'clinical_notes'] — ECG LVH strain + echo concentric LVH/severe AS + 4/6 murmur with diminished S2.
   - composed_from: ['What LVH signs on ECG? (ecg)', 'What does the echo show about LV and valve? (echo)', 'What does the murmur/S2 indicate? (heart_sounds)']
 
 **M27** `P0009`: Is the syncope workup supported by both the chest X-ray and lab findings for this valve disease?
