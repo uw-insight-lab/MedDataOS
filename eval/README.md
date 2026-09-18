@@ -30,7 +30,7 @@ results/<run>/            one self-contained folder per run
 ## Running
 
 ```bash
-# from repo root, with GEMINI_API_KEY and OPENAI_API_KEY in .env
+# from repo root, with GEMINI_API_KEY and OPENAI_API_KEY in the environment (or .env)
 PYTHONPATH=. python eval/run_queries.py full     # run queries (resumable)
 PYTHONPATH=. python eval/score_routing.py full    # routing metrics (no API)
 PYTHONPATH=. python eval/judge_citations.py full  # citation judge (resumable)

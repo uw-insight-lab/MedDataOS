@@ -79,7 +79,9 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Create a `.env` file in the project root:
+`GEMINI_API_KEY` is read from the environment. Export it in your shell, or
+create a `.env` file in the project root (an exported variable takes
+precedence over `.env`):
 
 ```bash
 GEMINI_API_KEY=your_api_key_here
@@ -164,7 +166,7 @@ MedDataOS/
 │       └── style.css         # Styling
 ├── tests/                    # Test suite
 ├── requirements.txt
-└── .env                      # API keys (create this)
+└── .env                      # API keys (optional; exported env vars win)
 ```
 
 ## API Endpoints
