@@ -161,9 +161,10 @@ MedDataOS/
 │   ├── backend/
 │   │   └── server.py         # FastAPI server + REST/WebSocket endpoints
 │   └── frontend/
-│       ├── index.html        # UI layout (sidebar + chat)
+│       ├── index.html        # UI layout (header + sidebar + chat)
 │       ├── app.js            # Chat, WebSocket, sidebar, citation rendering
-│       └── style.css         # Styling
+│       ├── style.css         # Styling
+│       └── logos/            # UWaterloo + UHN partner logos (header)
 ├── tests/                    # Test suite
 ├── requirements.txt
 └── .env                      # API keys (optional; exported env vars win)

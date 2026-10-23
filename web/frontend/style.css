@@ -158,6 +158,34 @@ header::after {
     gap: 14px;
 }
 
+/* ─── Partner Logos (UWaterloo + UHN) ──────────────────────── */
+.partner-logos {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-right: 6px;
+}
+
+.partner-logos img {
+    display: block;
+    width: auto;
+}
+
+/* Heights differ on purpose: UHN's heavy wordmark reads larger at equal height */
+.partner-logo-uw {
+    height: 34px;
+}
+
+.partner-logo-uhn {
+    height: 26px;
+}
+
+.partner-divider {
+    width: 1px;
+    height: 26px;
+    background: var(--border-warm);
+}
+
 /* ─── Header Left (toggle + logo) ──────────────────────────── */
 .header-left {
     display: flex;
