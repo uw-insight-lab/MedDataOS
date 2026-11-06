@@ -76,3 +76,6 @@ Thumbs.db
 
 # Local uploads may contain patient data
 data/
+
+# local instructions
+CLAUDE.md
