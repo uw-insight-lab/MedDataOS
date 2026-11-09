@@ -51,7 +51,8 @@ def running_server(
     env.update(HOST="127.0.0.1", PORT=str(port), **settings)
     command = [
         sys.executable,
-        str(APP / "web" / "backend" / "server.py"),
+        "-m",
+        "meddataos.server",
         str(case_folder),
         "--agent-url",
         agent_url,
@@ -162,7 +163,7 @@ def test_case_files_are_served(server):
 
 def test_server_requires_an_agent_url(case_folder):
     result = subprocess.run(
-        [sys.executable, str(APP / "web" / "backend" / "server.py"), str(case_folder)],
+        [sys.executable, "-m", "meddataos.server", str(case_folder)],
         capture_output=True,
         text=True,
         timeout=10,
@@ -724,7 +725,8 @@ def test_server_rejects_a_bad_specialist_name(case_folder):
     result = subprocess.run(
         [
             sys.executable,
-            str(APP / "web" / "backend" / "server.py"),
+            "-m",
+            "meddataos.server",
             str(case_folder),
             "--agent-url",
             "http://127.0.0.1:9/v1",
@@ -1080,7 +1082,7 @@ def test_notes_agent_answers_a_real_case(tmp_path):
         [
             sys.executable,
             "-m",
-            "specialists.notes.serve",
+            "meddataos.specialists.notes.serve",
             "--case",
             str(CASE_TCGA),
             "--port",
@@ -1292,8 +1294,7 @@ def test_a_dicom_citation_keeps_the_fetch(tmp_path):
 
 
 def test_a_cite_handle_expands_to_the_call_that_made_it():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import Answer, case as open_case
+    from meddataos.server.case import Answer, case as open_case
 
     calls = {
         "c1": {
@@ -1364,8 +1365,7 @@ def test_a_cite_handle_expands_to_the_call_that_made_it():
 
 
 def test_every_answer_schema_example_is_valid():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    import answer
+    import meddataos.server.answer as answer
 
     for model in (
         answer.Evidence,
@@ -1384,8 +1384,7 @@ def test_every_answer_schema_example_is_valid():
 
 
 def test_the_strict_answer_schema_uses_only_what_strict_mode_accepts():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    import answer
+    import meddataos.server.answer as answer
 
     schema = answer.response_format()["json_schema"]["schema"]
     rejected = {"oneOf", "const", "examples", "default", "title", "discriminator", "minItems"}
@@ -1419,8 +1418,7 @@ def test_the_strict_answer_schema_uses_only_what_strict_mode_accepts():
 
 
 def test_a_dicom_call_must_be_cited_as_imaging():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import Answer
+    from meddataos.server.case import Answer
 
     calls = {
         "c1": {
@@ -1452,8 +1450,7 @@ def test_a_dicom_call_must_be_cited_as_imaging():
 
 
 def test_a_volume_call_may_be_cited_as_derived():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import Answer
+    from meddataos.server.case import Answer
 
     calls = {
         "c5": {
@@ -1516,8 +1513,7 @@ def test_a_volume_call_may_be_cited_as_derived():
 
 
 def test_a_span_fetch_is_attached_to_the_citation():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import case as open_case
+    from meddataos.server.case import case as open_case
 
     span = open_case._call_span(
         {"modality": "note", "meta": {"note_date": "2005-12-15"}},
@@ -1559,7 +1555,7 @@ def test_a_span_fetch_is_attached_to_the_citation():
             }],
         }],
     })
-    from case import Answer
+    from meddataos.server.case import Answer
     assert Answer(text, [], [], calls).problem is None
     missing_quote = json.loads(text)
     missing_quote["citations"][0]["evidence"][0].pop("quote")
@@ -1579,8 +1575,7 @@ def test_a_span_fetch_is_attached_to_the_citation():
 
 
 def test_a_note_citation_must_quote_an_exact_slice():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import Answer, case as open_case
+    from meddataos.server.case import Answer, case as open_case
 
     note = (
         "Patient ID: RADCURE-0006\n"
@@ -1660,8 +1655,7 @@ def test_a_note_citation_must_quote_an_exact_slice():
 
 
 def test_a_note_citation_keeps_quotes_and_gains_span_links():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import Answer, case as open_case
+    from meddataos.server.case import Answer, case as open_case
 
     calls = {
         "c1": {
@@ -1734,8 +1728,7 @@ def test_a_note_citation_keeps_quotes_and_gains_span_links():
 
 
 def test_describing_a_dicom_series_keeps_its_metadata():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import case as open_case
+    from meddataos.server.case import case as open_case
 
     record = open_case._call_dicom(
         {"modality": "dicom", "web_path": "/case/ct"},
@@ -1750,8 +1743,7 @@ def test_describing_a_dicom_series_keeps_its_metadata():
 
 
 def test_a_fetched_file_must_be_cited_by_its_handle():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from case import Answer
+    from meddataos.server.case import Answer
 
     calls = {
         "c1": {
@@ -1809,8 +1801,7 @@ def test_a_cited_dicom_preview_is_a_png(tmp_path):
 @contextmanager
 def _specialist_case():
     """A report with one note, one DICOM series, and one table, and no leftover specialist state."""
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    from state import state
+    from meddataos.server.state import state
 
     previous = state.report
     state.report = {
@@ -1829,7 +1820,7 @@ def _specialist_case():
 
 
 def test_the_routers_copy_of_an_imaging_citation_keeps_the_slice():
-    from dispatch import _keep_specialist_fields, _restore_specialist_fields
+    from meddataos.server.dispatch import _keep_specialist_fields, _restore_specialist_fields
 
     with _specialist_case():
         _keep_specialist_fields("s1", "Neck CT", {
@@ -1861,7 +1852,7 @@ def test_the_routers_copy_of_an_imaging_citation_keeps_the_slice():
 
 
 def test_the_routers_copy_of_a_note_citation_gets_the_checked_quotes_back():
-    from dispatch import _keep_specialist_fields, _restore_specialist_fields
+    from meddataos.server.dispatch import _keep_specialist_fields, _restore_specialist_fields
 
     checked = {
         "n": 1,
@@ -1907,7 +1898,7 @@ def test_the_routers_copy_of_a_note_citation_gets_the_checked_quotes_back():
 
 
 def test_a_reply_without_specialist_citations_is_left_alone():
-    from dispatch import _restore_specialist_fields
+    from meddataos.server.dispatch import _restore_specialist_fields
 
     with _specialist_case():
         reply = json.dumps({"response": "Plain [cite:1].", "citations": [{"id": "1"}]})
@@ -1915,7 +1906,7 @@ def test_a_reply_without_specialist_citations_is_left_alone():
 
 
 def test_a_citation_that_names_no_agent_gets_the_one_for_its_file():
-    from case import case as open_case
+    from meddataos.server.case import case as open_case
 
     with _specialist_case():
         text = json.dumps({
@@ -1936,8 +1927,7 @@ def test_a_citation_that_names_no_agent_gets_the_one_for_its_file():
 
 
 def test_a_discrepancy_card_from_a_specialist_passes_the_answer_schema():
-    sys.path.insert(0, str(APP / "web" / "backend"))
-    import answer
+    import meddataos.server.answer as answer
 
     citation = {
         "kind": "file", "id": "d1", "file": "followup.txt",

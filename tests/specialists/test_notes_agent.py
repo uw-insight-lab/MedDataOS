@@ -1,6 +1,6 @@
 """Clinical notes agent: grounding, conflicts, timeline, verification and routing.
 
-Offline tests mock the LLM seam (``specialists.notes.llm``). The TCGA ledger test
+Offline tests mock the LLM seam (``meddataos.specialists.notes.llm``). The TCGA ledger test
 replays a hand-written extraction fixture over the real notes (skipped without
 ``data/``). The gold QA test is live and opt-in (GEMINI_API_KEY + NOTES_LIVE_EVAL=1).
 """
@@ -15,18 +15,18 @@ from pathlib import Path
 import pytest
 from google.genai import types
 
-from datactrl import Case
+from meddataos.datactrl import Case
 
-from specialists.notes import agent as notes_agent
-from specialists.notes import llm
-from specialists.notes.conflicts import detect_conflicts
-from specialists.notes.grounding import locate, value_supported
-from specialists.notes.ingest import NoteDoc, build_ledger, facts_from_payload
-from specialists.notes.ledger import Ledger
-from specialists.notes.schema import Fact, normalize_attribute, normalize_value
-from specialists.notes.timeline import build_timeline
-from specialists.notes.verify import TextStore, verify_answer
-from specialists.common import has_case
+from meddataos.specialists.notes import agent as notes_agent
+from meddataos.specialists.notes import llm
+from meddataos.specialists.notes.conflicts import detect_conflicts
+from meddataos.specialists.notes.grounding import locate, value_supported
+from meddataos.specialists.notes.ingest import NoteDoc, build_ledger, facts_from_payload
+from meddataos.specialists.notes.ledger import Ledger
+from meddataos.specialists.notes.schema import Fact, normalize_attribute, normalize_value
+from meddataos.specialists.notes.timeline import build_timeline
+from meddataos.specialists.notes.verify import TextStore, verify_answer
+from meddataos.specialists.common import has_case
 
 FIXTURES = Path(__file__).parent / "fixtures"
 TCGA = "TCGA-DD-A4NF"
@@ -158,7 +158,7 @@ def test_social_prefix_smoking_status_groups_with_social_history():
     ]
     (conflict,) = [c for c in _conflicts(facts) if c["attribute"] == "social_history.smoking"]
     assert conflict["kind"] == "discordant"
-    from specialists.notes.conflicts import _needs_adjudication
+    from meddataos.specialists.notes.conflicts import _needs_adjudication
     assert _needs_adjudication(conflict) is False
 
 
@@ -354,7 +354,7 @@ def test_navigate_mode_scales_to_300_notes_with_recursive_extraction(tmp_path, m
 
 @needs_tcga
 def test_tcga_ledger_replay_grounds_facts_and_finds_conflicts(monkeypatch):
-    from specialists.common import get_case
+    from meddataos.specialists.common import get_case
 
     extraction = json.loads((FIXTURES / "tcga_extraction.json").read_text())
     monkeypatch.setenv("NOTES_ADJUDICATE", "0")

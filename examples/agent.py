@@ -21,12 +21,12 @@ import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import quote
 
 from dotenv import load_dotenv
 
-
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 # Tries for a name lookup that fails before the model is reached.
 DNS_ATTEMPTS = 3

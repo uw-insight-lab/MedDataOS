@@ -8,14 +8,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from datactrl import Case
-from datactrl.utils.dicom_meta import (
+from meddataos.datactrl import Case
+from meddataos.datactrl.utils.dicom_meta import (
     ABDOMEN_FROM_SUPERIOR_MM,
     classify_series_kind,
     infer_regions,
     suggested_slice_index,
 )
-from datactrl.utils.dicom_views import (
+from meddataos.datactrl.utils.dicom_views import (
     preview_supported,
     views_for_series,
     volume_supported,
@@ -85,7 +85,7 @@ def test_infer_regions_from_text():
 
 
 def test_preferred_roi_name_priority():
-    from datactrl.utils.rtstruct import preferred_roi_name
+    from meddataos.datactrl.utils.rtstruct import preferred_roi_name
 
     assert preferred_roi_name(["SpinalCord", "Larynx", "PTV70", "GTVp"]) == "GTVp"
     assert preferred_roi_name(["Body", "Larynx"]) == "Larynx"
@@ -367,7 +367,7 @@ def test_dicom_discover_and_metadata(tmp_path: Path):
 
 def test_rtdose_from_dicom_applies_grid_scaling(tmp_path: Path):
     """Dose.from_dicom scales pixels by DoseGridScaling."""
-    from datactrl.utils.dicom_volume import load_scalar_volume
+    from meddataos.datactrl.utils.dicom_volume import load_scalar_volume
 
     series_uid = generate_uid()
     path = tmp_path / "dose.dcm"
@@ -430,7 +430,7 @@ def test_series_kind_uses_header_image_type(tmp_path: Path):
 def test_summarize_rtstruct_lists_rois_and_prefers_gtv(tmp_path: Path):
     from imgtools.coretypes import Scan
 
-    from datactrl.utils.rtstruct import (
+    from meddataos.datactrl.utils.rtstruct import (
         load_structure_set,
         overlay_rtstruct,
         rtstruct_slice_index,
@@ -561,7 +561,7 @@ def test_rtstruct_discover_and_preview(tmp_path: Path):
 
 
 def test_pet_window_keeps_uptake_visible_beside_a_hot_voxel():
-    from datactrl.utils.image import to_uint8_rgb
+    from meddataos.datactrl.utils.image import to_uint8_rgb
 
     data = np.full((20, 20), 10.0)
     data[0, 0] = 10_000.0
@@ -619,7 +619,7 @@ def test_pet_preview_defaults_to_roi_slice_and_overlays(tmp_path: Path):
 
 
 def test_preview_roi_selects_one_structure_and_its_slice(tmp_path: Path):
-    from datactrl.errors import InvalidFetchOptions
+    from meddataos.datactrl.errors import InvalidFetchOptions
 
     study_uid = generate_uid()
     ct_uid = generate_uid()

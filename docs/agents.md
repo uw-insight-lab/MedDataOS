@@ -78,7 +78,7 @@ description = "Looks at one DICOM slice. Use this for questions about the images
 ```
 
 ```bash
-pixi run serve /path/to/folder --agent-url http://127.0.0.1:8001/v1 --agents agents.toml
+pixi run serve /path/to/folder --agent-url http://127.0.0.1:8001/v1 --agents configs/agents.toml
 ```
 
 `--specialist notes=http://127.0.0.1:8002/v1` does the same for one agent, and can be repeated. A name is a short lowercase word. The same name cannot be listed twice.
@@ -91,7 +91,7 @@ The router has to repeat a specialist's citation in its own reply, and the answe
 
 ## Clinical notes specialist
 
-The notes specialist is `pixi run notes --case /path/to/case` from the root of this repo (it runs `python -m specialists.notes.serve`). `pixi run stack` starts it with the rest. It prints an address such as `http://127.0.0.1:8002/v1`. For notes alone, pass that address as `--agent-url`. When more than one specialist is running, keep a router as `--agent-url` and register the notes process beside it:
+The notes specialist is `pixi run notes --case /path/to/case` from the root of this repo (it runs `python -m meddataos.specialists.notes.serve`). `pixi run stack` starts it with the rest. It prints an address such as `http://127.0.0.1:8002/v1`. For notes alone, pass that address as `--agent-url`. When more than one specialist is running, keep a router as `--agent-url` and register the notes process beside it:
 
 ```toml
 [notes]
@@ -134,7 +134,7 @@ Some reasoning models reject function tools on chat completions unless `reasonin
 
 If no file was opened, the answer is shown when it is plain text and contains neither `[cite:` nor `"citations"`. A JSON object in that case is refused with a request for plain text. Text that does contain a citation marker is checked with the rules below, against every discovered file.
 
-If a file was opened, the whole answer must be one JSON object that matches `CitedAnswer` in `web/backend/answer.py`:
+If a file was opened, the whole answer must be one JSON object that matches `CitedAnswer` in `src/meddataos/server/answer.py`:
 
 ```json
 {

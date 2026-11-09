@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from datactrl.discovery.classify import classify_file
-from datactrl.discovery.walk import iter_files
-from datactrl.types import Modality
+from meddataos.datactrl.discovery.classify import classify_file
+from meddataos.datactrl.discovery.walk import iter_files
+from meddataos.datactrl.types import Modality
 
 FIXTURE = Path(__file__).parent / "fixtures" / "messy"
 

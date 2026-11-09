@@ -7,7 +7,7 @@ See [DESIGN.md](DESIGN.md) for scope.
 ## Quick start
 
 ```python
-from datactrl import Case
+from meddataos.datactrl import Case
 
 case = Case.open("/path/to/case")
 report = case.discover()
@@ -75,7 +75,7 @@ Notes:
 Via tool dispatch (same semantics, JSON in/out):
 
 ```python
-from datactrl.tools import dispatch
+from meddataos.datactrl.tools import dispatch
 
 dispatch("assert_link", {
     "root": "/path/to/case",
@@ -89,7 +89,7 @@ dispatch("links", {"root": "/path/to/case", "resource_id": "note:abc123"})
 ## Tool dispatch
 
 ```python
-from datactrl.tools import TOOL_DEFINITIONS, dispatch
+from meddataos.datactrl.tools import TOOL_DEFINITIONS, dispatch
 
 print(dispatch("discover", {"root": "/path/to/case"}))
 # compact inventory; then: describe / fetch / notes_search / links / assert_link / dicom_tree / dicom_groups
@@ -98,7 +98,7 @@ print(dispatch("discover", {"root": "/path/to/case"}))
 
 ## Install and tests
 
-datactrl lives in `src/datactrl` of the MedDataOS repository and is installed with it (`pixi install`, or `pip install -e .` from the repository root). Its tests are in `tests/datactrl`:
+datactrl lives in `src/meddataos/datactrl` of the MedDataOS repository and is installed with it (`pixi install`, or `pip install -e ".[datactrl]"` from the repository root). Its tests are in `tests/datactrl`:
 
 ```bash
 pixi run pytest tests/datactrl

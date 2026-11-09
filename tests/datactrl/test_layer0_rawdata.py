@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from datactrl import Case
-from datactrl.errors import InvalidFetchOptions
+from meddataos.datactrl import Case
+from meddataos.datactrl.errors import InvalidFetchOptions
 
 RAWDATA = Path(__file__).resolve().parents[2] / "data" / "rawdata"
 

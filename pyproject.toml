@@ -6,43 +6,49 @@ authors = [{ name = "Joshua Siraj", email = "joshua.siraj@ryerson.ca" }]
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "fastapi>=0.104.0,<1",
-    "uvicorn[standard]>=0.24.0,<1",
-    "python-multipart>=0.0.6,<1",
-    "websockets>=12.0,<18",
-    "python-dotenv>=1.0.0,<2",
     "pydantic>=2.13.4,<3",
+]
+
+[project.optional-dependencies]
+datactrl = [
     "med-imagetools>=2.15.0,<3",
     "pypdf>=6.0.0,<7",
     "Pillow>=10.0.0",
     "numpy>=1.26.0",
 ]
-
-[project.optional-dependencies]
-dev = ["pytest>=8.0.0,<10"]
 parquet = ["pyarrow>=14.0.0"]
+server = [
+    "meddataos[datactrl]",
+    "fastapi>=0.104.0,<1",
+    "uvicorn[standard]>=0.24.0,<1",
+    "python-multipart>=0.0.6,<1",
+    "websockets>=12.0,<18",
+    "python-dotenv>=1.0.0,<2",
+]
 specialists = [
+    "meddataos[datactrl]",
     "google-genai>=1.0.0",
     "python-dateutil>=2.9",
+    "python-dotenv>=1.0.0,<2",
 ]
 
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling"]
 
-# datactrl and specialists are importable packages. The web app in web/ and the
-# example agent in examples/ run as scripts and are not part of the wheel.
+# The wheel is the meddataos package. The page in web/ and the example agent
+# in examples/ are files, not part of the wheel.
 [tool.hatch.build.targets.wheel]
-packages = ["src/datactrl", "specialists"]
+packages = ["src/meddataos"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "."]
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.13"
 mypy_path = "src"
-packages = ["datactrl"]
+packages = ["meddataos"]
 exclude = ["\\.pixi/"]
 ignore_missing_imports = true
 warn_return_any = true
@@ -52,3 +58,8 @@ check_untyped_defs = true
 
 [tool.ruff]
 extend = "configs/ruff.toml"
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI reads File() from the signature. Moving the call inside the function
+# stops the parameter from being an upload.
+"src/meddataos/server/routes.py" = ["B008"]

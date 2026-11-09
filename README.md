@@ -8,11 +8,10 @@ One process opens one folder. Chat sessions, pins, and review checkboxes last un
 
 | Path | Contents |
 |------|----------|
-| `web/` | The FastAPI server in `web/backend` and the page in `web/frontend`. See [the page](web/README.md). |
-| `src/datactrl/` | The case library: discovery, DICOM, notes, and the tools the server runs. See [datactrl](docs/datactrl/README.md) and its [design](docs/datactrl/DESIGN.md). |
-| `specialists/` | The notes and imaging agents. Each is served as its own chat endpoint. |
+| `web/` | The page. See [the page](web/README.md). |
+| `src/meddataos/` | The package: `datactrl` (case access; see [datactrl](docs/datactrl/README.md)), `server`, and `specialists`. |
 | `examples/agent.py` | The example router. |
-| `agents.toml` | Registers the specialists with the server. |
+| `configs/agents.toml` | Registers the specialists with the server. |
 | `scripts/stack.py` | Starts the router, specialists, and server together. |
 | `tests/` | `server/`, `datactrl/`, and `specialists/`. |
 | `docs/` | [Connect an agent](docs/agents.md) and the datactrl docs. |
@@ -23,7 +22,7 @@ Copy `.env.example` to `.env`.
 
 To use the example agent, set `OPENAI_MODEL`. Set `OPENAI_API_KEY` when the model requires one. `OPENAI_BASE_URL` is the model's base URL, the part before `/chat/completions`. The example agent calls `https://api.openai.com/v1` only when `OPENAI_BASE_URL` is unset. A blank value does not use that default, so set the URL or remove the line.
 
-To run everything for one case, the example agent, the notes and imaging specialists from `agents.toml`, and the server:
+To run everything for one case, the example agent, the notes and imaging specialists from `configs/agents.toml`, and the server:
 
 ```bash
 pixi run stack data/TCGA-DD-A4NF

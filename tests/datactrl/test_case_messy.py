@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from datactrl import Case
-from datactrl.errors import LimitExceeded, UnknownView
-from datactrl.limits import MAX_TABLE_LIMIT
-from datactrl.tools import dispatch, reset_sessions
+from meddataos.datactrl import Case
+from meddataos.datactrl.errors import LimitExceeded, UnknownView
+from meddataos.datactrl.limits import MAX_TABLE_LIMIT
+from meddataos.datactrl.tools import dispatch, reset_sessions
 
 FIXTURE = Path(__file__).parent / "fixtures" / "messy"
 
@@ -133,8 +133,8 @@ def test_note_sections_and_span_offsets():
 
 
 def test_note_span_bounds():
-    from datactrl.errors import InvalidFetchOptions
-    from datactrl.limits import MAX_SPAN_CHARS, MAX_SPAN_CONTEXT_CHARS
+    from meddataos.datactrl.errors import InvalidFetchOptions
+    from meddataos.datactrl.limits import MAX_SPAN_CHARS, MAX_SPAN_CONTEXT_CHARS
 
     case = Case.open(FIXTURE)
     note = _hep_note(case)
@@ -184,7 +184,7 @@ def test_pdf_note_quality_and_page_view():
 
 
 def test_gemini_function_declarations_shape():
-    from datactrl.tools import gemini_function_declarations
+    from meddataos.datactrl.tools import gemini_function_declarations
 
     decls = gemini_function_declarations()
     names = {item["name"] for item in decls}

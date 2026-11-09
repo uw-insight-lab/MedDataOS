@@ -3,7 +3,7 @@
     pixi run stack data/TCGA-DD-A4NF
     pixi run stack data/RADCURE-0006 --only notes
 
-The router is examples/agent.py. The specialists come from agents.toml, and
+The router is examples/agent.py. The specialists come from configs/agents.toml, and
 their ports are read from the url in that file. Output from each process is
 prefixed with its name. Ctrl-C stops everything.
 """
@@ -28,11 +28,11 @@ from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).resolve().parents[1]
-AGENTS_FILE = ROOT / "agents.toml"
+AGENTS_FILE = ROOT / "configs" / "agents.toml"
 ROUTER_PORT = 8001
 SPECIALIST_MODULES = {
-    "notes": "specialists.notes.serve",
-    "imaging": "specialists.imaging.serve",
+    "notes": "meddataos.specialists.notes.serve",
+    "imaging": "meddataos.specialists.imaging.serve",
 }
 
 
@@ -96,7 +96,7 @@ def main() -> int:
     parser.add_argument("case", help="Case folder to open, such as data/TCGA-DD-A4NF")
     parser.add_argument(
         "--only",
-        help="Comma-separated specialists to start. Default is every one in agents.toml.",
+        help="Comma-separated specialists to start. Default is every one in configs/agents.toml.",
     )
     args = parser.parse_args()
 
@@ -168,7 +168,8 @@ def main() -> int:
             "server",
             [
                 sys.executable,
-                "web/backend/server.py",
+                "-m",
+                "meddataos.server",
                 str(case),
                 "--agent-url",
                 f"http://127.0.0.1:{ROUTER_PORT}/v1",

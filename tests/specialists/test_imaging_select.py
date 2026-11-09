@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import pytest
-from datactrl import Case
-from datactrl.types import Modality, ResourceRef
-from datactrl.utils.dicom_meta import ABDOMEN_FROM_SUPERIOR_MM
+from meddataos.datactrl import Case
+from meddataos.datactrl.types import Modality, ResourceRef
+from meddataos.datactrl.utils.dicom_meta import ABDOMEN_FROM_SUPERIOR_MM
 
-from specialists.common import case_root, has_case
-from specialists.imaging import read
-from specialists.imaging.select import (
+from meddataos.specialists.common import case_root, has_case
+from meddataos.specialists.imaging import read
+from meddataos.specialists.imaging.select import (
     choose_preview_window,
     parse_query_intent,
     rank_series,
@@ -247,7 +247,7 @@ def test_description_drops_image_links_and_repeated_metadata():
 
 
 def test_marker_follows_words_even_when_the_text_has_dotted_numbers():
-    from specialists.imaging.serve import _mark
+    from meddataos.specialists.imaging.serve import _mark
 
     marked = _mark("Series Neck 2.0 CE shows the airway. A second sentence.")
     assert marked == "Series Neck 2.0 CE shows the airway [cite:1]. A second sentence."
