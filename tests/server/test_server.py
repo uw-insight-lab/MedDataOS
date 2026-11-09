@@ -20,7 +20,7 @@ import pytest
 from websockets.sync.client import connect
 
 
-APP = Path(__file__).resolve().parents[1]
+APP = Path(__file__).resolve().parents[2]
 
 
 def _free_port() -> int:
@@ -1013,9 +1013,7 @@ def test_a_specialist_citation_outside_the_case_is_an_error(routing_server):
     assert len(_question_bodies(NotesSpecialist, question)) == 7
 
 
-WORKSPACE = APP.parents[1]
-CASE_TCGA = WORKSPACE / "data" / "TCGA-DD-A4NF"
-NOTES_PYTHON = WORKSPACE / "MedDataOS" / "venv" / "bin" / "python"
+CASE_TCGA = APP / "data" / "TCGA-DD-A4NF"
 
 
 class NotesRouter(BaseHTTPRequestHandler):
@@ -1075,24 +1073,20 @@ def test_notes_agent_answers_a_real_case(tmp_path):
     notes_port = _free_port()
     notes_log = tmp_path / "notes.log"
     log_handle = notes_log.open("w")
-    notes_root = str(WORKSPACE / "MedDataOS")
     env = os.environ.copy()
     env.pop("PYTHONSAFEPATH", None)
     env["PYTHONUNBUFFERED"] = "1"
-    env["PYTHONPATH"] = os.pathsep.join(
-        [notes_root, str(WORKSPACE / "src"), env.get("PYTHONPATH", "")]
-    ).rstrip(os.pathsep)
     notes_proc = subprocess.Popen(
         [
-            str(NOTES_PYTHON if NOTES_PYTHON.exists() else Path(sys.executable)),
+            sys.executable,
             "-m",
-            "src.agents.notes.serve",
+            "specialists.notes.serve",
             "--case",
             str(CASE_TCGA),
             "--port",
             str(notes_port),
         ],
-        cwd=notes_root,
+        cwd=APP,
         env=env,
         stdout=log_handle,
         stderr=subprocess.STDOUT,
