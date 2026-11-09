@@ -1,4 +1,4 @@
-# med-datactrl
+# datactrl
 
 Local medical data access harness: open a filesystem root, auto-discover DICOM / structured data / clinical notes, and fetch bounded slices for humans or LLM tools.
 
@@ -96,18 +96,10 @@ print(dispatch("discover", {"root": "/path/to/case"}))
 # Gemini-style declarations: gemini_function_declarations()
 ```
 
-## Install
+## Install and tests
+
+datactrl lives in `src/datactrl` of the MedDataOS repository and is installed with it (`pixi install`, or `pip install -e .` from the repository root). Its tests are in `tests/datactrl`:
 
 ```bash
-pixi install
-# or
-pip install -e .
-```
-
-## Tests
-
-```bash
-pixi run pytest
-# or
-pytest
+pixi run pytest tests/datactrl
 ```
