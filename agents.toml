@@ -1,0 +1,7 @@
+[notes]
+url = "http://127.0.0.1:8002/v1"
+description = "Answers from clinical notes with verified quotes, dates, and conflicts. Use this for questions about the chart, history, labs in notes, and discrepancies between notes."
+
+[imaging]
+url = "http://127.0.0.1:8003/v1"
+description = "Looks at one DICOM slice. Use this for questions about the images, scans, contours, or what is visible on imaging."
