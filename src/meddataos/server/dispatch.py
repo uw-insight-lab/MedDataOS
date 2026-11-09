@@ -13,9 +13,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from uuid import uuid4
 
 from meddataos.server import answer
 from meddataos.server.case import Answer, Contract, Profile, case, path_key
@@ -29,6 +31,98 @@ def _background(coroutine) -> None:
     task = asyncio.create_task(coroutine)
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
+
+
+_TOOL_LABELS = {
+    "discover": "Discovering the case",
+    "describe": "Describing",
+    "fetch": "Reading",
+    "links": "Listing links",
+    "assert_link": "Checking a link",
+    "dicom_tree": "Reading the DICOM tree",
+    "dicom_groups": "Grouping DICOM series",
+}
+
+
+def _file_label(arguments: dict) -> str:
+    """The case file's label for a resource id, without reading the file."""
+    resource_id = arguments.get("resource_id")
+
+    if not isinstance(resource_id, str):
+        return ""
+
+    for item in case.files():
+        if item.get("id") != resource_id:
+            continue
+
+        label = item.get("label")
+
+        if isinstance(label, str) and label.strip():
+            return label.strip()
+
+        path = item.get("web_path") or ""
+        return str(path).rsplit("/", 1)[-1]
+
+    return ""
+
+
+def _tool_label(name: str, arguments: dict) -> str:
+    action = _TOOL_LABELS.get(name, name or "Running a tool")
+    target = _file_label(arguments)
+
+    if target and name in ("describe", "fetch"):
+        return f"{action} {target}"
+
+    return action
+
+
+_step_started: dict[str, float] = {}
+
+
+def _live(session_id: str):
+    """The session while its question is open. The patient card and late replies have none."""
+    if not session_id or session_id not in state.pending:
+        return None
+
+    return state.sessions.get(session_id)
+
+
+async def record_step(session_id: str, step: dict) -> None:
+    """Remember one step on the session and push it, with how long it took once it ends."""
+    session = _live(session_id)
+
+    if session is None:
+        return
+
+    step_id = step["step_id"]
+    stored = next((item for item in session.steps if item["step_id"] == step_id), None)
+    fields = {key: value for key, value in step.items() if value is not None}
+    now = time.monotonic()
+
+    if stored is None:
+        stored = fields
+        stored["started_ms"] = session.elapsed_ms()
+        session.steps.append(stored)
+        _step_started[step_id] = now
+    else:
+        stored.update(fields)
+
+    if stored.get("status") in ("done", "error"):
+        began = _step_started.pop(step_id, now)
+        stored["duration_ms"] = int((now - began) * 1000)
+
+    await state.hub.step(session_id, dict(stored), session.elapsed_ms())
+
+
+async def set_status(session_id: str, label: str) -> None:
+    """Say what the open question is waiting on, such as the model or the citation check."""
+    session = _live(session_id)
+
+    if session is None or session.status == label:
+        return
+
+    session.status = label
+    await state.hub.status(session_id, label, session.elapsed_ms())
 
 
 class AgentError(Exception):
@@ -137,6 +231,7 @@ class Conversation:
         consult: bool = False,
         max_steps: int | None = None,
         answer_format: Callable[[], dict | None] | None = None,
+        activity: str = "Thinking",
     ) -> None:
         """The messages so far, plus how tool calls and the answer format work."""
         self.messages = messages
@@ -146,10 +241,15 @@ class Conversation:
         self.consult = consult
         self.max_steps = self.MAX_STEPS if max_steps is None else max_steps
         self.answer_format = answer_format
+        self.activity = activity
 
     async def reply(self) -> str:
-        """Call the agent until it stops asking for tools, then return its text."""
+        """Call the agent until it stops asking for tools, then return its text.
+
+        Waiting on the model updates the live status. It does not add a row.
+        """
         for _ in range(self.max_steps):
+            await set_status(self.session_id, self.activity)
             message = await self._next()
             self.messages.append(message)
             calls = message.get("tool_calls") or []
@@ -198,6 +298,7 @@ class Conversation:
         try:
             arguments = json.loads(function.get("arguments") or "{}")
         except json.JSONDecodeError as exc:
+            await self._tool_step(name, {}, {"status": "error"})
             return {
                 "status": "error",
                 "name": name,
@@ -205,6 +306,7 @@ class Conversation:
             }
 
         if not isinstance(arguments, dict):
+            await self._tool_step(name, {}, {"status": "error"})
             return {
                 "status": "error",
                 "name": name,
@@ -214,7 +316,54 @@ class Conversation:
         if name.startswith("consult_"):
             return await self._consult(name, arguments)
 
-        return await asyncio.to_thread(case.run, name, arguments, self.session_id)
+        step_id = uuid4().hex[:12]
+        await record_step(self.session_id, {
+            "step_id": step_id,
+            "kind": "tool",
+            "status": "started",
+            "label": _tool_label(name, arguments),
+            "name": name,
+        })
+        result = await asyncio.to_thread(case.run, name, arguments, self.session_id)
+        await self._finish_tool(step_id, name, arguments, result)
+        return result
+
+    async def _tool_step(self, name: str, arguments: dict, result: dict) -> None:
+        """Record a tool call that failed before it ran."""
+        step_id = uuid4().hex[:12]
+        await record_step(self.session_id, {
+            "step_id": step_id,
+            "kind": "tool",
+            "status": "started",
+            "label": _tool_label(name, arguments),
+            "name": name,
+        })
+        await self._finish_tool(step_id, name, arguments, result)
+
+    async def _finish_tool(self, step_id: str, name: str, arguments: dict, result: dict) -> None:
+        cite = result.get("cite") if isinstance(result, dict) else None
+        label = _tool_label(name, arguments)
+
+        if isinstance(cite, str):
+            record = state.calls.get(self.session_id, {}).get(cite) or {}
+            filename = record.get("file")
+
+            if isinstance(filename, str) and filename and name in ("describe", "fetch"):
+                verb = "Describing" if name == "describe" else "Reading"
+                label = f"{verb} {filename}"
+
+        step = {
+            "step_id": step_id,
+            "kind": "tool",
+            "status": "error" if not isinstance(result, dict) or result.get("status") == "error" else "done",
+            "label": label,
+            "name": name,
+        }
+
+        if isinstance(cite, str):
+            step["cite"] = cite
+
+        await record_step(self.session_id, step)
 
     async def _consult(self, name: str, arguments: dict) -> dict:
         """Call one registered specialist. A second call returns the first result."""
@@ -254,8 +403,23 @@ class Conversation:
             )
             return cache[specialist_name]
 
+        step_id = uuid4().hex[:12]
+        await record_step(self.session_id, {
+            "step_id": step_id,
+            "kind": "consult",
+            "status": "started",
+            "label": f"Consulting {specialist_name}",
+            "name": specialist_name,
+        })
         result = await consult_specialist(specialist, question.strip(), self.session_id)
         cache[specialist_name] = result
+        await record_step(self.session_id, {
+            "step_id": step_id,
+            "kind": "consult",
+            "status": "error" if result.get("status") == "error" else "done",
+            "label": f"Consulting {specialist_name}",
+            "name": specialist_name,
+        })
         return result
 
 
@@ -502,6 +666,7 @@ async def consult_specialist(
         client=_client_for(specialist.url),
         tools=list(case.tools),
         consult=False,
+        activity=f"Waiting for {specialist.name}",
     )
     problem = ""
 
@@ -571,8 +736,12 @@ class Question:
 
     def start(self) -> None:
         """Mark the session busy and ask the agent in the background."""
+        session = state.sessions[self.session_id]
+        session.steps = []
+        session.status = ""
+        session.started = time.monotonic()
         state.pending.add(self.session_id)
-        question = state.sessions[self.session_id].history[-1]["content"]
+        question = session.history[-1]["content"]
         log("server", f"session={self.label} question sent to the agent: {question}")
         _background(self.answer())
 
@@ -596,6 +765,7 @@ class Question:
                 if self.session_id not in state.pending:
                     return
 
+                await set_status(self.session_id, "Checking citations")
                 opened = state.reads.get(self.session_id, [])
                 verdict = Answer(
                     text, opened, case.files(), state.calls.get(self.session_id, {})
@@ -616,6 +786,7 @@ class Question:
                     {"role": "assistant", "content": text},
                     {"role": "user", "content": verdict.correction()},
                 ]
+                conversation.activity = "Revising the answer"
 
             await self._deliver(
                 "The agent could not produce an answer with valid citations. "
@@ -673,10 +844,17 @@ class Question:
         state.cited.pop(self.session_id, None)
 
         session = state.sessions[self.session_id]
-        session.add("assistant", message)
+        steps = [dict(item) for item in session.steps]
+        duration_ms = session.elapsed_ms()
+        for item in session.steps:
+            _step_started.pop(item["step_id"], None)
+        session.steps = []
+        session.status = ""
+        session.started = None
+        session.add("assistant", message, steps, duration_ms)
         session.processing = False
 
-        await state.hub.assistant(self.session_id, message)
+        await state.hub.assistant(self.session_id, message, steps, duration_ms)
         log(
             "server",
             f"session={self.label} answer sent to "

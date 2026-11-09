@@ -343,6 +343,9 @@ async def get_session(session_id: str):
         "message_count": len(session.history),
         "processing": session.processing,
         "history": session.history,
+        "steps": session.steps,
+        "activity": session.status if session.processing else "",
+        "elapsed_ms": session.elapsed_ms() if session.processing else None,
     }
 
 

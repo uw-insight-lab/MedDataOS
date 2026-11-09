@@ -514,7 +514,7 @@ def test_server_sends_the_question_to_the_agent(dispatch_server):
         session_id = send_chat(dispatch_server, question)["session_id"]
         pushed = json.loads(page.recv(timeout=5))
 
-        while pushed["type"] == "patient":
+        while pushed["type"] in {"patient", "status", "step"}:
             pushed = json.loads(page.recv(timeout=5))
 
     assert pushed["type"] == "assistant"
@@ -616,6 +616,29 @@ def test_prose_followed_by_json_is_sent_back_for_a_citation_object(dispatch_serv
     )
 
 
+def _until_assistants(page, session_ids, timeout=10):
+    """WebSocket messages for these sessions, through each session's answer."""
+    seen = []
+    got = set()
+    deadline = time.time() + timeout
+
+    while got != set(session_ids) and time.time() < deadline:
+        pushed = json.loads(page.recv(timeout=max(0.1, deadline - time.time())))
+
+        if pushed.get("type") in {"system", "patient"}:
+            continue
+
+        seen.append(pushed)
+
+        if pushed.get("type") == "assistant" and pushed.get("session_id") in session_ids:
+            got.add(pushed["session_id"])
+
+    if got != set(session_ids):
+        raise AssertionError(f"missing answers for {set(session_ids) - got}")
+
+    return seen
+
+
 def test_server_runs_the_agents_tool_calls(dispatch_server):
     session_id = send_chat(dispatch_server, "[read] What does the note say?")["session_id"]
     answer = json.loads(wait_for_answer(dispatch_server, session_id)["history"][-1]["content"])
@@ -628,6 +651,114 @@ def test_server_runs_the_agents_tool_calls(dispatch_server):
     assert citation["command"]["tool"] == "fetch"
     assert citation["command"]["arguments"]["view"] == "text"
     assert citation["command"]["arguments"]["resource_id"]
+
+
+def test_a_read_arrives_as_a_step_with_its_cite_token(dispatch_server):
+    question = "[read] Which file did you open?"
+
+    with connect(dispatch_server["ws"] + "/ws") as page:
+        assert json.loads(page.recv(timeout=5))["type"] == "system"
+        session_id = send_chat(dispatch_server, question)["session_id"]
+        seen = _until_assistants(page, [session_id])
+
+    finished = [
+        item for item in seen
+        if item["type"] == "step" and item["status"] == "done" and item["kind"] == "tool"
+    ]
+    assert len(finished) == 1
+    assert finished[0]["session_id"] == session_id
+    assert finished[0]["name"] == "fetch"
+    assert finished[0]["cite"] == "c1"
+    assert finished[0]["label"].startswith("Reading ")
+    assert "fatigue" not in json.dumps(finished[0]).lower()
+
+    answer = seen[-1]
+    assert answer["type"] == "assistant"
+    assert [step["kind"] for step in answer["steps"]] == ["tool"]
+    assert any(step.get("cite") == "c1" for step in answer["steps"])
+    saved = wait_for_answer(dispatch_server, session_id)["history"][-1]
+    assert any(step.get("cite") == "c1" for step in saved["steps"])
+    assert get(dispatch_server, f"/api/session/{session_id}")["steps"] == []
+
+
+def test_the_page_hears_what_the_question_is_doing(dispatch_server):
+    question = "[read][forget] What is the agent doing now?"
+
+    with connect(dispatch_server["ws"] + "/ws") as page:
+        assert json.loads(page.recv(timeout=5))["type"] == "system"
+        session_id = send_chat(dispatch_server, question)["session_id"]
+        seen = _until_assistants(page, [session_id])
+
+    statuses = [item for item in seen if item["type"] == "status"]
+    assert all(item["session_id"] == session_id for item in statuses)
+    labels = [item["label"] for item in statuses]
+    assert labels[0] == "Thinking"
+    assert "Checking citations" in labels
+    assert "Revising the answer" in labels
+    assert all(isinstance(item["elapsed_ms"], int) for item in statuses)
+
+    done = next(item for item in seen if item["type"] == "step" and item["status"] == "done")
+    assert isinstance(done["duration_ms"], int)
+    assert isinstance(done["started_ms"], int)
+
+    answer = seen[-1]
+    assert isinstance(answer["duration_ms"], int)
+    saved = wait_for_answer(dispatch_server, session_id)
+    assert saved["history"][-1]["duration_ms"] == answer["duration_ms"]
+    assert saved["status"] == "success"
+    assert saved["activity"] == ""
+    assert saved["elapsed_ms"] is None
+
+
+def test_a_bad_tool_call_ends_as_an_error_step(dispatch_server):
+    session_id = send_chat(dispatch_server, "[bad args] Try a broken fetch.")["session_id"]
+    steps = wait_for_answer(dispatch_server, session_id)["history"][-1]["steps"]
+    tools = [step for step in steps if step["kind"] == "tool"]
+
+    assert tools
+    assert all(step["status"] == "error" and "cite" not in step for step in tools)
+    assert all("fatigue" not in step["label"].lower() for step in steps)
+
+
+def test_steps_carry_the_session_that_asked(dispatch_server):
+    with connect(dispatch_server["ws"] + "/ws") as page:
+        assert json.loads(page.recv(timeout=5))["type"] == "system"
+        asking = send_chat(dispatch_server, "[read] Steps stay on this session.")["session_id"]
+        other = send_chat(dispatch_server, "Another session says hello.")["session_id"]
+        seen = _until_assistants(page, [asking, other])
+
+    tool_steps = [item for item in seen if item["type"] == "step" and item["kind"] == "tool"]
+    assert tool_steps
+    assert {item["session_id"] for item in tool_steps} == {asking}
+    asking_answer = wait_for_answer(dispatch_server, asking)["history"][-1]
+    other_answer = wait_for_answer(dispatch_server, other)["history"][-1]
+    assert any(step.get("cite") == "c1" for step in asking_answer["steps"])
+    assert "steps" not in other_answer
+
+
+def test_the_patient_card_sends_no_steps(dispatch_server):
+    with connect(dispatch_server["ws"] + "/ws") as page:
+        assert json.loads(page.recv(timeout=5))["type"] == "system"
+        deadline = time.time() + 0.6
+
+        while time.time() < deadline:
+            try:
+                pushed = json.loads(page.recv(timeout=0.2))
+            except TimeoutError:
+                break
+
+            assert pushed["type"] in {"system", "patient"}
+
+
+def test_a_plain_answer_has_no_steps(dispatch_server):
+    session_id = send_chat(dispatch_server, "Just say hello please.")["session_id"]
+    session = wait_for_answer(dispatch_server, session_id)
+    answer = session["history"][-1]
+
+    assert answer["content"] == "Plain answer."
+    assert "steps" not in answer
+    assert isinstance(answer["duration_ms"], int)
+    assert session["steps"] == []
 
 
 def test_server_rejects_markers_side_by_side(dispatch_server):
