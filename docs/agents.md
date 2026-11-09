@@ -16,7 +16,7 @@ Each request is JSON:
 |---|---|
 | `model` | `AGENT_MODEL` from `.env`. Empty when that variable is unset. |
 | `messages` | The system message, then the session history. |
-| `tools` | The med-datactrl tools, omitted on the retry described below. |
+| `tools` | The datactrl tools, omitted on the retry described below. |
 
 `AGENT_API_KEY`, when set, is sent as `Authorization: Bearer …`. `AGENT_TIMEOUT` is how many seconds the server waits for each response. The default is `120`.
 
@@ -32,7 +32,7 @@ The system message for a question contains:
 
 Each resource in that list has `id`, `modality` (`note`, `structured`, or `dicom`), `label`, and `web_path`. `web_path` is the file's URL on this server, such as `/case/clinic_note.txt`. Paths are URL-encoded per segment. The list is the `resources` array from the discovery report.
 
-The tools are `discover`, `describe`, `fetch`, `links`, `assert_link`, `dicom_tree`, and `dicom_groups`. Their schemas come from med-datactrl. `root` and `case_id` are removed from every schema, including `required`. The server drops those two arguments if the agent sends them, and sets `root` to the folder it opened before it runs the tool.
+The tools are `discover`, `describe`, `fetch`, `links`, `assert_link`, `dicom_tree`, and `dicom_groups`. Their schemas come from datactrl. `root` and `case_id` are removed from every schema, including `required`. The server drops those two arguments if the agent sends them, and sets `root` to the folder it opened before it runs the tool.
 
 A tool result comes back as a `tool` message whose content is JSON:
 
@@ -74,7 +74,7 @@ description = "Answers from clinical notes with verified quotes, dates, and conf
 
 [imaging]
 url = "http://127.0.0.1:8003/v1"
-description = "Interprets DICOM series the case actually contains."
+description = "Looks at one DICOM slice. Use this for questions about the images, scans, contours, or what is visible on imaging."
 ```
 
 ```bash
@@ -87,9 +87,11 @@ The router is given one extra tool per specialist, `consult_notes`, `consult_ima
 
 A specialist may answer in plain text, or with the citation JSON below. A `describe` or `fetch` it calls comes back with a `cite` token, and that token is what the citation names. A specialist that reads the case itself, without those tools, cites the file's `web_path` instead. Files it cites count as opened, so the router's own reply has to cite them too. With no specialists registered, none of this is added and the server talks only to `--agent-url`.
 
+The router has to repeat a specialist's citation in its own reply, and the answer schema has no room for a slice preview, quote offsets, or a span link. So the server keeps each accepted specialist citation, and before the page sees the reply it puts the specialist's `agent`, DICOM slice (a `preview` of `slice_index`, `window`, and `overlay` becomes the same `dicom` record a fetched slice gets), checked `evidence`, and `conflicts` back on the router's citation for the same file. A router quote that matches none of the specialist's quotes is dropped, because the server cannot check it. Any citation that still names no agent is given the one for its file: `clinical_notes`, `imaging`, or `structured`.
+
 ## Clinical notes specialist
 
-The notes specialist is `python -m src.agents.notes.serve --case /path/to/case` in the med-datactrl repo. It prints an address such as `http://127.0.0.1:8002/v1`. For notes alone, pass that address as `--agent-url`. When more than one specialist is running, keep a router as `--agent-url` and register the notes process beside it:
+The notes specialist is `pixi run notes --case /path/to/case` from the root of this repo (it runs `python -m specialists.notes.serve`). `pixi run stack` starts it with the rest. It prints an address such as `http://127.0.0.1:8002/v1`. For notes alone, pass that address as `--agent-url`. When more than one specialist is running, keep a router as `--agent-url` and register the notes process beside it:
 
 ```toml
 [notes]
@@ -99,9 +101,21 @@ description = "Answers from clinical notes with verified quotes, dates, and conf
 
 It opens that case itself and returns citation JSON. Each citation is tagged `clinical_notes` and carries the verified quotes and documented discrepancies, which the page shows on the badge, the hover card, and the source viewer. It does not ask the server to read files.
 
+## Imaging specialist (stand-in)
+
+A temporary imaging specialist, `pixi run imaging --case /path/to/case` from the root of this repo, stands in until a fuller imaging agent exists. Both specialists read `GEMINI_API_KEY` from this repo's `.env`. It prints `http://127.0.0.1:8003/v1`. Register it next to notes:
+
+```toml
+[imaging]
+url = "http://127.0.0.1:8003/v1"
+description = "Looks at one DICOM slice. Use this for questions about the images, scans, contours, or what is visible on imaging."
+```
+
+It ranks the case's series against the question, renders one preview slice (with contours for an RTSTRUCT or when the question asks for them), and describes that slice with a vision model (Gemini). A confident pick becomes one citation for the series file, tagged `imaging`, with a `preview` of the slice index, window, and overlay; the page loads that slice from `/api/dicom/preview`. If no series ranks confidently, the reply is plain text listing the candidates and has no citation. Any agent can take its place as long as it answers the same way.
+
 ## Azure OpenAI
 
-The example router speaks Azure when these are set in this repo's `.env`. The notes agent reads the same variables from its own environment:
+The example router speaks Azure when these are set in this repo's `.env`. The notes and imaging specialists read the same variables from the same file:
 
 ```bash
 AZURE_OPENAI_API_KEY=
@@ -110,7 +124,9 @@ AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 AZURE_OPENAI_API_VERSION=2024-10-21
 ```
 
-`AZURE_OPENAI_DEPLOYMENT` is the deployment name. `AZURE_OPENAI_API_VERSION` is the date Azure puts on the request. When the key, endpoint, and deployment are set, those calls do not use Gemini. When they are empty, the notes agent keeps using `GEMINI_API_KEY`.
+`AZURE_OPENAI_DEPLOYMENT` is the deployment name. `AZURE_OPENAI_API_VERSION` is the date Azure puts on the request. When the key, endpoint, and deployment are set, those calls do not use Gemini. When they are empty, the specialists keep using `GEMINI_API_KEY`.
+
+Some reasoning models reject function tools on chat completions unless `reasoning_effort` is `none`, and the page then gets no tools. Set `AZURE_OPENAI_REASONING_EFFORT=none` for those (`OPENAI_REASONING_EFFORT` when not using Azure). Leave it unset for models that don't take the parameter.
 
 ## Citations
 
