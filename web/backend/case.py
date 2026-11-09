@@ -344,6 +344,46 @@ class Case:
 
         return json.dumps(parsed)
 
+    _AGENT_BY_MODALITY: ClassVar[dict[str, str]] = {
+        "note": "clinical_notes",
+        "dicom": "imaging",
+        "structured": "structured",
+    }
+
+    def name_sources(self, text: str, calls: dict[str, dict]) -> str:
+        """Give a citation that names no agent the one for its file, so its badge reads Notes, Imaging, ….
+
+        A model that must fill every field of the answer schema often sends ``agent: null``.
+        A citation that carries a DICOM record is left alone: the page names those itself.
+        """
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return text
+
+        citations = parsed.get("citations") if isinstance(parsed, dict) else None
+
+        if not isinstance(citations, list):
+            return text
+
+        modality_of = {path_key(item["web_path"]): item.get("modality") for item in self.files()}
+        changed = False
+
+        for citation in citations:
+            if not isinstance(citation, dict) or citation.get("agent") or citation.get("dicom"):
+                continue
+
+            handle = citation.get("cite")
+            call = calls.get(handle) if isinstance(handle, str) else None
+            modality = (call or {}).get("modality") or modality_of.get(path_key(citation.get("web_path")))
+            agent = self._AGENT_BY_MODALITY.get(modality or "")
+
+            if agent:
+                citation["agent"] = agent
+                changed = True
+
+        return json.dumps(parsed) if changed else text
+
     # -----------------------------------------------------------------------
     # Calls remembered for the open question
     # -----------------------------------------------------------------------
