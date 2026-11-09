@@ -3,16 +3,38 @@ authors = ["Joshua Siraj <joshua.siraj@ryerson.ca>"]
 channels = ["conda-forge"]
 name = "MedDataOS"
 platforms = ["linux-64"]
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
 python = ">=3.13,<3.14"
 
 [pypi-dependencies]
-meddataos = { path = ".", editable = true, extras = ["dev"] }
-med-datactrl = { git = "https://github.com/pmcdi/med-datactrl.git", branch = "main" }
+meddataos = { path = ".", editable = true, extras = ["dev", "specialists"] }
+
+[environments]
+default = ["style"]
 
 [tasks]
+stack = { cmd = "python scripts/stack.py", description = "Start the router, specialists, and web server for one case" }
 serve = "python web/backend/server.py"
 agent = "python examples/agent.py"
+notes = "python -m specialists.notes.serve"
+imaging = "python -m specialists.imaging.serve"
 test = "pytest tests"
+
+############################################## STYLE ###############################################
+# Applies to src/datactrl. See configs/ruff.toml for the configuration.
+
+[feature.style.pypi-dependencies]
+ruff = ">=0.4.4"
+mypy = ">=1.15.0,<2"
+
+[feature.style.tasks]
+ruff-check.cmd = ["ruff", "check", "src"]
+ruff-check.description = "Run ruff check"
+ruff-format.cmd = ["ruff", "format", "src"]
+ruff-format.description = "Run ruff format"
+type-check.cmd = ["mypy", "-p", "datactrl"]
+type-check.description = "Run mypy type check"
+qc.depends-on = ["ruff-format", "ruff-check", "type-check"]
+qc.description = "Quality check: ruff & mypy"
