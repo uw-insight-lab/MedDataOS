@@ -156,6 +156,70 @@ def test_patient_card_comes_from_the_folder(server):
     assert [item["label"] for item in patients[0]["modalities"]] == ["Notes", "Tables"]
 
 
+def patch(server, path, body):
+    request = urllib.request.Request(
+        server["http"] + path,
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="PATCH",
+    )
+
+    with urllib.request.urlopen(request) as response:
+        return json.load(response)
+
+
+def test_chats_pins_and_reviews_survive_a_restart(tmp_path):
+    folder = tmp_path / "P0099"
+    folder.mkdir()
+    (folder / "clinic_note.txt").write_text("Chief complaint: fatigue.\n")
+
+    agent = ThreadingHTTPServer(("127.0.0.1", 0), FakeAgent)
+    threading.Thread(target=agent.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{agent.server_address[1]}/v1"
+
+    try:
+        with running_server(folder, agent_url=url, AGENT_MODEL="fake") as first:
+            question = "Keep this chat after restart."
+            session_id = send_chat(first, question, patient_id="P0099")["session_id"]
+            answer = wait_for_answer(first, session_id)
+            assert answer["history"][-1]["content"] == "Plain answer."
+
+            pinned = post(
+                first,
+                "/api/patients/P0099/pins",
+                {
+                    "type": "text",
+                    "text": "follow the fatigue plan",
+                    "source": session_id,
+                },
+            )
+            assert pinned["status"] == "ok"
+
+            reviewed = patch(
+                first,
+                "/api/patients/P0099/reviews",
+                {"key": "/case/clinic_note.txt", "checklist_state": {"0": True}},
+            )
+            assert reviewed["key"] == "/case/clinic_note.txt"
+
+        with running_server(folder, agent_url=url, AGENT_MODEL="fake") as second:
+            chats = get(second, "/api/patients/P0099/conversations")
+            assert [item["session_id"] for item in chats] == [session_id]
+            assert chats[0]["preview"] == question
+
+            restored = get(second, f"/api/session/{session_id}")
+            assert restored["processing"] is False
+            assert restored["history"][-1]["content"] == "Plain answer."
+            assert get(second, "/api/patients/P0099/pins")[0]["text"] == (
+                "follow the fatigue plan"
+            )
+            assert get(second, "/api/patients/P0099/reviews") == {
+                "/case/clinic_note.txt": {"0": True},
+            }
+    finally:
+        agent.shutdown()
+
+
 def test_case_files_are_served(server):
     with urllib.request.urlopen(server["http"] + "/case/clinic_note.txt") as response:
         assert b"fatigue" in response.read()
@@ -504,6 +568,47 @@ def dispatch_server(case_folder):
 
 def requests_for(question: str) -> list[dict]:
     return [body for body in FakeAgent.requests if body["messages"][1]["content"] == question]
+
+
+def test_audit_run_records_tools_refusals_and_calls(dispatch_server):
+    session_id = send_chat(
+        dispatch_server,
+        "[read][forget] What does the note say?",
+    )["session_id"]
+    wait_for_answer(dispatch_server, session_id)
+
+    payload = get(dispatch_server, f"/api/session/{session_id}/audit")
+    assert payload["status"] == "success"
+    assert payload["runs"]
+    run = payload["runs"][0]
+    assert run["session_id"] == session_id
+    assert "[read]" in run["question"]
+    assert run["refusals"]
+    assert any(step.get("kind") == "tool" for step in run["steps"])
+    assert any(item.get("cite") == "c1" for item in run["calls"])
+
+
+def test_audit_runs_survive_a_restart(tmp_path):
+    folder = tmp_path / "P0043"
+    folder.mkdir()
+    (folder / "clinic_note.txt").write_text("Chief complaint: fatigue.\n")
+
+    agent = ThreadingHTTPServer(("127.0.0.1", 0), FakeAgent)
+    threading.Thread(target=agent.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{agent.server_address[1]}/v1"
+
+    try:
+        with running_server(folder, agent_url=url, AGENT_MODEL="fake") as first:
+            session_id = send_chat(first, "Audit me.", patient_id="P0043")["session_id"]
+            wait_for_answer(first, session_id)
+            run_id = get(first, f"/api/session/{session_id}/audit")["runs"][0]["run_id"]
+
+        with running_server(folder, agent_url=url, AGENT_MODEL="fake") as second:
+            runs = get(second, f"/api/session/{session_id}/audit")["runs"]
+            assert runs[0]["run_id"] == run_id
+            assert runs[0]["answer"] == "Plain answer."
+    finally:
+        agent.shutdown()
 
 
 def test_server_sends_the_question_to_the_agent(dispatch_server):

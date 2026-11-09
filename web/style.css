@@ -2325,6 +2325,30 @@ main {
     color: var(--critical);
 }
 
+.btn-export-audit {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-warm);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-export-audit:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-export-audit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 /* ─── Empty State ───────────────────────────────────────────── */
 .empty-state {
     text-align: center;

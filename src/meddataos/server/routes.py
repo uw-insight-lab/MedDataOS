@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from meddataos.datactrl.case import Case
 from meddataos.server import dispatch
 from meddataos.server.case import case
+from meddataos.server import store
 from meddataos.server.state import APP_ROOT, log, short_session, state
 
 router = APIRouter()
@@ -323,6 +324,7 @@ async def chat(
 
     session.processing = True
     session.add("user", message)
+    state.save()
     log("user", f"session={label} patient={session.patient_id or '?'} {message}")
 
     dispatch.ask(session_id)
@@ -346,6 +348,35 @@ async def get_session(session_id: str):
         "steps": session.steps,
         "activity": session.status if session.processing else "",
         "elapsed_ms": session.elapsed_ms() if session.processing else None,
+    }
+
+
+@router.get("/api/session/{session_id}/audit")
+async def session_audit(session_id: str, limit: int = 100):
+    """Audit runs for one chat session, newest first."""
+    if state.root is None:
+        return {"status": "error", "message": "No case is open"}
+
+    if session_id not in state.sessions:
+        return {"status": "error", "message": "Session not found"}
+
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "runs": store.list_audit_runs(state.root, session_id=session_id, limit=limit),
+    }
+
+
+@router.get("/api/patients/{patient_id}/audit")
+async def patient_audit(patient_id: str, limit: int = 100):
+    """Audit runs for one patient across sessions, newest first."""
+    if state.root is None:
+        return {"status": "error", "message": "No case is open"}
+
+    return {
+        "status": "success",
+        "patient_id": patient_id,
+        "runs": store.list_audit_runs(state.root, patient_id=patient_id, limit=limit),
     }
 
 
@@ -426,6 +457,7 @@ async def add_pin(patient_id: str, request: dict):
 
     pin_id = str(uuid4())
     pins.append({"pin_id": pin_id, **pin, "source": request.get("source", "")})
+    state.save()
     return {"status": "ok", "pin_id": pin_id}
 
 
@@ -434,6 +466,7 @@ async def remove_pin(patient_id: str, pin_id: str):
     """Drop one pin."""
     pins = state.pins.get(patient_id, [])
     state.pins[patient_id] = [pin for pin in pins if pin["pin_id"] != pin_id]
+    state.save()
     return {"status": "ok"}
 
 
@@ -449,6 +482,7 @@ async def patch_pin(patient_id: str, pin_id: str, request: dict):
 
     if "annotations" in request:
         pin["annotations"] = request["annotations"]
+        state.save()
 
     return pin
 
@@ -469,5 +503,6 @@ async def patch_review(patient_id: str, request: dict):
 
     checklist_state = request.get("checklist_state", {})
     state.reviews.setdefault(patient_id, {})[key] = checklist_state
+    state.save()
 
     return {"key": key, "checklist_state": checklist_state}

@@ -166,6 +166,7 @@ class AppState:
         self.reads: dict[str, list[dict]] = {}
         self.calls: dict[str, dict[str, dict]] = {}
         self.cited: dict[str, dict[str, dict]] = {}
+        self.runs: dict[str, dict] = {}
         self.datactrl_case: Case | None = None
         self.hub = Hub()
 
@@ -179,12 +180,48 @@ class AppState:
         print(f"Opening {root}", flush=True)
         self.root = root
         self.report = tools.discover(str(root))
+        self._load()
         return root
+
+    def save(self) -> None:
+        """Write chats, pins, and reviews for the open case to disk."""
+        if self.root is None:
+            return
+
+        from meddataos.server import store
+
+        store.save(self.root, self.sessions, self.pins, self.reviews)
+
+    def _load(self) -> None:
+        """Restore chats, pins, and reviews saved for this case."""
+        from meddataos.server import store
+
+        payload = store.load(self.root)
+        self.sessions = store.sessions_from_store(payload["sessions"])
+        self.pins = {
+            key: list(value)
+            for key, value in payload["pins"].items()
+            if isinstance(key, str) and isinstance(value, list)
+        }
+        self.reviews = {
+            key: dict(value)
+            for key, value in payload["reviews"].items()
+            if isinstance(key, str) and isinstance(value, dict)
+        }
+
+        if self.sessions or self.pins or self.reviews:
+            print(
+                f"Restored {len(self.sessions)} chat(s), "
+                f"{sum(len(v) for v in self.pins.values())} pin(s), "
+                f"{sum(len(v) for v in self.reviews.values())} review key(s)",
+                flush=True,
+            )
 
     def new_session(self, patient_id: str | None) -> str:
         """A new chat, optionally tied to one patient."""
         session_id = str(uuid4())
         self.sessions[session_id] = Session(patient_id=patient_id)
+        self.save()
         return session_id
 
     def conversations(self, patient_id: str) -> list[dict]:

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedDataOS - Medical Data Operating System</title>
-    <link rel="stylesheet" href="/static/style.css?v=74">
+    <link rel="stylesheet" href="/static/style.css?v=75">
 </head>
 <body>
     <div class="container">
@@ -55,6 +55,7 @@
                     <div class="panel-header">
                         <h2>Chat <span id="active-patient-label" class="active-patient-label"></span></h2>
                         <div class="panel-header-actions">
+                            <button id="export-audit-btn" class="btn-export-audit" type="button" title="Download audit JSON for this chat" disabled>Export audit</button>
                             <button id="clear-btn" class="btn-clear">Clear</button>
                         </div>
                     </div>
@@ -134,6 +135,6 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
 
-    <script src="/static/app.js?v=83"></script>
+    <script src="/static/app.js?v=84"></script>
 </body>
 </html>

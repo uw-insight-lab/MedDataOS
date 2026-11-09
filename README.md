@@ -2,7 +2,7 @@
 
 A local page for asking questions about the files in one folder. The server opens that folder with [datactrl](docs/datactrl/README.md), serves the files, and sends each question to an OpenAI-compatible chat completions endpoint. That endpoint is the agent: the example in `examples/agent.py`, or any other program that speaks the same API.
 
-One process opens one folder. Chat sessions, pins, and review checkboxes last until the process stops. Restart the server to open a different folder.
+One process opens one folder. Chat sessions, pins, review checkboxes, and audit runs are saved in SQLite under `data/cases/` for that folder path and come back when you reopen the same case. Restart the server to open a different folder.
 
 ## Layout
 

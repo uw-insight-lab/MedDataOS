@@ -29,6 +29,7 @@ const connectionStatus = document.getElementById('connection-status');
 const connectionText = document.getElementById('connection-text');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
+const exportAuditBtn = document.getElementById('export-audit-btn');
 const messageInput = document.getElementById('message-input');
 const attachBtn = document.getElementById('attach-btn');
 const fileInput = document.getElementById('file-input');
@@ -917,6 +918,44 @@ function updateSendButton() {
     const hasMessage = messageInput.value.trim().length > 0;
     sendBtn.disabled = !isConnected || isProcessing || !hasMessage;
     attachBtn.disabled = !isConnected || isProcessing;
+    if (exportAuditBtn) {
+        exportAuditBtn.disabled = !sessionId;
+    }
+}
+
+async function exportSessionAudit() {
+    if (!sessionId || !exportAuditBtn) return;
+
+    exportAuditBtn.disabled = true;
+
+    try {
+        const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}/audit`);
+        const data = await res.json();
+
+        if (!res.ok || data.status !== 'success') {
+            throw new Error(data.message || 'Could not load audit');
+        }
+
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const patient = activePatientId || 'patient';
+        const payload = {
+            exported_at: new Date().toISOString(),
+            patient_id: activePatientId,
+            session_id: sessionId,
+            runs: data.runs || [],
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `audit-${patient}-${sessionId.slice(0, 8)}-${stamp}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error('Audit export failed:', error);
+        window.alert(error.message || 'Audit export failed');
+    } finally {
+        updateSendButton();
+    }
 }
 
 // Handle file selection
@@ -2843,6 +2882,9 @@ document.addEventListener('mousedown', (e) => {
 // Event listeners
 sendBtn.addEventListener('click', sendMessage);
 clearBtn.addEventListener('click', clearChat);
+if (exportAuditBtn) {
+    exportAuditBtn.addEventListener('click', exportSessionAudit);
+}
 attachBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', handleFileSelect);
 fileRemove.addEventListener('click', removeFile);

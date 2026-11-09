@@ -17,11 +17,13 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from meddataos.server import answer
 from meddataos.server.case import Answer, Contract, Profile, case, path_key
 from meddataos.server.registry import Specialist
+from meddataos.server import store
 from meddataos.server.state import log, short_session, state
 
 _tasks: set[asyncio.Task] = set()
@@ -742,6 +744,12 @@ class Question:
         session.started = time.monotonic()
         state.pending.add(self.session_id)
         question = session.history[-1]["content"]
+        state.runs[self.session_id] = {
+            "run_id": uuid4().hex,
+            "question": question,
+            "started_at": datetime.now(UTC).isoformat(),
+            "refusals": [],
+        }
         log("server", f"session={self.label} question sent to the agent: {question}")
         _background(self.answer())
 
@@ -775,6 +783,11 @@ class Question:
                 if verdict.problem is None:
                     await self._deliver(text)
                     return
+
+                run = state.runs.get(self.session_id)
+
+                if run is not None:
+                    run["refusals"].append({"attempt": attempt, "problem": problem})
 
                 log(
                     "agent",
@@ -854,6 +867,27 @@ class Question:
         session.add("assistant", message, steps, duration_ms)
         session.processing = False
 
+        run = state.runs.pop(self.session_id, None)
+
+        if state.root is not None and run is not None:
+            store.append_audit_run(
+                state.root,
+                {
+                    **run,
+                    "session_id": self.session_id,
+                    "patient_id": session.patient_id,
+                    "finished_at": datetime.now(UTC).isoformat(),
+                    "duration_ms": duration_ms,
+                    "outcome": _audit_outcome(message),
+                    "steps": steps,
+                    "calls": store.calls_for_audit(calls),
+                    "answer": message,
+                    "citations": store.citations_for_audit(message),
+                },
+            )
+
+        state.save()
+
         await state.hub.assistant(self.session_id, message, steps, duration_ms)
         log(
             "server",
@@ -924,6 +958,12 @@ class PatientCard:
 
         if card:
             await state.hub.broadcast({"type": "patient", "patient": card.as_dict()})
+
+
+def _audit_outcome(message: str) -> str:
+    if message.startswith("The agent could not") or message.startswith("The agent failed"):
+        return "failure"
+    return "success"
 
 
 def ask(session_id: str) -> None:

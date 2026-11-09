@@ -74,7 +74,7 @@ Thumbs.db
 .pixi/*
 !.pixi/config.toml
 
-# Local uploads may contain patient data
+# Local uploads and per-case chat/pin/review stores may contain patient data
 data/
 
 # local instructions
