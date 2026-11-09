@@ -284,9 +284,158 @@ def _remember_citations(session_id: str, text: str) -> None:
         ref = known.get(path_key(citation.get("web_path")))
         key = path_key(ref.get("web_path")) if ref else ""
 
+        if ref:
+            _keep_specialist_fields(session_id, key, citation)
+
         if ref and key not in seen and key not in fetched:
             opened.append(ref)
             seen.add(key)
+
+
+# ---------------------------------------------------------------------------
+# What a specialist said about a file
+#
+# The router has to repeat a specialist's citation in its own reply, and the
+# strict answer schema has no room for a slice preview, quote offsets, or a span
+# link. The server keeps the specialist's checked citation and puts those fields
+# back on whatever the router cites for the same file.
+# ---------------------------------------------------------------------------
+
+
+def _keep_specialist_fields(session_id: str, key: str, citation: dict) -> None:
+    """Remember what an accepted specialist citation said about one file."""
+    kept = state.cited.setdefault(session_id, {}).setdefault(
+        key, {"evidence": [], "conflicts": []}
+    )
+
+    for field in ("agent", "summary"):
+        value = citation.get(field)
+
+        if isinstance(value, str) and value.strip() and not kept.get(field):
+            kept[field] = value.strip()
+
+    for field in ("preview", "dicom"):
+        value = citation.get(field)
+
+        if isinstance(value, dict) and value and not kept.get(field):
+            kept[field] = value
+
+    for item in citation.get("evidence") or []:
+        if isinstance(item, dict) and item not in kept["evidence"]:
+            kept["evidence"].append(item)
+
+    conflicts = citation.get("conflicts")
+
+    if isinstance(conflicts, list) and conflicts and not kept["conflicts"]:
+        kept["conflicts"] = [item for item in conflicts if isinstance(item, dict)]
+
+
+def _dicom_record(web_path: str, preview: object) -> dict | None:
+    """The record the page renders as a DICOM slice, built from a specialist's preview."""
+    if not isinstance(preview, dict) or not web_path:
+        return None
+
+    entry: dict = {"web_path": web_path}
+
+    for field in ("slice_index", "n_slices", "window", "roi"):
+        if preview.get(field) is not None:
+            entry[field] = preview[field]
+
+    if preview.get("overlay"):
+        entry["overlay"] = True
+
+    return {"previews": [entry]}
+
+
+def _same_quote(left: object, right: object) -> bool:
+    if not isinstance(left, str) or not isinstance(right, str):
+        return False
+
+    a, b = " ".join(left.lower().split()), " ".join(right.lower().split())
+    return bool(a) and bool(b) and (a == b or (min(len(a), len(b)) >= 12 and (a in b or b in a)))
+
+
+def _merge_evidence(sent: object, kept: list[dict]) -> list[dict]:
+    """The router's quotes, each replaced by the specialist's checked copy of the same quote.
+
+    A quote the specialist never gave is dropped: the server cannot check it, and the
+    page shows quotes as verified. If none match, the specialist's own quotes are used.
+    """
+    merged: list[dict] = []
+
+    for item in sent if isinstance(sent, list) else []:
+        if not isinstance(item, dict):
+            continue
+
+        match = next((row for row in kept if _same_quote(item.get("quote"), row.get("quote"))), None)
+
+        if match is None:
+            continue
+
+        fixed = dict(match)
+
+        for field in ("n", "claim"):
+            if item.get(field) is not None:
+                fixed[field] = item[field]
+
+        merged.append(fixed)
+
+    return merged or [dict(row) for row in kept]
+
+
+def _restore_specialist_fields(session_id: str, text: str) -> str:
+    """Put the specialist's agent, DICOM slice, quotes, and discrepancies back on the router's citations."""
+    saved = state.cited.get(session_id) or {}
+
+    if not saved:
+        return text
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+
+    citations = parsed.get("citations") if isinstance(parsed, dict) else None
+
+    if not isinstance(citations, list):
+        return text
+
+    files = {path_key(item["web_path"]): item["web_path"] for item in case.files()}
+    changed = False
+
+    for item in citations:
+        if not isinstance(item, dict) or item.get("cite"):
+            continue
+
+        key = path_key(item.get("web_path"))
+        kept = saved.get(key)
+
+        if not kept:
+            continue
+
+        if kept.get("agent") and not item.get("agent"):
+            item["agent"] = kept["agent"]
+
+        if kept.get("summary") and not str(item.get("summary") or "").strip():
+            item["summary"] = kept["summary"]
+
+        if not item.get("dicom"):
+            record = kept.get("dicom") or _dicom_record(
+                files.get(key, item.get("web_path") or ""), kept.get("preview")
+            )
+
+            if record:
+                item["dicom"] = record
+
+        if kept["evidence"]:
+            item["evidence"] = _merge_evidence(item.get("evidence"), kept["evidence"])
+
+        if kept["conflicts"]:
+            item["conflicts"] = kept["conflicts"]
+
+        changed = True
+
+    return json.dumps(parsed, ensure_ascii=False) if changed else text
 
 
 async def consult_specialist(specialist: Specialist, question: str, session_id: str) -> dict:
@@ -414,6 +563,7 @@ class Question:
             await self._deliver(f"The agent failed: {exc}")
         finally:
             state.consulted.pop(self.session_id, None)
+            state.cited.pop(self.session_id, None)
 
     def _answer_format(self) -> dict | None:
         """The answer schema, once a describe or fetch means the reply must be cited."""
@@ -447,10 +597,13 @@ class Question:
             return
 
         calls = state.calls.get(self.session_id, {})
+        message = _restore_specialist_fields(self.session_id, message)
         message = case.expand_citations(message, calls)
+        message = case.name_sources(message, calls)
         state.pending.discard(self.session_id)
         state.reads.pop(self.session_id, None)
         state.calls.pop(self.session_id, None)
+        state.cited.pop(self.session_id, None)
 
         session = state.sessions[self.session_id]
         session.add("assistant", message)

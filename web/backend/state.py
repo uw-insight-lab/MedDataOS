@@ -97,6 +97,7 @@ class AppState:
         self.pending: set[str] = set()
         self.reads: dict[str, list[dict]] = {}
         self.calls: dict[str, dict[str, dict]] = {}
+        self.cited: dict[str, dict[str, dict]] = {}
         self.hub = Hub()
 
     def open(self, folder: str) -> Path:
