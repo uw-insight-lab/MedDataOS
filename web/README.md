@@ -22,7 +22,7 @@ An assistant message that is JSON with `response` and a non-empty `citations` li
 
 Other assistant text is shown as markdown. `Clear` drops the selection on the page. The session remains on the server.
 
-The paperclip accepts `.csv` and `.xlsx`. The server writes the bytes to `data/input/dataset.csv` or `data/input/dataset.xlsx`, replacing the previous upload, and appends `[Uploaded file: <name>]` to the question. The agent sees that line. The file stays out of the case folder, so the med-datactrl tools do not list it. `data/` is gitignored.
+The paperclip accepts `.csv` and `.xlsx`. The server writes the bytes to `data/input/dataset.csv` or `data/input/dataset.xlsx`, replacing the previous upload, and appends `[Uploaded file: <name>]` to the question. The agent sees that line. The file stays out of the case folder, so the datactrl tools do not list it. `data/` is gitignored.
 
 ## Pins
 

@@ -1,14 +1,35 @@
 # MedDataOS
 
-A local page for asking questions about the files in one folder. The server opens that folder with [med-datactrl](https://github.com/pmcdi/med-datactrl), serves the files, and sends each question to an OpenAI-compatible chat completions endpoint. That endpoint is the agent: the example in `examples/agent.py`, or any other program that speaks the same API.
+A local page for asking questions about the files in one folder. The server opens that folder with [datactrl](docs/datactrl/README.md), serves the files, and sends each question to an OpenAI-compatible chat completions endpoint. That endpoint is the agent: the example in `examples/agent.py`, or any other program that speaks the same API.
 
 One process opens one folder. Chat sessions, pins, and review checkboxes last until the process stops. Restart the server to open a different folder.
+
+## Layout
+
+| Path | Contents |
+|------|----------|
+| `web/` | The FastAPI server in `web/backend` and the page in `web/frontend`. See [the page](web/README.md). |
+| `src/datactrl/` | The case library: discovery, DICOM, notes, and the tools the server runs. See [datactrl](docs/datactrl/README.md) and its [design](docs/datactrl/DESIGN.md). |
+| `specialists/` | The notes and imaging agents. Each is served as its own chat endpoint. |
+| `examples/agent.py` | The example router. |
+| `agents.toml` | Registers the specialists with the server. |
+| `scripts/stack.py` | Starts the router, specialists, and server together. |
+| `tests/` | `server/`, `datactrl/`, and `specialists/`. |
+| `docs/` | [Connect an agent](docs/agents.md) and the datactrl docs. |
 
 ## Start
 
 Copy `.env.example` to `.env`.
 
 To use the example agent, set `OPENAI_MODEL`. Set `OPENAI_API_KEY` when the model requires one. `OPENAI_BASE_URL` is the model's base URL, the part before `/chat/completions`. The example agent calls `https://api.openai.com/v1` only when `OPENAI_BASE_URL` is unset. A blank value does not use that default, so set the URL or remove the line.
+
+To run everything for one case, the example agent, the notes and imaging specialists from `agents.toml`, and the server:
+
+```bash
+pixi run stack data/TCGA-DD-A4NF
+```
+
+Each process's output is prefixed with its name, and Ctrl-C stops them all. `--only notes` starts a subset. The specialists need `GEMINI_API_KEY` or the Azure settings in `.env`. The steps below start the agent and the server by hand.
 
 In one terminal:
 
@@ -30,7 +51,7 @@ To skip the example agent, point `--agent-url` at another chat completions endpo
 
 `HOST` and `PORT` bind the page. The defaults are `127.0.0.1` and `8080`.
 
-`pixi run test` starts the server on a small folder and talks to it as the page, as an agent, and as a model behind the example agent.
+`pixi run test` starts the server on a small folder and talks to it as the page, as an agent, and as a model behind the example agent. It also runs the datactrl and specialist tests.
 
 ## What a question goes through
 
@@ -47,7 +68,7 @@ sequenceDiagram
     Server->>Agent: Chat so far, file list, citation rule, tools
     loop Until the agent stops calling tools, at most 8 rounds
         Agent-->>Server: Tool call
-        Server->>Folder: Run it with med-datactrl
+        Server->>Folder: Run it with datactrl
         Server->>Agent: Tool result
     end
     Agent-->>Server: Answer
@@ -66,7 +87,7 @@ If the agent opens no files, it answers in plain text. If it still can't cite co
 
 A successful `describe` or `fetch` of a file in the case list counts as opening it. The answer then has to be the citation JSON in [Connect an agent](docs/agents.md). With no file opened, plain text is accepted, and a JSON object is sent back with a request for plain text.
 
-With no extra flags, the page talks only to `--agent-url`. Optional specialists are other chat endpoints, registered with `--agents` or repeated `--specialist name=url` flags. The server offers each one to the router as `consult_<name>`, runs that call, and still checks citations. [Connect an agent](docs/agents.md) describes both.
+With no extra flags, the page talks only to `--agent-url`. Optional specialists are other chat endpoints, registered with `--agents` or repeated `--specialist name=url` flags. The server offers each one to the router as `consult_<name>`, runs that call, and still checks citations. Notes and imaging are started as their own processes and registered that way. [Connect an agent](docs/agents.md) describes both.
 
 The example agent forwards to `OPENAI_MODEL`, or to Azure OpenAI when `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, and `AZURE_OPENAI_DEPLOYMENT` are set.
 
