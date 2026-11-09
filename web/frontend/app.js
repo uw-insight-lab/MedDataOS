@@ -464,8 +464,7 @@ function updateCitationBadgeStates() {
                     badge.classList.add('citation-review-partial');
                 }
             }
-            const conflict = getCitationConflict(citation);
-            if (conflict || notesConflictsToShow(citation).length) {
+            if (citationHasDiscrepancy(citation)) {
                 badge.classList.add('citation-has-conflict');
             }
         } catch (e) { /* skip malformed */ }
@@ -874,8 +873,7 @@ function handleWebSocketMessage(data) {
                 // Update conflict indicator on provenance tab
                 const provTab = modalTabToggle.querySelector('.modal-tab[data-tab="provenance"]');
                 if (provTab) {
-                    const conflict = getCitationConflict(modalCitation);
-                    provTab.classList.toggle('tab-has-conflict', !!conflict);
+                    provTab.classList.toggle('tab-has-conflict', citationHasDiscrepancy(modalCitation));
                 }
             }
         }
@@ -931,6 +929,9 @@ function removeFile() {
     fileName.textContent = '';
 }
 
+// Citation kind (from the answer schema) → agent id, for a citation that names no agent
+const kindAgents = { imaging: 'imaging', note: 'clinical_notes', table: 'structured' };
+
 function citationLabel(labels, agent, citation) {
     if (citation && citation.kind === 'derived') {
         return labels === agentCardLabels ? 'Derived result' : 'Derived';
@@ -939,7 +940,8 @@ function citationLabel(labels, agent, citation) {
         if (citation && dicomPreviews(citation).length) return 'Imaging';
         if (citation && dicomRecord(citation)?.metadata) return 'DICOM';
         if (citation && dicomRecord(citation)) return 'Imaging';
-        return 'Source';
+        agent = citation && kindAgents[citation.kind];
+        if (!agent) return 'Source';
     }
     return labels[agent] || String(agent).replace(/_/g, ' ');
 }
@@ -975,6 +977,8 @@ function renderDerivedBlock(citation, compact) {
 // Agent ID → short display label for citation badges
 const agentBadgeLabels = {
     'clinical_notes': 'Notes',
+    'imaging':        'Imaging',
+    'structured':     'Table',
     'chest_xray':     'X-Ray',
     'ecg':            'ECG',
     'heart_sounds':   'Heart Sounds',
@@ -986,6 +990,8 @@ const agentBadgeLabels = {
 // Agent ID → full display name for citation card header
 const agentCardLabels = {
     'clinical_notes': 'Findings from Clinical Notes',
+    'imaging':        'Findings from Imaging',
+    'structured':     'Findings from Tables',
     'chest_xray':     'Findings from Chest X-Ray',
     'ecg':            'Findings from ECG',
     'heart_sounds':   'Findings from Heart Sounds',
@@ -997,6 +1003,8 @@ const agentCardLabels = {
 // Agent-specific checklist section headers
 const agentFindingsLabel = {
     'clinical_notes': 'Clinical Summary',
+    'imaging':        'Imaging Findings',
+    'structured':     'Table Findings',
     'chest_xray':     'Radiographic Findings',
     'ecg':            'ECG Findings',
     'heart_sounds':   'Auscultation Findings',
@@ -1011,6 +1019,11 @@ const provenanceSteps = {
         { label: 'Ledger', desc: 'Grounded facts compiled from the notes' },
         { label: 'Timeline and conflicts', desc: 'Dates ordered; disagreements between notes kept' },
         { label: 'Verified quotes', desc: 'Each claim checked against a span in the source note' },
+    ],
+    'imaging': [
+        { label: 'Series selection', desc: 'The case series ranked against the question; no confident match means no read' },
+        { label: 'Slice render', desc: 'One bounded preview slice rendered from the DICOM series, with contours when asked' },
+        { label: 'Vision read', desc: 'Single-slice interpretation by a vision model; not a full study read' },
     ],
     'chest_xray': [
         { label: 'Data Origin', desc: 'Posteroanterior chest radiograph, digital acquisition' },
@@ -1059,6 +1072,18 @@ const agentInfo = {
         paper: 'https://arxiv.org/abs/2512.24601',
         license: 'N/A',
         limitations: 'Extraction can miss facts. Inferred dates are approximate. Advisory only.',
+    },
+    'imaging': {
+        model: 'Gemini vision + datactrl preview',
+        modelUrl: null,
+        purpose: 'Describes a single bounded DICOM slice fetched through the datactrl harness',
+        input: 'DICOM series preview (PNG)',
+        output: 'Slice-level findings tied to the cited series, slice, and window',
+        method: 'Deterministic series ranking and slice render, then a vision model on that one slice',
+        accuracy: 'Preview only; not a full study read',
+        paper: null,
+        license: 'Research prototype',
+        limitations: 'One slice, fixed windowing, no segmentation model. Not a diagnostic report.',
     },
     'chest_xray': {
         model: 'TorchXRayVision',
@@ -1155,6 +1180,11 @@ function getCitationConflict(citation) {
     const first = bus.contradicted_by[0];
     const label = citationLabel(agentBadgeLabels, first.agent);
     return { count: bus.contradicted_by.length, firstAgent: label, finding: first.finding };
+}
+
+// A knowledge-bus contradiction, or a documented discrepancy between notes
+function citationHasDiscrepancy(citation) {
+    return notesConflictsToShow(citation).length > 0 || !!getCitationConflict(citation);
 }
 
 // Replace [cite:X] tokens with hoverable <sup> badges
@@ -2080,8 +2110,7 @@ async function openCitationModal(citation, pin = null, focusSpanUrl = null) {
     // Mark Provenance tab if citation has conflicts
     const provTab = modalTabToggle.querySelector('.modal-tab[data-tab="provenance"]');
     if (provTab) {
-        const conflict = getCitationConflict(citation);
-        provTab.classList.toggle('tab-has-conflict', !!conflict);
+        provTab.classList.toggle('tab-has-conflict', citationHasDiscrepancy(citation));
     }
 
     // Show modal
