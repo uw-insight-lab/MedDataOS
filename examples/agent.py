@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
+import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -25,6 +27,9 @@ from dotenv import load_dotenv
 
 
 load_dotenv()
+
+# Tries for a name lookup that fails before the model is reached.
+DNS_ATTEMPTS = 3
 
 
 def _target() -> tuple[str, dict, str | None]:
@@ -63,22 +68,35 @@ def forward(body: dict) -> tuple[int, dict]:
     if body.get("response_format"):
         outgoing["response_format"] = body["response_format"]
 
+    # Some reasoning models refuse function tools unless this is "none".
+    effort = os.getenv("AZURE_OPENAI_REASONING_EFFORT" if model is None else "OPENAI_REASONING_EFFORT")
+    if effort:
+        outgoing["reasoning_effort"] = effort
+
     request = urllib.request.Request(
         url,
         data=json.dumps(outgoing).encode(),
         headers=headers,
     )
 
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            return response.status, json.load(response)
-    except urllib.error.HTTPError as exc:
-        raw = exc.read().decode()
+    for attempt in range(DNS_ATTEMPTS):
         try:
-            payload = json.loads(raw) if raw else {"error": {"message": exc.reason}}
-        except json.JSONDecodeError:
-            payload = {"error": {"message": raw or exc.reason}}
-        return exc.code, payload
+            with urllib.request.urlopen(request, timeout=120) as response:
+                return response.status, json.load(response)
+        except urllib.error.HTTPError as exc:
+            raw = exc.read().decode()
+            try:
+                payload = json.loads(raw) if raw else {"error": {"message": exc.reason}}
+            except json.JSONDecodeError:
+                payload = {"error": {"message": raw or exc.reason}}
+            return exc.code, payload
+        except urllib.error.URLError as exc:
+            # A failed name lookup never reached the model, so retrying is safe.
+            if isinstance(exc.reason, socket.gaierror) and attempt < DNS_ATTEMPTS - 1:
+                time.sleep(2)
+                continue
+            return 502, {"error": {"message": f"Could not reach the model: {exc.reason}"}}
+    raise AssertionError("unreachable")
 
 
 class Handler(BaseHTTPRequestHandler):
