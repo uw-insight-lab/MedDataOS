@@ -34,7 +34,13 @@ class Evidence(BaseModel):
         ]},
     )
 
-    n: int | None = Field(default=None, description="Claim number, starting at 1.")
+    n: int | str | None = Field(
+        default=None,
+        description=(
+            "Claim number, starting at 1. A specialist may use a short label such as d1 "
+            "for a discrepancy card."
+        ),
+    )
     claim: str = Field(description="The words in response that this quote supports.")
     quote: str | None = Field(
         default=None,
