@@ -79,3 +79,6 @@ data/
 
 # local instructions
 CLAUDE.md
+
+# Specialist caches
+.cache/
