@@ -777,7 +777,7 @@ class Router(BaseHTTPRequestHandler):
         if not tool_msgs:
             calls = []
 
-            if "[notes]" in question or "[badcite]" in question:
+            if "[notes]" in question or "[badcite]" in question or "[strip]" in question:
                 calls.append(self._consult("notes", "call_notes", question))
 
             if "[twice]" in question:
@@ -801,6 +801,20 @@ class Router(BaseHTTPRequestHandler):
 
         if cited:
             payload = json.loads(cited)
+
+            if "[strip]" in question:
+                # What the strict answer schema leaves of a specialist's citation.
+                payload["citations"] = [
+                    {
+                        "kind": "file",
+                        "id": item["id"],
+                        "file": item["file"],
+                        "web_path": item["web_path"],
+                        "summary": item["summary"],
+                        "agent": None,
+                    }
+                    for item in payload["citations"]
+                ]
 
             if errors:
                 payload["response"] = "Imaging specialist failed. " + payload["response"]
@@ -837,7 +851,29 @@ class NotesSpecialist(BaseHTTPRequestHandler):
         NotesSpecialist.requests.append(body)
         question = next(item["content"] for item in body["messages"] if item["role"] == "user")
         path = "/case/missing.txt" if "[badcite]" in question else "/case/clinic_note.txt"
-        data = json.dumps(FakeAgent.message(content=cited_note(path))).encode()
+        content = cited_note(path)
+
+        if "[strip]" in question:
+            checked = json.loads(content)
+            checked["citations"][0].update({
+                "agent": "clinical_notes",
+                "evidence": [{
+                    "n": 1,
+                    "claim": "The patient has fatigue",
+                    "quote": "fatigue",
+                    "start": 0,
+                    "end": 7,
+                    "span_url": "/api/cases/P0042/notes/span?id=note%3Ax&start=0&end=7",
+                }],
+                "conflicts": [{
+                    "attribute": "symptom",
+                    "severity": "high",
+                    "values": [{"value": "fatigue", "note_label": "clinic_note"}],
+                }],
+            })
+            content = json.dumps(checked)
+
+        data = json.dumps(FakeAgent.message(content=content)).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
@@ -952,6 +988,18 @@ def test_a_specialist_is_consulted_once_per_question(routing_server):
     assert len(tool_messages) == 2
     assert json.loads(tool_messages[0]["content"])["status"] == "ok"
     assert json.loads(tool_messages[0]["content"]) == json.loads(tool_messages[1]["content"])
+
+
+def test_the_page_gets_the_specialists_checked_citation_not_the_routers_copy(routing_server):
+    question = "[strip] What does the note say?"
+    session_id = send_chat(routing_server, question)["session_id"]
+    answer = json.loads(wait_for_answer(routing_server, session_id)["history"][-1]["content"])
+    citation = answer["citations"][0]
+
+    assert citation["agent"] == "clinical_notes"
+    assert citation["evidence"][0]["span_url"].endswith("start=0&end=7")
+    assert citation["evidence"][0]["quote"] == "fatigue"
+    assert citation["conflicts"][0]["attribute"] == "symptom"
 
 
 def test_a_specialist_citation_outside_the_case_is_an_error(routing_server):
@@ -1762,3 +1810,144 @@ def test_a_cited_dicom_preview_is_a_png(tmp_path):
             body = response.read()
             assert response.headers.get_content_type() == "image/png"
         assert body.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+@contextmanager
+def _specialist_case():
+    """A report with one note, one DICOM series, and one table, and no leftover specialist state."""
+    sys.path.insert(0, str(APP / "web" / "backend"))
+    from state import state
+
+    previous = state.report
+    state.report = {
+        "resources": [
+            {"id": "note:1", "modality": "note", "label": "completion", "path": "completion.txt"},
+            {"id": "dicom:ct", "modality": "dicom", "label": "ct", "path": "Neck CT"},
+            {"id": "structured:labs", "modality": "structured", "label": "labs", "path": "labs.csv"},
+        ],
+    }
+    state.cited.clear()
+    try:
+        yield state
+    finally:
+        state.report = previous
+        state.cited.clear()
+
+
+def test_the_routers_copy_of_an_imaging_citation_keeps_the_slice():
+    from dispatch import _keep_specialist_fields, _restore_specialist_fields
+
+    with _specialist_case():
+        _keep_specialist_fields("s1", "Neck CT", {
+            "web_path": "/case/Neck%20CT",
+            "agent": "imaging",
+            "summary": "One axial slice shows the larynx.",
+            "preview": {"slice_index": 12, "window": "ct", "overlay": True},
+        })
+        reply = json.dumps({
+            "response": "The larynx is visible [cite:1].",
+            "citations": [{
+                "kind": "file", "id": "1", "file": "Neck CT", "web_path": "/case/Neck CT",
+                "summary": "", "agent": None,
+            }],
+        })
+
+        citation = json.loads(_restore_specialist_fields("s1", reply))["citations"][0]
+
+    assert citation["agent"] == "imaging"
+    assert citation["summary"] == "One axial slice shows the larynx."
+    assert citation["dicom"] == {
+        "previews": [{
+            "web_path": "/case/Neck%20CT",
+            "slice_index": 12,
+            "window": "ct",
+            "overlay": True,
+        }],
+    }
+
+
+def test_the_routers_copy_of_a_note_citation_gets_the_checked_quotes_back():
+    from dispatch import _keep_specialist_fields, _restore_specialist_fields
+
+    checked = {
+        "n": 1,
+        "claim": "Treatment finished February 13",
+        "quote": "Treatment completed February 13",
+        "start": 120,
+        "end": 151,
+        "note_id": "note:1",
+        "span_url": "/api/cases/P1/notes/span?id=note%3A1&start=120&end=151",
+    }
+    conflict = {"attribute": "rt.end_date", "severity": "high", "values": [{"value": "February 13"}]}
+
+    with _specialist_case():
+        _keep_specialist_fields("s1", "completion.txt", {
+            "web_path": "/case/completion.txt",
+            "agent": "clinical_notes",
+            "summary": "Completion note.",
+            "evidence": [checked],
+            "conflicts": [conflict],
+        })
+        reply = json.dumps({
+            "response": "Treatment finished in February [cite:1].",
+            "citations": [{
+                "kind": "file", "id": "1", "file": "completion.txt",
+                "web_path": "/case/completion.txt", "summary": "Completion note.",
+                "evidence": [
+                    {"n": 1, "claim": "Treatment ended mid-February", "quote": "treatment  completed February 13"},
+                    {"n": 2, "claim": "Invented", "quote": "The patient was cured in full"},
+                ],
+            }],
+        })
+
+        citation = json.loads(_restore_specialist_fields("s1", reply))["citations"][0]
+
+    assert citation["agent"] == "clinical_notes"
+    assert citation["conflicts"] == [conflict]
+    assert len(citation["evidence"]) == 1
+    evidence = citation["evidence"][0]
+    assert evidence["quote"] == "Treatment completed February 13"
+    assert evidence["span_url"] == checked["span_url"]
+    assert (evidence["start"], evidence["end"]) == (120, 151)
+    assert evidence["claim"] == "Treatment ended mid-February"
+
+
+def test_a_reply_without_specialist_citations_is_left_alone():
+    from dispatch import _restore_specialist_fields
+
+    with _specialist_case():
+        reply = json.dumps({"response": "Plain [cite:1].", "citations": [{"id": "1"}]})
+        assert _restore_specialist_fields("s1", reply) == reply
+
+
+def test_a_citation_that_names_no_agent_gets_the_one_for_its_file():
+    from case import case as open_case
+
+    with _specialist_case():
+        text = json.dumps({
+            "response": "Notes [cite:1]. Labs [cite:2]. Scan [cite:3]. Slice [cite:4].",
+            "citations": [
+                {"id": "1", "web_path": "/case/completion.txt", "agent": None},
+                {"id": "2", "web_path": "/case/labs.csv"},
+                {"id": "3", "web_path": "/case/Neck%20CT"},
+                {"id": "4", "web_path": "/case/Neck%20CT", "dicom": {"previews": [{}]}},
+            ],
+        })
+
+        citations = json.loads(open_case.name_sources(text, {}))["citations"]
+
+    assert [item.get("agent") for item in citations] == [
+        "clinical_notes", "structured", "imaging", None,
+    ]
+
+
+def test_a_discrepancy_card_from_a_specialist_passes_the_answer_schema():
+    sys.path.insert(0, str(APP / "web" / "backend"))
+    import answer
+
+    citation = {
+        "kind": "file", "id": "d1", "file": "followup.txt",
+        "web_path": "/case/followup.txt", "summary": "Follow-up note.",
+        "evidence": [{"n": "d1", "claim": "February 20", "quote": "ended February 20"}],
+    }
+    assert answer.shape_problem(citation, None) is None
