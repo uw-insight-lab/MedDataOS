@@ -8,13 +8,13 @@ One process opens one folder. Chat sessions, pins, review checkboxes, and audit 
 
 | Path | Contents |
 |------|----------|
-| `web/` | The page. See [the page](web/README.md). |
+| `web/` | The page. See [the page](docs/page.md). |
 | `src/meddataos/` | The package: `datactrl` (case access; see [datactrl](docs/datactrl/README.md)), `server`, and `specialists`. |
 | `examples/agent.py` | The example router. |
 | `configs/agents.toml` | Registers the specialists with the server. |
 | `scripts/stack.py` | Starts the router, specialists, and server together. |
 | `tests/` | `server/`, `datactrl/`, and `specialists/`. |
-| `docs/` | [Connect an agent](docs/agents.md) and the datactrl docs. |
+| `docs/` | This site's pages. `pixi run docs` serves them. |
 
 ## Start
 
@@ -65,18 +65,21 @@ sequenceDiagram
     User->>Page: Ask a question
     Page->>Server: POST /api/chat
     Server->>Agent: Chat so far, file list, citation rule, tools
-    loop Until the agent stops calling tools, at most 8 rounds
+    loop Until the agent stops calling tools, at most 16 rounds
         Agent-->>Server: Tool call
         Server->>Folder: Run it with datactrl
+        Server->>Page: step
         Server->>Agent: Tool result
     end
+    Server->>Page: status while the agent writes or citations are checked
     Agent-->>Server: Answer
     Server->>Server: Check citations against describe and fetch calls
     alt Citations missing or wrong
         Server->>Agent: Refusal and the reason, up to 6 corrections
         Agent-->>Server: Corrected answer
     end
-    Server->>Page: WebSocket message
+    Server->>Server: Save the chat and an audit run
+    Server->>Page: assistant message
     Page-->>User: Answer in the chat
 ```
 
@@ -92,4 +95,4 @@ The example agent forwards to `OPENAI_MODEL`, or to Azure OpenAI when `AZURE_OPE
 
 If the citations are still wrong after the original answer and six corrections, the page shows `The agent could not produce an answer with valid citations` and the last problem. If the agent cannot be reached, times out, or returns something other than a chat completion, the page shows `The agent failed` and the reason.
 
-The page renders a citation JSON answer as text with a marker for each `[cite:id]`. Hovering or opening a marker loads that file from the folder. [The page](web/README.md) covers the sidebar, pins, and attachments.
+The page renders a citation JSON answer as text with a marker for each `[cite:id]`. Hovering or opening a marker loads that file from the folder. [The page](docs/page.md) covers the sidebar, pins, and attachments. `pixi run docs` serves that page with the rest of the docs.

@@ -1,0 +1,35 @@
+site_name: MedDataOS
+site_description: A local page for questions about the files in one case folder.
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Start: index.md
+  - Connect an agent: agents.md
+  - Page: page.md
+  - Case data: data.md
+  - Specialists:
+      - Notes: specialists/notes.md
+      - Imaging: specialists/imaging.md
+  - datactrl:
+      - API: datactrl/README.md
+      - Design: datactrl/DESIGN.md
+
+validation:
+  absolute_links: warn
+  unrecognized_links: warn

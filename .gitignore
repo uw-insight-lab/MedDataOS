@@ -82,3 +82,6 @@ CLAUDE.md
 
 # Specialist caches
 .cache/
+
+# MkDocs build
+site/

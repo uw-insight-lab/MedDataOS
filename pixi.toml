@@ -12,7 +12,7 @@ python = ">=3.13,<3.14"
 meddataos = { path = ".", editable = true, extras = ["datactrl", "server", "specialists"] }
 
 [environments]
-default = ["style"]
+default = ["style", "docs"]
 library = { features = ["library"], no-default-feature = true }
 
 [tasks]
@@ -41,6 +41,13 @@ type-check.cmd = ["mypy", "-p", "meddataos.datactrl", "-p", "meddataos.server"]
 type-check.description = "Run mypy type check"
 qc.depends-on = ["ruff-format", "ruff-check", "type-check"]
 qc.description = "Quality check: ruff & mypy"
+
+[feature.docs.pypi-dependencies]
+mkdocs-material = ">=9.5,<10"
+
+[feature.docs.tasks]
+docs = { cmd = "mkdocs serve", description = "Serve the docs site" }
+docs-build = { cmd = "mkdocs build --strict", description = "Build the docs site into site/" }
 
 [feature.library.dependencies]
 python = ">=3.13,<3.14"
