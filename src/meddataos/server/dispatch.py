@@ -78,6 +78,60 @@ def _tool_label(name: str, arguments: dict) -> str:
     return action
 
 
+def _cite_kind(modality: str) -> str:
+    """The citation type a finished read stands for, from the file's modality."""
+    return {"dicom": "imaging", "note": "note", "structured": "table"}.get(modality, "")
+
+
+def _stamp_answer_kinds(steps: list[dict], message: str) -> None:
+    """Use the delivered citation's kind when the answer names one for that token."""
+    try:
+        parsed = json.loads(message)
+    except json.JSONDecodeError:
+        return
+
+    citations = parsed.get("citations") if isinstance(parsed, dict) else None
+
+    if not isinstance(citations, list):
+        return
+
+    kinds = {}
+    sources = {}
+
+    for item in citations:
+        if not isinstance(item, dict) or not isinstance(item.get("cite"), str):
+            continue
+
+        if isinstance(item.get("kind"), str) and item["kind"]:
+            kinds[item["cite"]] = item["kind"]
+
+        if item.get("kind") != "derived" or not isinstance(item.get("inputs"), list):
+            continue
+
+        used = []
+
+        for entry in item["inputs"]:
+            if not isinstance(entry, dict) or not isinstance(entry.get("cite"), str):
+                continue
+
+            label = entry.get("label") if isinstance(entry.get("label"), str) else ""
+            used.append(f"{entry['cite']} {label}".strip())
+
+        if used:
+            sources[item["cite"]] = used
+
+    for step in steps:
+        kind = kinds.get(step.get("cite"))
+
+        if kind:
+            step["cite_kind"] = kind
+
+        used = sources.get(step.get("cite"))
+
+        if used:
+            step["sources"] = used
+
+
 _step_started: dict[str, float] = {}
 
 
@@ -364,6 +418,10 @@ class Conversation:
 
         if isinstance(cite, str):
             step["cite"] = cite
+            cite_kind = _cite_kind(str(record.get("modality") or ""))
+
+            if cite_kind:
+                step["cite_kind"] = cite_kind
 
         await record_step(self.session_id, step)
 
@@ -858,6 +916,7 @@ class Question:
 
         session = state.sessions[self.session_id]
         steps = [dict(item) for item in session.steps]
+        _stamp_answer_kinds(steps, message)
         duration_ms = session.elapsed_ms()
         for item in session.steps:
             _step_started.pop(item["step_id"], None)

@@ -1359,6 +1359,14 @@ main {
     user-select: none;
 }
 
+.citation-token {
+    margin-left: 4px;
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--text-dim);
+}
+
 .citation-date {
     font-family: var(--mono);
     font-size: 9px;

@@ -308,13 +308,34 @@ class DerivedResult(BaseModel):
     )
 
 
+class DerivedInput(BaseModel):
+    """One call, and the piece of it, that a derived value used."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cite: str = Field(
+        description="Cite token of a describe or fetch from this question.",
+        examples=["c5"],
+    )
+    label: str = Field(
+        description="What was taken from that call: an ROI, series, column, or file.",
+        examples=["GTVp label map"],
+    )
+    detail: str | None = Field(
+        default=None,
+        description="Optional setting or measurement, such as spacing or a column name.",
+        examples=["roi=GTVp, spacing 2×2×2 mm"],
+    )
+
+
 class DerivedCitation(BaseModel):
     """A calculation or prediction the agent derived from a describe or fetch call.
 
     Use when the claim is not what the file shows directly, but a number or label
     produced from that call (for example voxel volume from a volume fetch, or a
-    model score). Cite the call that supplied the inputs. method is plain prose a
-    reviewer can read on the card.
+    model score). Cite the call the marker points at. inputs names every call the
+    value used, including that one. method is plain prose a reviewer can read
+    on the card.
 
     """
 
@@ -326,13 +347,18 @@ class DerivedCitation(BaseModel):
                     "kind": "derived",
                     "cite": "c5",
                     "method": (
-                        "Voxel count on the GTVp label map from the RTSTRUCT volume"
-                        "fetch "
-                        "(roi=GTVp, spacing 2×2×2 mm), multiplied by voxel volume and "
-                        "converted to cm³."
+                        "Voxel count on the GTVp label map from the RTSTRUCT volume "
+                        "fetch, multiplied by voxel volume and converted to cm³."
                     ),
                     "summary": "GTVp volume is 2.592 cm³ on the resampled label map.",
                     "result": {"value": 2.592, "unit": "cm³"},
+                    "inputs": [
+                        {
+                            "cite": "c5",
+                            "label": "GTVp label map",
+                            "detail": "roi=GTVp, spacing 2×2×2 mm",
+                        }
+                    ],
                 },
             ]
         },
@@ -364,12 +390,12 @@ class DerivedCitation(BaseModel):
         default=None,
         description="Optional extra steps, assumptions, or intermediate numbers.",
     )
-    inputs: list[str] | None = Field(
-        default=None,
+    inputs: list[DerivedInput] = Field(
+        min_length=1,
         description=(
-            "Optional short labels for inputs used (ROI name, sandbox path, series id)."
+            "Every describe or fetch this value used. Each item names that call's "
+            "cite token and what was taken from it."
         ),
-        examples=[["GTVp", "inputs/volume.nii.gz"]],
     )
 
 

@@ -774,6 +774,7 @@ def test_a_read_arrives_as_a_step_with_its_cite_token(dispatch_server):
     assert finished[0]["session_id"] == session_id
     assert finished[0]["name"] == "fetch"
     assert finished[0]["cite"] == "c1"
+    assert finished[0]["cite_kind"] == "note"
     assert finished[0]["label"].startswith("Reading ")
     assert "fatigue" not in json.dumps(finished[0]).lower()
 
@@ -1714,11 +1715,16 @@ def test_a_volume_call_may_be_cited_as_derived():
         "kind": "derived",
         "cite": "c5",
         "method": (
-            "Voxel count on the GTVp label map from the RTSTRUCT volume fetch "
-            "(roi=GTVp, spacing 2×2×2 mm), multiplied by voxel volume and converted to cm³."
+            "Voxel count on the GTVp label map from the RTSTRUCT volume fetch, "
+            "multiplied by voxel volume and converted to cm³."
         ),
         "summary": "GTVp volume is 2.592 cm³ on the resampled label map.",
         "result": {"value": 2.592, "unit": "cm³"},
+        "inputs": [{
+            "cite": "c5",
+            "label": "GTVp label map",
+            "detail": "roi=GTVp, spacing 2×2×2 mm",
+        }],
     }) is None
 
     # Volume is still a DICOM fetch; imaging remains valid. derived is optional.
@@ -1737,8 +1743,26 @@ def test_a_volume_call_may_be_cited_as_derived():
         "kind": "derived",
         "cite": "c5",
         "summary": "GTVp volume is 2.592 cm³.",
+        "inputs": [{"cite": "c5", "label": "GTVp label map"}],
     })
     assert missing_method and "method" in missing_method
+
+    missing_inputs = problem({
+        "kind": "derived",
+        "cite": "c5",
+        "method": "Voxel count times voxel volume.",
+        "summary": "GTVp volume is 2.592 cm³.",
+    })
+    assert missing_inputs and "inputs" in missing_inputs
+
+    unknown_input = problem({
+        "kind": "derived",
+        "cite": "c5",
+        "method": "Voxel count times voxel volume.",
+        "summary": "GTVp volume is 2.592 cm³.",
+        "inputs": [{"cite": "c9", "label": "another series"}],
+    })
+    assert unknown_input and "c9" in unknown_input
 
     as_note = problem({
         "kind": "note",

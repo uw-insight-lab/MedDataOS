@@ -1008,6 +1008,15 @@ function derivedResultText(citation) {
     return result.unit ? `${value} ${result.unit}` : value;
 }
 
+function derivedInputText(item) {
+    if (!item || typeof item !== 'object') return '';
+    const token = item.cite ? String(item.cite) : '';
+    const label = item.label ? String(item.label) : '';
+    const detail = item.detail ? String(item.detail) : '';
+    const head = [token, label].filter(Boolean).join(' ');
+    return detail ? `${head} — ${detail}` : head;
+}
+
 function renderDerivedBlock(citation, compact) {
     if (!citation || citation.kind !== 'derived') return '';
     const parts = [];
@@ -1015,16 +1024,16 @@ function renderDerivedBlock(citation, compact) {
     if (resultText) {
         parts.push(`<div class="derived-result${compact ? ' derived-result-compact' : ''}">${escapeHtml(resultText)}</div>`);
     }
+    if (Array.isArray(citation.inputs) && citation.inputs.length) {
+        parts.push(
+            `<ul class="derived-inputs">${citation.inputs.map(item => `<li>${escapeHtml(derivedInputText(item))}</li>`).join('')}</ul>`
+        );
+    }
     if (citation.method) {
         parts.push(`<div class="derived-method">${escapeHtml(citation.method)}</div>`);
     }
     if (!compact && citation.detail) {
         parts.push(`<div class="derived-detail">${escapeHtml(citation.detail)}</div>`);
-    }
-    if (!compact && Array.isArray(citation.inputs) && citation.inputs.length) {
-        parts.push(
-            `<ul class="derived-inputs">${citation.inputs.map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}</ul>`
-        );
     }
     return parts.length ? `<div class="derived-block">${parts.join('')}</div>` : '';
 }
@@ -1253,7 +1262,8 @@ function renderWithCitations(html, citations) {
         const data = encodeURIComponent(JSON.stringify(citation));
         const label = citationLabel(agentBadgeLabels, citation.agent, citation);
         const dateStr = getCitationDate(citation);
-        return `<span class="citation-group"><sup class="citation" data-citation="${data}">${escapeHtml(label)}</sup>${dateStr ? `<span class="citation-date">${dateStr}</span>` : ''}</span>`;
+        const token = String(citation.cite || citation.id || id);
+        return `<span class="citation-group"><sup class="citation" data-citation="${data}">${escapeHtml(label)}<span class="citation-token">${escapeHtml(token)}</span></sup>${dateStr ? `<span class="citation-date">${dateStr}</span>` : ''}</span>`;
     });
 }
 
@@ -1751,9 +1761,27 @@ function stepTarget(step) {
     return label;
 }
 
+function stepCite(step) {
+    const token = step.cite ? String(step.cite) : '';
+    const type = {
+        imaging: 'Imaging',
+        note: 'Note',
+        table: 'Table',
+        file: 'File',
+        derived: 'Derived',
+    }[step.cite_kind] || '';
+
+    const sources = Array.isArray(step.sources) && step.sources.length
+        ? ` from ${step.sources.join(', ')}`
+        : '';
+
+    if (token && type) return `${token} · ${type}${sources}`;
+    return token || type;
+}
+
 function stepRow(step, showKind) {
     const kind = ['tool', 'consult'].includes(step.kind) ? step.kind : 'tool';
-    const cite = step.cite ? escapeHtml(String(step.cite)) : '';
+    const cite = escapeHtml(stepCite(step));
     const time = stepStatus(step) === 'started' || !(step.duration_ms >= 100)
         ? ''
         : formatDuration(step.duration_ms);

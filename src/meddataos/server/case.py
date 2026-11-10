@@ -634,7 +634,8 @@ class Contract:
         "imaging for a DICOM series, note for a clinical note, table for a table. "
         "When the claim is a calculation or prediction from that call (for example a "
         "voxel volume from a volume fetch), use kind derived with a plain-language "
-        "method and optional result value/unit; still cite that call's token. "
+        "method, a result value/unit when you have one, and inputs: each item is "
+        "the cite token of a call from this question plus what was taken from it. "
         "Put [cite:token] right after the words that call supports. "
         "A sentence may cite several calls, but never put markers side by side "
         "or group them at the end of the answer. "
@@ -734,6 +735,10 @@ class Contract:
                 return (
                     f"citation cite {handle!r} is not a tool result from this question"
                 )
+
+            if citation.get("kind") == "derived":
+                return Contract._derived_inputs_problem(citation, marker, calls)
+
             return None
 
         web = citation.get("web_path")
@@ -757,6 +762,33 @@ class Contract:
             )
 
         return f"citation {marker} web_path {web!r} is not an opened file"
+
+    @staticmethod
+    def _derived_inputs_problem(
+        citation: dict, marker: str, calls: dict[str, dict]
+    ) -> str | None:
+        """Why a derived citation's inputs do not name calls from this question."""
+        inputs = citation.get("inputs")
+
+        if not isinstance(inputs, list) or not inputs:
+            return f"citation {marker} needs inputs naming the calls the value used"
+
+        for item in inputs:
+            if not isinstance(item, dict):
+                return f"citation {marker} input must be an object"
+
+            token = item.get("cite")
+
+            if not isinstance(token, str) or token not in calls:
+                return (
+                    f"citation {marker} input cite {token!r} is not a tool result "
+                    "from this question"
+                )
+
+            if not isinstance(item.get("label"), str) or not item["label"].strip():
+                return f"citation {marker} input {token} needs a label for the data used"
+
+        return None
 
     @staticmethod
     def _notes_problem(

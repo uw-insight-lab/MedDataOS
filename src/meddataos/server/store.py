@@ -385,7 +385,7 @@ def citations_for_audit(message: str) -> list[dict]:
 
         kept.append({
             key: item[key]
-            for key in ("cite", "id", "kind", "web_path", "summary", "agent")
+            for key in ("cite", "id", "kind", "web_path", "summary", "agent", "inputs")
             if key in item
         })
 
